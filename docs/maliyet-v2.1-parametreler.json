@@ -1,0 +1,72 @@
+{
+  "plan_date": "2026-10-10",
+  "currency": "USD",
+  "first_pilot_station_count": 1,
+  "daily_slips_per_station_low": 500,
+  "daily_slips_per_station_high": 1000,
+  "calendar_days_per_month": 30,
+  "ocr_extra_request_rate": "0.05",
+  "ocr_unit_price_first_tier": "0.0015",
+  "vision_free_units_per_month_if_available": 1000,
+  "vision_first_tier_limit": 5000000,
+  "vision_unit_price_above_first_tier": "0.0006",
+  "textract_expense_comparison_only_unit_price": "0.01",
+  "masked_image_mib": "0.5",
+  "thumbnail_mib": "0.1",
+  "capacity_retention_days_not_legal_policy": 90,
+  "spaces_base_usd": "5",
+  "spaces_included_gib": "250",
+  "spaces_extra_storage_per_gib": "0.02",
+  "contingency_rate": "0.15",
+  "operational_addons_low_usd": "30",
+  "operational_addons_high_usd": "60",
+  "review_example_rate": "0.10",
+  "review_example_seconds": 20,
+  "development_person_days_low_excluding_turpak": 27,
+  "development_person_days_high_excluding_turpak": 45,
+  "turpak_adapter_person_days_low_after_access": 6,
+  "turpak_adapter_person_days_high_after_access": 12,
+  "contractor_day_rate_usd_unknown": null,
+  "review_hourly_loaded_cost_usd_unknown": null,
+  "turpak_one_time_vendor_quote_unknown": null,
+  "turpak_monthly_vendor_quote_unknown": null,
+  "vat_rate_unknown": null,
+  "usd_try_rate_unknown": null,
+  "profiles": {
+    "shadow_pilot_not_ha": {
+      "application_vms": "24",
+      "worker_vms": "12",
+      "production_db_single_node_default_storage": "30.45",
+      "staging_vm": "12",
+      "staging_db_default_storage": "15.15",
+      "regional_load_balancer": "0",
+      "vm_daily_backup_rate": "0.30"
+    },
+    "production_ha_pilot": {
+      "application_vms": "48",
+      "worker_vms": "12",
+      "production_db_primary_plus_standby_default_storage": "271.50",
+      "staging_vm": "12",
+      "staging_db_default_storage": "15.15",
+      "regional_load_balancer": "12",
+      "vm_daily_backup_rate": "0.30"
+    },
+    "production_ha_five_stations_capacity_assumption": {
+      "application_vms": "48",
+      "worker_vms": "24",
+      "production_db_primary_plus_standby_default_storage": "271.50",
+      "staging_vm": "12",
+      "staging_db_default_storage": "15.15",
+      "regional_load_balancer": "12",
+      "vm_daily_backup_rate": "0.30"
+    }
+  },
+  "price_sources": {
+    "ocr": "https://cloud.google.com/vision/pricing",
+    "vms_backups": "https://www.digitalocean.com/pricing/droplets",
+    "database": "https://www.digitalocean.com/pricing/managed-databases",
+    "spaces": "https://www.digitalocean.com/pricing/spaces-object-storage",
+    "load_balancer": "https://www.digitalocean.com/pricing/load-balancers",
+    "textract_comparison_only": "https://aws.amazon.com/textract/pricing/"
+  }
+}

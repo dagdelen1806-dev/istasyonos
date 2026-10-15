@@ -1,0 +1,110 @@
+{
+  "contract_version": "stationos.source-evidence.v2.2",
+  "description_tr": "Yazılımın iç veri sözleşmesi için sentetik örnek; Turpak API şeması veya aktif üretim yapılandırması değildir.",
+  "example_only": true,
+  "server_authoritative_fields_note_tr": "Tenant, rol, aktarım izni, privacy sonucu ve onay durumu sunucu kayıtlarından gelir; istemci bu alanları göndererek yetki kazanamaz.",
+  "scope": {
+    "tenant_id": "DEMO_TENANT",
+    "company_id": "DEMO_COMPANY",
+    "station_id": "DEMO_STATION_01",
+    "business_unit": "FUEL"
+  },
+  "source_document": {
+    "batch_id": "DEMO_BATCH_001",
+    "version": 1,
+    "source_system": "TURPAK",
+    "source_profile_ref": "DEMO_AUTHORIZED_REPORT_PROFILE",
+    "ingestion_method": "REPORT_PHOTO_OCR",
+    "document_type": "SHIFT_SALES_REPORT",
+    "provider_report_id": null,
+    "missing_provider_report_id_note_tr": "Sistem kendi batch ID değerini gerçek Turpak rapor ID değeri olarak sunmaz.",
+    "coverage_level": "STATION_TOTAL",
+    "report_generated_at": null,
+    "period": {
+      "start_inclusive": "2026-10-10T08:00:00+03:00",
+      "end_exclusive": "2026-10-10T16:00:00+03:00",
+      "timezone": "Europe/Istanbul",
+      "origin": "USER_DECLARED_PENDING_DOCUMENT_CHECK"
+    },
+    "expected_page_count": 2,
+    "received_page_count": 2,
+    "completeness_status": "PENDING_REVIEW",
+    "source_confirmation_status": "NEEDS_REVIEW",
+    "station_identity_status": "PENDING_DOCUMENT_MATCH"
+  },
+  "artifact": {
+    "artifact_id": "DEMO_MASKED_DERIVATIVE_001",
+    "version": 1,
+    "artifact_type": "MASKED_RASTER_IMAGE",
+    "content_type": "image/png",
+    "object_ref": "OPAQUE_INTERNAL_OBJECT_REFERENCE",
+    "byte_hash_sha256": null,
+    "note_tr": "Gerçek byte hash örnek dosyada üretilmedi. Worker null hash veya doğrulanmamış sürümle dış OCR çağrısı yapamaz.",
+    "raw_artifact_ref": null,
+    "metadata_removed": false,
+    "privacy_validation": {
+      "status": "NOT_RUN",
+      "local_processing_region_required": "TR_OR_OTHER_EXPLICITLY_AUTHORIZED_BOUNDARY",
+      "policy_version": "privacy-v2.2-draft",
+      "bound_artifact_hash": null,
+      "server_validator_ref": null,
+      "pii_findings_content": "NEVER_EMBED_RAW_PII_HERE"
+    },
+    "storage_envelope": {
+      "status": "NOT_ENCRYPTED_IN_EXAMPLE",
+      "proposed_algorithm": "AES-256-GCM",
+      "nonce_length_bytes": 12,
+      "tag_length_bytes": 16,
+      "key_management": "DEK_PER_OBJECT_WRAPPED_BY_SEPARATE_KEK",
+      "wrapped_dek_ref": null,
+      "kek_key_ref": null,
+      "kek_version": null,
+      "aad_fields": ["tenant_id", "artifact_id", "artifact_version", "purpose"],
+      "purpose": "MASKED_SOURCE_EVIDENCE"
+    },
+    "retention_policy_ref": "PENDING_LEGAL_AND_ACCOUNTING_REVIEW",
+    "legal_hold_status": "NOT_EVALUATED"
+  },
+  "extraction": {
+    "status": "CANDIDATE_ONLY_SYNTHETIC_EXAMPLE",
+    "parser_version": "parser-v2.2-draft",
+    "normalised_fields": {
+      "currency": "TRY",
+      "net_sales_minor": 12500000,
+      "total_semantics": "NET_SALES",
+      "personnel_totals": null
+    },
+    "requires_human_confirmation": true,
+    "no_ledger_write_note_tr": "Bu toplam karşılaştırma kaynağıdır; yeni satış veya banka tahsilatı posting'i değildir. Net satış tanımı kaynak rapordan teyit edilmelidir.",
+    "external_ocr_request_id": null
+  },
+  "external_transfer_gate": {
+    "production_enabled": false,
+    "proposed_provider": "GOOGLE_CLOUD_VISION",
+    "proposed_region": "eu",
+    "proposed_api_host": "eu-vision.googleapis.com",
+    "fallback_global_or_us_allowed": false,
+    "personal_data_may_remain_after_masking": true,
+    "legal_review_ref": null,
+    "provider_contract_ref": null,
+    "masking_test_acceptance_ref": null,
+    "server_policy_status": "BLOCKED_PENDING_APPROVAL",
+    "no_authorization_note_tr": "Bu örnek JSON'u değiştirmek aktarım izni yaratmaz. Kapı gerçek sunucu politikası, belge hash'i, gizlilik kabulü ve hukuki incelemeyle doğrulanır."
+  },
+  "reconciliation_binding": {
+    "shift_snapshot_ref": null,
+    "snapshot_revision": null,
+    "source_approval_ref": null,
+    "accounting_approval_ref": null,
+    "status": "NOT_READY"
+  },
+  "expected_error_examples": [
+    {"code": "PRIVACY_VALIDATION_REQUIRED", "retry_external_ocr": false},
+    {"code": "ARTIFACT_VERSION_MISMATCH", "retry_external_ocr": false},
+    {"code": "TRANSFER_POLICY_BLOCKED", "retry_external_ocr": false},
+    {"code": "SOURCE_SCOPE_MISMATCH", "retry_external_ocr": false},
+    {"code": "REPORT_COVERAGE_CONFLICT", "retry_external_ocr": false},
+    {"code": "DOCUMENT_INCOMPLETE", "retry_external_ocr": false},
+    {"code": "OCR_PROVIDER_TEMPORARY_FAILURE", "retry_external_ocr": "BOUNDED_RETRY_AFTER_GATE_RECHECK"}
+  ]
+}

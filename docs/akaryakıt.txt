@@ -1,0 +1,592 @@
+PROJE: İSTASYON OS
+DATABASE BLUEPRINT v1.0 — PLAN ÖZETİ
+
+AMAÇ
+----
+Akaryakıt istasyonlarının vardiya, personel hesapları, kasa, ödeme, banka,
+akaryakıt, market, stok, satın alma, fatura, finans, İK, raporlama ve AI
+ihtiyaçlarını tek sistemde birleştiren; başlangıçta tek istasyonla çalışıp
+ileride çoklu istasyon ve çoklu şirket yapısına ölçeklenebilen profesyonel
+bir SaaS/işletme yönetim sistemi geliştirilecektir.
+
+TEMEL MİMARİ PRENSİP
+--------------------
+Sistem tek istasyona göre tasarlanmayacaktır.
+
+Yapı:
+
+TENANT / COMPANY
+    |
+    +---- STATIONS
+             |
+             +---- USERS
+             +---- EMPLOYEES
+             +---- SHIFTS
+             +---- CASH
+             +---- BANK
+             +---- SALES
+             +---- PAYMENTS
+             +---- FUEL
+             +---- MARKET
+             +---- PURCHASE
+             +---- INVOICES
+             +---- STOCK
+             +---- FINANCE
+             +---- HR
+             +---- INTEGRATIONS
+
+Her tenant'ın verileri tamamen izole edilmelidir.
+
+ID STANDARTI
+------------
+Ana tablolar UUID kullanacaktır.
+
+Finansal ve kritik operasyon kayıtları fiziksel olarak silinmeyecek;
+durum/değişiklik/düzeltme kayıtlarıyla yönetilecektir.
+
+Temel audit alanları:
+- created_at
+- updated_at
+
+Kritik işlemlerde ayrıca:
+- created_by
+- updated_by
+- audit log
+kullanılacaktır.
+
+
+01 — TENANT / COMPANY
+---------------------
+Ana tablo: tenants
+
+Temel alanlar:
+- id
+- code
+- legal_name
+- tax_number
+- tax_office
+- phone
+- email
+- address
+- city
+- district
+- status
+- timezone
+- currency
+- created_at
+- updated_at
+
+Tenant durumları:
+- ACTIVE
+- PASSIVE
+- SUSPENDED
+
+Kurallar:
+- tenant code unique
+- vergi numarası uygun şekilde unique
+- varsayılan timezone Europe/Istanbul
+- varsayılan currency TRY
+
+Bir tenant birden fazla istasyona sahip olabilir.
+
+
+02 — STATION
+------------
+Ana tablo: stations
+
+Temel alanlar:
+- id
+- tenant_id
+- code
+- name
+- official_name
+- license_number
+- tax_number
+- tax_office
+- phone
+- email
+- address
+- city
+- district
+- postal_code
+- latitude
+- longitude
+- timezone
+- currency
+- status
+- opening_date
+- created_at
+- updated_at
+
+Station status:
+- ACTIVE
+- PASSIVE
+- SUSPENDED
+- MAINTENANCE
+- CLOSED
+
+Kurallar:
+- tenant_id zorunlu
+- station code aynı tenant içinde unique
+- fiziksel silme yapılmayacak
+- istasyonun konum bilgileri desteklenecek
+- bir tenant -> birçok station
+- bir station -> tek tenant
+
+Ayrı tablolar:
+- station_settings
+- station_operating_hours
+- station_modules
+- station_integrations
+- integration_credentials
+- integration_sync_logs
+
+Station settings içinde örnek:
+- default_shift_duration = 480 dakika
+- currency
+- timezone
+- cash_difference_tolerance
+- auto_close_warning
+- require_manager_approval
+- low_stock_warning
+
+Vardiya standart süresi 8 saattir (480 dakika), ancak ayarlanabilir
+olarak tasarlanacaktır.
+
+
+03 — USER / ROLE / PERMISSION
+-----------------------------
+Kritik prensip:
+
+USER != EMPLOYEE != ROLE != PERMISSION
+
+Bunlar birbirinden ayrılacaktır.
+
+Ana tablo:
+users
+
+Temel alanlar:
+- id
+- tenant_id
+- username
+- email
+- phone
+- password_hash
+- status
+- last_login_at
+- email_verified_at
+- phone_verified_at
+- created_at
+- updated_at
+
+Şifreler kesinlikle düz metin tutulmayacaktır.
+
+Kullanıcıların istasyon erişimi için:
+
+user_station_access
+
+alanları:
+- id
+- user_id
+- station_id
+- is_primary
+- starts_at
+- ends_at
+- status
+
+Bir kullanıcı birden fazla istasyona erişebilir.
+
+ROLLER
+------
+roles tablosu kullanılacak.
+
+Örnek roller:
+- SUPER_ADMIN
+- TENANT_OWNER
+- CENTRAL_MANAGER
+- STATION_MANAGER
+- SHIFT_SUPERVISOR
+- EMPLOYEE
+- FINANCE
+- HR_MANAGER
+- ACCOUNTING
+- AUDITOR
+
+SUPER_ADMIN ile TENANT_OWNER kesinlikle aynı yetki seviyesinde
+tasarlanmayacaktır.
+
+ROLE ASSIGNMENT
+---------------
+user_roles
+
+alanları:
+- id
+- user_id
+- role_id
+- station_id
+- starts_at
+- ends_at
+- status
+
+Rol istasyon kapsamında atanabilir.
+
+PERMISSIONS
+-----------
+permissions tablosu kullanılacaktır.
+
+Örnek permission'lar:
+
+shift.view
+shift.start
+shift.close
+
+cash.view
+cash.create
+cash.adjust
+cash.approve
+
+sales.view
+sales.import
+
+invoice.view
+invoice.create
+invoice.approve
+invoice.cancel
+
+stock.view
+stock.adjust
+
+fuel.view
+fuel.manage
+fuel.report
+
+hr.view
+hr.manage
+
+salary.view
+salary.manage
+
+reports.view
+
+ROLE -> PERMISSION ilişkisi:
+
+role_permissions
+
+kullanılacaktır.
+
+
+YETKİ SCOPE SİSTEMİ
+-------------------
+Yetkiler yalnızca "var/yok" şeklinde düşünülmeyecek.
+
+Scope desteklenecek:
+
+- OWN
+- STATION
+- TENANT
+- ALL
+
+Örnek:
+
+Personel:
+shift.view -> OWN
+
+İstasyon müdürü:
+shift.view -> STATION
+
+Patron:
+shift.view -> TENANT
+
+Yetki kontrol zinciri:
+
+MODULE ACTIVE?
+    ->
+STATION ACCESS?
+    ->
+ROLE?
+    ->
+PERMISSION?
+    ->
+SCOPE?
+    ->
+ALLOW / DENY
+
+
+MODÜL KONTROLÜ
+--------------
+Kullanıcının yetkisi olsa bile ilgili modül tenant/istasyon için aktif
+değilse erişim verilmez.
+
+Örneğin:
+- HR modülü aktif değilse HR yetkisi olan kullanıcı dahi HR'a erişemez.
+- Market modülü sadece belirli istasyonlarda aktif olabilir.
+
+
+MOBİL CİHAZ
+-----------
+Personeller cep telefonundan sisteme erişecektir.
+
+user_devices tablosu kullanılacaktır.
+
+Alanlar:
+- id
+- user_id
+- device_type
+- device_name
+- device_identifier
+- last_seen_at
+- status
+- created_at
+
+Eski veya kayıp cihazın erişimi kapatılabilmelidir.
+
+
+BİYOMETRİK GÜVENLİK
+-------------------
+Vardiya başlangıç/bitişinde cihaz biyometrik doğrulaması kullanılabilir.
+
+ÖNEMLİ:
+Ham parmak izi/biyometrik veri uygulama veritabanında tutulmayacaktır.
+
+Sadece doğrulamanın başarılı/başarısız sonucu kullanılacaktır.
+
+
+AUDIT
+-----
+Kritik işlemler audit log'a yazılacaktır.
+
+Örnek:
+- vardiya kapatma
+- kasa düzeltme
+- finansal kayıt değişikliği
+- fatura iptali
+- stok düzeltme
+- yetki değişikliği
+- yönetici onayı
+
+Audit kaydında mümkün olduğunca:
+- kim
+- ne yaptı
+- ne zaman yaptı
+- önceki değer
+- yeni değer
+bilgileri bulunacaktır.
+
+Audit kayıtları silinmeyecektir.
+
+
+ENTEGRASYON MİMARİSİ
+--------------------
+Harici sistemler doğrudan her modüle bağlanmayacaktır.
+
+Bunun yerine:
+
+INTEGRATION LAYER
+
+kullanılacaktır.
+
+Desteklenecek entegrasyon türleri:
+- FUEL_AUTOMATION
+- POS
+- YN_OKC
+- E_INVOICE
+- ACCOUNTING
+- BANK
+- PAYMENT
+
+Harici sistem kimlikleri saklanacaktır.
+
+Entegrasyon şifreleri/API key'leri stations tablosunda tutulmayacak;
+ayrı güvenli credential yapısında ve şifrelenmiş şekilde yönetilecektir.
+
+Senkronizasyon:
+- last_sync_at
+- last_sync_status
+- integration_sync_logs
+
+ile takip edilecektir.
+
+Başarısız işlemler:
+- PENDING
+- RETRY
+- FAILED
+durumlarıyla yönetilebilecektir.
+
+
+İSTASYON ALT YAPISI
+-------------------
+İlerleyen aşamalarda station şu domainlerle ilişkilendirilecektir:
+
+STATION
+ |
+ +-- CASH REGISTERS
+ +-- BANK ACCOUNTS
+ +-- POS TERMINALS
+ +-- FUEL
+ |     +-- TANKS
+ |     +-- PUMPS
+ |     +-- FUEL TYPES
+ |     +-- DELIVERIES
+ |     +-- SALES
+ |
+ +-- MARKET
+ |     +-- PRODUCTS
+ |     +-- INVENTORY
+ |     +-- PURCHASES
+ |     +-- SALES
+ |
+ +-- EMPLOYEES
+ +-- SHIFTS
+ +-- FINANCE
+ +-- INTEGRATIONS
+
+
+MARKET VE ÜRÜN MİMARİSİ
+-----------------------
+Global ürün kataloğu ile istasyon stokları birbirinden ayrılacaktır.
+
+PRODUCT
+    |
+    +---- INVENTORY / STATION STOCK
+
+Böylece aynı ürün farklı istasyonlarda farklı stok miktarı ve maliyetle
+yönetilebilir.
+
+Fatura ürün eşleştirme ileride:
+Barkod
+-> Tedarikçi Kodu
+-> Üretici Kodu
+-> Stok Kodu
+-> Ürün Adı
+-> AI eşleştirme
+
+mantığıyla geliştirilecektir.
+
+
+İSTASYON SAĞLIK DURUMU
+----------------------
+İleride patron dashboard'unda istasyonun genel operasyonel durumu:
+
+- HEALTHY
+- WARNING
+- CRITICAL
+
+olarak hesaplanabilecektir.
+
+Örnek kontrol noktaları:
+- otomasyon bağlantısı
+- yakıt seviyesi
+- kasa farkı
+- banka mutabakatı
+- kritik stok
+- bekleyen faturalar
+- finansal problemler
+
+Bu durum mümkün olduğunca gerçek verilerden dinamik hesaplanacaktır.
+
+
+MODÜLER TİCARİ MODEL
+--------------------
+Sistem modüler olarak satılacaktır.
+
+Örnek modüller:
+- Vardiya & Kasa
+- Akaryakıt
+- Market
+- Stok
+- Satın Alma
+- Fatura
+- Finans
+- Banka & Mutabakat
+- İK
+- Raporlama
+- AI
+- Çoklu İstasyon
+
+Modüller tenant ve gerektiğinde station bazında aktif/pasif edilebilecektir.
+
+HR özellikle çekirdek sistemden bağımsız opsiyonel modül olarak tasarlanacaktır.
+
+
+ŞU ANA KADAR TAMAMLANANLAR
+--------------------------
+01 — Tenant / Company Architecture      [TAMAM]
+02 — Station Architecture               [TAMAM]
+03 — User / Role / Permission            [TAMAM]
+
+
+BİR SONRAKİ AŞAMA
+-----------------
+04 — EMPLOYEE / PERSONEL DATABASE BLUEPRINT
+
+Bu aşamada aşağıdakiler tasarlanacaktır:
+
+- employees
+- employee identity
+- employee number
+- station assignment
+- department
+- job position
+- employment status
+- işe giriş tarihi
+- çalışma geçmişi
+- vardiya ilişkisi
+- izin altyapısının temeli
+- maaş/prim/avans için HR modül bağlantısı
+- user <-> employee ilişkisi
+- personel mobil kullanım altyapısı
+
+İK modülü çekirdek sistemden ayrılacak ve ileride ayrıca lisanslanabilir
+şekilde tasarlanacaktır.
+
+
+GELİŞTİRME KURALI
+-----------------
+Şu aşamada kodlama başlamayacaktır.
+
+Önce Database Blueprint tamamlanacak.
+
+Sıra bozulmayacaktır:
+
+01 Tenant
+02 Station
+03 User/Role/Permission
+04 Employee
+05 Module/Subscription
+06 Shift
+07 Cash
+08 Sales
+09 Payment
+10 OCR / Slip
+11 Bank / Reconciliation
+12 Fuel
+13 Market
+14 Purchase
+15 Invoice
+16 Inventory
+17 Finance
+18 HR
+19 Reporting
+20 AI
+21 Multi-Station
+22 Audit / Integration
+
+Her aşama tamamlandıktan sonra bir sonraki aşamaya geçilecektir.
+
+Database Blueprint tamamlandıktan sonra:
+- ERD
+- migration planı
+- database constraints
+- indexes
+- Laravel models
+- migrations
+- services
+- policies
+- API architecture
+
+planlanacaktır.
+
+BUSINESS RULES v1.0 DONDURULMUŞTUR.
+Database Blueprint bundan sonraki teknik tasarımın temel referansıdır.
+Yeni özellikler mevcut kuralları bozacak şekilde eklenmeyecek;
+gerekirse v1.1 veya v2.0 değişikliği olarak ele alınacaktır.

@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#087f78"><title>İstasyonOS · Personel hesap teslimi v2.0</title><link rel="stylesheet" href="/app.css"><script type="module" src="/app.mjs"></script></head>
+<body>
+<div class="demo-strip"><strong>SENTETİK DEMO</strong><span>Gerçek veri, fotoğraf, banka veya Turpak bağlantısı yok. Kayıtlar geçicidir.</span></div>
+<header class="topbar"><a class="wordmark" href="/"><span class="mark" aria-hidden="true">İ</span><span>İstasyonOS<small>SAHA → MUHASEBE · v2.0</small></span></a><div class="header-actions"><a href="/yonetim.html" class="link">Firma / raporlama prototipi</a><button id="refresh" class="quiet" type="button">Sunucudan yenile</button></div></header>
+<div class="layout">
+<aside class="sidebar"><div class="side-label">ÇALIŞMA KİMLİĞİ</div><label for="actor">Demo kişisi</label><select id="actor" aria-label="Demo kişisi" disabled><option>Bağlanıyor…</option></select><p class="muted" id="actor-description">Bu seçici giriş sistemi değil, görev ayrılığı demosudur.</p><nav id="navigation" aria-label="Hesap modülleri"></nav><div class="sidebar-bottom"><span id="connection" class="connection" role="status">Sunucuya bağlanılıyor</span><p class="muted">Her tarayıcı alanı ayrı. Yenileme kayıtları sunucudan alır; sunucu yeniden başlarsa demo kaybolur.</p><details><summary>Deneme sırası</summary><ol><li>Ayşe: hesap aç → örnek verileri doldur.</li><li>İki slipi belgeden teyit et → hesabı teslim et.</li><li>Mehmet: fizikî 3.500 TL teslimi kabul et.</li><li>Elif: ilk imza. Zeynep: ikinci imza.</li></ol><p>Bu sıra yalnız sentetik veriyi test eder.</p></details></div></aside>
+<main id="main"><div id="feedback" role="alert" class="feedback" hidden></div><div id="pending" class="notice amber" hidden></div><div id="app" aria-live="polite"><div class="loading"><h1>Hesap akışı hazırlanıyor</h1><p>Demo sunucusu yanıtı bekleniyor…</p></div></div></main>
+</div>
+<footer>İstasyonOS · İşletme kontrol prototipi. Muhasebe kabulü, banka tahsilatı veya istasyon vardiyası kapanışı değildir.</footer>
+<dialog id="review-dialog" aria-labelledby="review-title"><form id="review-form"><div class="dialog-head"><h2 id="review-title">Slip alanlarını kontrol et</h2><button type="button" class="quiet" data-action="close-dialog" aria-label="Pencereyi kapat">Kapat</button></div><div id="review-content"></div><div class="dialog-footer"><button type="button" class="quiet danger" data-action="reject-slip">Kanıtı reddet</button><button type="submit" class="primary">Belgeden kontrol ettim — teyit et</button></div><div id="review-error" class="error" role="alert"></div></form></dialog>
+<noscript>Bu demo JavaScript ve çalışan demo sunucusu gerektirir.</noscript>
+</body></html>

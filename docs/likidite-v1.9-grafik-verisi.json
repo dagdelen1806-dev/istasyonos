@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.9",
+  "status": "MISSING_REAL_DATA",
+  "basis": "available_cash_and_confirmed_or_estimated_flows",
+  "currency": "TRY",
+  "snapshot_at": null,
+  "company_alias": null,
+  "station_alias": null,
+  "source_ref": "pilot-v1.9-gercek-veri-toplama.xlsx",
+  "opening_cash_minor": null,
+  "daily": [],
+  "card_bridge": [],
+  "account_risk": []
+}

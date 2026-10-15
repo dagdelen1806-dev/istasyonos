@@ -1,0 +1,1291 @@
+{
+  "not": "Güncel bağımsız Windows kaynak sürümü; manifest kendisi hariç tüm Git kaynakları.",
+  "dosya_sayisi": 257,
+  "dosyalar": [
+    {
+      "dosya": ".dockerignore",
+      "byte": 109,
+      "sha256": "c3bd0a573ee3018fceee716a29afca5954ce11a3dfb1199f79ba6907997e6a41"
+    },
+    {
+      "dosya": ".env.example",
+      "byte": 624,
+      "sha256": "47859de9049ac1951a43f19d7b290f1c213d14282b84c59affe87247b095847f"
+    },
+    {
+      "dosya": ".gitignore",
+      "byte": 1421,
+      "sha256": "ea1155d12e547626a989988945f55df5d615986112576e24f7cb4c904d4978f1"
+    },
+    {
+      "dosya": ".prettierignore",
+      "byte": 310,
+      "sha256": "17f593918ed38aec9deac4301d519a4349172c649d1849ce17190cedbde33228"
+    },
+    {
+      "dosya": ".prettierrc",
+      "byte": 310,
+      "sha256": "087532218269eb851c22dcc3d5234ea46bfa513b494a3d7b167b1c1f48c410c5"
+    },
+    {
+      "dosya": "BASLAT.cmd",
+      "byte": 112,
+      "sha256": "f347db457ca5036cfb0f9835a74485d81810d74589d7d2a5e239838dda274fda"
+    },
+    {
+      "dosya": "CLAUDE.md",
+      "byte": 15517,
+      "sha256": "680bfbe95770c260557ad820b91594e59ce9a885c5bf65543ba5a6167de3bac1"
+    },
+    {
+      "dosya": "Dockerfile",
+      "byte": 629,
+      "sha256": "3d96e8a810f5d259877aa0b51ddbaeb2bc42ed47cd1e61ced6521517255b3e72"
+    },
+    {
+      "dosya": "KUR.ps1",
+      "byte": 2194,
+      "sha256": "92a48c4700b64dce42c60411cf7395db04d8d224985f9012a851e1e37d3e46b7"
+    },
+    {
+      "dosya": "PAKET-BILGISI.json",
+      "byte": 920,
+      "sha256": "21761f28f1cb53d12d7bc685ddac730ff1a0be3290b06e4f9a227f513692d28a"
+    },
+    {
+      "dosya": "README-PAKET.md",
+      "byte": 3280,
+      "sha256": "6035a1814875c2f93a92a34d67dfcf5791e82a70524a26d3add6ec5d42823d27"
+    },
+    {
+      "dosya": "README.md",
+      "byte": 4445,
+      "sha256": "65b1fa0775a0e9dfa12e175776bf72191b8581566beb08db870982f7b147f120"
+    },
+    {
+      "dosya": "TODO.md",
+      "byte": 2229,
+      "sha256": "a5717d26e4472a785abfaa8e95a9fdc80ca4c2914f18b5c048acc88c16b30e2f"
+    },
+    {
+      "dosya": "WINDOWS-BASLANGIC.md",
+      "byte": 4459,
+      "sha256": "90fdb142dd82e5d34c038cfc2bafe53f7e98409ff5939acf2e4d043749908b3c"
+    },
+    {
+      "dosya": "app.config.ts",
+      "byte": 136,
+      "sha256": "e449b8444ece2d516a06f1c05fd17440d404cb9e8fd01b0f2c3b02c833953911"
+    },
+    {
+      "dosya": "client/index.html",
+      "byte": 961,
+      "sha256": "bb26bd3e6dc324e0821a93d2a47ad9fec7a19f3b3e7d2c0e8c5016283ba2aac0"
+    },
+    {
+      "dosya": "client/public/.gitkeep",
+      "byte": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "dosya": "client/public/__manus__/debug-collector.js",
+      "byte": 28175,
+      "sha256": "f82a9aab7088440c13ca916995c935b81dc445ad633ad6394911b4f78aa5fc35"
+    },
+    {
+      "dosya": "client/public/manifest.webmanifest",
+      "byte": 551,
+      "sha256": "4455e6e2f7f146146b6dbe286664a243c53fc8225074eb223d597fbb5ff221ad"
+    },
+    {
+      "dosya": "client/public/manus-routes.json",
+      "byte": 906,
+      "sha256": "93316706c713b4d3d56d01f5c82f4fadd6f2d9c2808b76e5728a75b4e5c528a5"
+    },
+    {
+      "dosya": "client/public/offline.html",
+      "byte": 1053,
+      "sha256": "ec4cfe3bb126a5bd6f98922d016a3d1adf8ee79b5d841830c553a33dd8d66e5b"
+    },
+    {
+      "dosya": "client/public/station-icon-192.png",
+      "byte": 3500,
+      "sha256": "3dc02aaa3eefa0568ec9b951bd80bea1d31b2a1d00039bbd88fb21ba253f9e01"
+    },
+    {
+      "dosya": "client/public/station-icon-512.png",
+      "byte": 9398,
+      "sha256": "6a4bed8898f21a8917909b16163fd2c79c0efe356679f274abd756eb56c0cbe3"
+    },
+    {
+      "dosya": "client/public/station-icon.svg",
+      "byte": 285,
+      "sha256": "467f94d21c171fd4a1d9e289c6c92396b4b592c50227256d2d0b99a5c6b395ca"
+    },
+    {
+      "dosya": "client/public/sw.js",
+      "byte": 1066,
+      "sha256": "6766ea7034e40b6c03c3d815900aee826dfca33b739fd47e50c65cd6b4a85442"
+    },
+    {
+      "dosya": "client/src/App.tsx",
+      "byte": 982,
+      "sha256": "537ff092ae24c0281a9f713804c40d5f1582c8912e3553fda8c1ec6106ae58e7"
+    },
+    {
+      "dosya": "client/src/_core/hooks/useAuth.ts",
+      "byte": 2756,
+      "sha256": "efbbc8d704dedb6ba9f3c6ec2d0beb82c69e6effe4771675d28c51b8291f3cce"
+    },
+    {
+      "dosya": "client/src/components/AIChatBox.tsx",
+      "byte": 10851,
+      "sha256": "c97ae745ae8f4db0b5e1a96d851fe9fd6943c53bc1bc6c28603bce36058ce28a"
+    },
+    {
+      "dosya": "client/src/components/DashboardLayout.tsx",
+      "byte": 8998,
+      "sha256": "4f5d5829ff8a47b800d92a884848b4d7abddeafebb3af939cf5a96624a24f06c"
+    },
+    {
+      "dosya": "client/src/components/DashboardLayoutSkeleton.tsx",
+      "byte": 1628,
+      "sha256": "7b6eab8ac4d4118bdf2be88f23e7db5318d975ac03e6451f773d5eb15feb34cc"
+    },
+    {
+      "dosya": "client/src/components/ErrorBoundary.tsx",
+      "byte": 1688,
+      "sha256": "3b0bdb7a19758fcd440138ccfb5f306b96836564f15d7c8c9663d7dd7417e972"
+    },
+    {
+      "dosya": "client/src/components/ManusDialog.tsx",
+      "byte": 2432,
+      "sha256": "66237a756ee50b4195a074f689aa97dd4ec445cbbc6f0d11f12bb32a6fb4cd0d"
+    },
+    {
+      "dosya": "client/src/components/Map.tsx",
+      "byte": 4988,
+      "sha256": "32336112510f652956bafbeab95de4e9057403a01dd3d24ec77040b850f12317"
+    },
+    {
+      "dosya": "client/src/components/stationos/AssistantPanel.tsx",
+      "byte": 6166,
+      "sha256": "2ed8af548c95d45c152ed4adbcfb40577680f619fd93a014c602d44a795a07d6"
+    },
+    {
+      "dosya": "client/src/components/stationos/BusinessModules.tsx",
+      "byte": 55596,
+      "sha256": "4048047c98f33f0ca636f62814eac37aabe9e14211c33e7d70d623f8ab7b87b4"
+    },
+    {
+      "dosya": "client/src/components/stationos/Common.tsx",
+      "byte": 5307,
+      "sha256": "53a64f3cd5c5937751f656b64fc67723586bbca2d4779cfb6862cc74e3a68348"
+    },
+    {
+      "dosya": "client/src/components/stationos/business.css",
+      "byte": 15500,
+      "sha256": "3a2e2ca091153c2311be6b2f1569a7b7e2198851d2908ca18f240e91def64304"
+    },
+    {
+      "dosya": "client/src/components/ui/accordion.tsx",
+      "byte": 2048,
+      "sha256": "7b96cf50388ad3d07be64924ab33ba5f63b79a6a5749ebe4d31c789c0bc00d44"
+    },
+    {
+      "dosya": "client/src/components/ui/alert-dialog.tsx",
+      "byte": 3866,
+      "sha256": "aeecd7967eb0be3bad2753b6633d9a43cc4c08cb35de872ffdc0b9f2b6a9b26c"
+    },
+    {
+      "dosya": "client/src/components/ui/alert.tsx",
+      "byte": 1622,
+      "sha256": "eccfc7f6ca9d51407cb413a3ca4b5ac721898ac93d38e95c02c35188ad674abe"
+    },
+    {
+      "dosya": "client/src/components/ui/aspect-ratio.tsx",
+      "byte": 269,
+      "sha256": "654f5d6e9ed17472305d7e6fc5de30453875ffae585f5d064aedc9e6945bdbb0"
+    },
+    {
+      "dosya": "client/src/components/ui/avatar.tsx",
+      "byte": 1090,
+      "sha256": "c2382ff71d7ef3492096ed6ef35bf82e1fd421a81d55ca80453f5f5138eac360"
+    },
+    {
+      "dosya": "client/src/components/ui/badge.tsx",
+      "byte": 1639,
+      "sha256": "51fd797c59e63d164ade736769f19f26e41c157daba29aa0b327b3b226f4d4ac"
+    },
+    {
+      "dosya": "client/src/components/ui/breadcrumb.tsx",
+      "byte": 2371,
+      "sha256": "dd84657e30691ea7f14a785c13b660d6cd626c08ba1df8439c3eca858ee3cd7e"
+    },
+    {
+      "dosya": "client/src/components/ui/button-group.tsx",
+      "byte": 2220,
+      "sha256": "ba1d824f0f4d8b5dd78a80fa766e3543eefb9173143652be2c7cb765af1864f5"
+    },
+    {
+      "dosya": "client/src/components/ui/button.tsx",
+      "byte": 2097,
+      "sha256": "b08b4785e03566c7a6063b3d57234deae41649676870cbbb9ab2448d816e1739"
+    },
+    {
+      "dosya": "client/src/components/ui/calendar.tsx",
+      "byte": 7663,
+      "sha256": "89308bce82e8b23b611cfbc88bc19f7b341d7109ab9a2838c04cb50922113501"
+    },
+    {
+      "dosya": "client/src/components/ui/card.tsx",
+      "byte": 1997,
+      "sha256": "1397e7d264d90162220ea7473b311e434651886267c71e7f58d4488be9d8ff39"
+    },
+    {
+      "dosya": "client/src/components/ui/carousel.tsx",
+      "byte": 5603,
+      "sha256": "42f66e6fde568c209df5d58a4ca13c3ae92d120a04fd99f7be695d6a570ef0a9"
+    },
+    {
+      "dosya": "client/src/components/ui/chart.tsx",
+      "byte": 10113,
+      "sha256": "47c4de202fe1dc229af94d2c86197251d279bee131d2a6fb75ab9e58cec71aab"
+    },
+    {
+      "dosya": "client/src/components/ui/checkbox.tsx",
+      "byte": 1218,
+      "sha256": "4fc309590e66d3c41e3be5fb73f988b0e916e7bf5fff321c22c3a64cd4fe97cf"
+    },
+    {
+      "dosya": "client/src/components/ui/collapsible.tsx",
+      "byte": 791,
+      "sha256": "95b5b9ea89a4105045c58b7eba539e57a1f4abc5a54d43ea0f7168f46b645eeb"
+    },
+    {
+      "dosya": "client/src/components/ui/command.tsx",
+      "byte": 4838,
+      "sha256": "47910540789d4de9e890de63bfc0046f9cf6bfaa86d496a98c79622900f8520c"
+    },
+    {
+      "dosya": "client/src/components/ui/context-menu.tsx",
+      "byte": 8284,
+      "sha256": "fe63c0a0dcabe749874ad19e07dee8418337c62dd64452fc08b5abf27b49b9eb"
+    },
+    {
+      "dosya": "client/src/components/ui/dialog.tsx",
+      "byte": 6023,
+      "sha256": "a0d473b7c28d783d8b9733419db6d154557397f588689b8f61e7320853692885"
+    },
+    {
+      "dosya": "client/src/components/ui/drawer.tsx",
+      "byte": 4255,
+      "sha256": "573deecc31f90fcd96f53a37b2e5363eb326fe737cbdb28cac38a5d014734fc8"
+    },
+    {
+      "dosya": "client/src/components/ui/dropdown-menu.tsx",
+      "byte": 8434,
+      "sha256": "ede99252b737a29eb1f05370956e2b842be161b6a661f1429155ac561653d029"
+    },
+    {
+      "dosya": "client/src/components/ui/empty.tsx",
+      "byte": 2406,
+      "sha256": "c0b612929b15fd498b984d8d98d1b082a3eb294be5aa8eb9cb53b67cf152f465"
+    },
+    {
+      "dosya": "client/src/components/ui/field.tsx",
+      "byte": 6057,
+      "sha256": "f093424ca5eadf43d46b020ed780aee7aa5f6d90d0b48fb50c031e3d7b0528c7"
+    },
+    {
+      "dosya": "client/src/components/ui/form.tsx",
+      "byte": 3801,
+      "sha256": "0157362d572713567d989b726277879e75c60c24684ade4aef854867dc2fac48"
+    },
+    {
+      "dosya": "client/src/components/ui/hover-card.tsx",
+      "byte": 1525,
+      "sha256": "bdfe831708e7de6b9fbb14d8fe5af5a0985f67cff3c2b5755b4b570c3b4e7ad5"
+    },
+    {
+      "dosya": "client/src/components/ui/input-group.tsx",
+      "byte": 5066,
+      "sha256": "f62f2be2ad4c2c7711e7b25b0d6c03572f7871cb4022e9f4f6860dcd77dd9e57"
+    },
+    {
+      "dosya": "client/src/components/ui/input-otp.tsx",
+      "byte": 2253,
+      "sha256": "45fc7fed882aa5024d8eea52d9b392d13b1d80f2b7f846365bc2586e3d16253d"
+    },
+    {
+      "dosya": "client/src/components/ui/input.tsx",
+      "byte": 2728,
+      "sha256": "0aaad971269e84519fb14928a70777db539b4cacf9f145fecd905ba483a199c6"
+    },
+    {
+      "dosya": "client/src/components/ui/item.tsx",
+      "byte": 4513,
+      "sha256": "89f2ed48c2270064d63e0a40f755c1da14e99e7db46bceac56d6dee7b45b8798"
+    },
+    {
+      "dosya": "client/src/components/ui/kbd.tsx",
+      "byte": 866,
+      "sha256": "4f8f3e521b2b007643b8a2c8f86cf547bd87e703dc2bed067083ca48f901d6ad"
+    },
+    {
+      "dosya": "client/src/components/ui/label.tsx",
+      "byte": 602,
+      "sha256": "7fdad17d8e83912ad0cfc372c551a901ab98523ef17c0792a17c592a147db732"
+    },
+    {
+      "dosya": "client/src/components/ui/menubar.tsx",
+      "byte": 8405,
+      "sha256": "53fb1c058fabaf0cfb3fb2cfdb9b17ccc8762376d62cc011150d919209b82c1a"
+    },
+    {
+      "dosya": "client/src/components/ui/navigation-menu.tsx",
+      "byte": 6680,
+      "sha256": "aafccbe2b05d9f80b7d007301b51aaede4692efc468304c5fb11b21cd0c0ef43"
+    },
+    {
+      "dosya": "client/src/components/ui/pagination.tsx",
+      "byte": 2726,
+      "sha256": "8f0d822b4688eb131e37fbf2330e19b269ab6487583be3249b98f3b68bb07928"
+    },
+    {
+      "dosya": "client/src/components/ui/popover.tsx",
+      "byte": 1629,
+      "sha256": "5e7bec05904d9091a7b53963f5b49660bf3564b02a057ef8640ab6855d6e32fd"
+    },
+    {
+      "dosya": "client/src/components/ui/progress.tsx",
+      "byte": 731,
+      "sha256": "2297e3c13d5b2a04a9164c3900c8cae2e477c07ebed35c4bbda98d1232ab7b7e"
+    },
+    {
+      "dosya": "client/src/components/ui/radio-group.tsx",
+      "byte": 1459,
+      "sha256": "025f03d81d4e304eb27d94e6517f37072a3941df8f8603ac55cfb42b17cd99ef"
+    },
+    {
+      "dosya": "client/src/components/ui/resizable.tsx",
+      "byte": 2023,
+      "sha256": "52e1027a4b4a5f70f0479f69fe40046dfa112952b7e568292727e1618348ee80"
+    },
+    {
+      "dosya": "client/src/components/ui/scroll-area.tsx",
+      "byte": 1637,
+      "sha256": "793c5d69e6e5ce8bcbe453b8834d53f3a90839fc8e8e1f9fe5f77e7626566677"
+    },
+    {
+      "dosya": "client/src/components/ui/select.tsx",
+      "byte": 6297,
+      "sha256": "40945665ec8363e55ae38f26115ee763cbc5548bed585eed569d406cbc4b7a75"
+    },
+    {
+      "dosya": "client/src/components/ui/separator.tsx",
+      "byte": 690,
+      "sha256": "23bbf3f74d01f55533f6f22ebbc2b299137421e07896cb7af21245756a10c27e"
+    },
+    {
+      "dosya": "client/src/components/ui/sheet.tsx",
+      "byte": 4107,
+      "sha256": "ab22e38f2cf312a31a84fb91f7e912f0da66e809f6e1ae675ec6cf0c8ec0ba61"
+    },
+    {
+      "dosya": "client/src/components/ui/sidebar.tsx",
+      "byte": 21946,
+      "sha256": "5217b07ddc4cfa767cc003ea39cda4a01fcea015a9de42752bb4f800af0475cb"
+    },
+    {
+      "dosya": "client/src/components/ui/skeleton.tsx",
+      "byte": 279,
+      "sha256": "1f75b999a5ad2f65e8fb807faa2b3fccef9eb333996fb4c9030575dac7393091"
+    },
+    {
+      "dosya": "client/src/components/ui/slider.tsx",
+      "byte": 1988,
+      "sha256": "9c458646597836916678a9bce2f3064d4d5cdb0c65d32d92bc71f57d7569fb6b"
+    },
+    {
+      "dosya": "client/src/components/ui/sonner.tsx",
+      "byte": 561,
+      "sha256": "a65fe9ded89363ec546f28401a26caec1a3aa38c52259eb829cfa33723dbe3a5"
+    },
+    {
+      "dosya": "client/src/components/ui/spinner.tsx",
+      "byte": 335,
+      "sha256": "ecd836d476573adb4403747c3457339276805433c20eacf3408303b76ec283ff"
+    },
+    {
+      "dosya": "client/src/components/ui/switch.tsx",
+      "byte": 1168,
+      "sha256": "688cccb52220e05f6770fb5e8296375f2a784bcf6585eb26a721a9f29361ab60"
+    },
+    {
+      "dosya": "client/src/components/ui/table.tsx",
+      "byte": 2445,
+      "sha256": "085566291cf03c9fea590aa9b77339feebf04cf8ce23494a3667f84bf4811e29"
+    },
+    {
+      "dosya": "client/src/components/ui/tabs.tsx",
+      "byte": 1963,
+      "sha256": "394b62295cee5185e858bcabfafcd5a7287910944c962fbd9c1c06444b22cedb"
+    },
+    {
+      "dosya": "client/src/components/ui/textarea.tsx",
+      "byte": 2613,
+      "sha256": "ffbad961ec02f9ca23f4157daa1a4139960c4477a245c216a793b4692dec142c"
+    },
+    {
+      "dosya": "client/src/components/ui/toggle-group.tsx",
+      "byte": 1936,
+      "sha256": "92e7640e30c4ae3ffd775e9a3d845327c26d9ce0f9f39555c2e7cfc2c8671c4d"
+    },
+    {
+      "dosya": "client/src/components/ui/toggle.tsx",
+      "byte": 1563,
+      "sha256": "a922c5e0534b9fd556ff8a8b56e25f7d24544be6050472cdd1ea003b8a0f3e47"
+    },
+    {
+      "dosya": "client/src/components/ui/tooltip.tsx",
+      "byte": 1886,
+      "sha256": "6f0c581e2018d676e43c0b4b5aeb62d3fe68e65907cf748548208d75ac212677"
+    },
+    {
+      "dosya": "client/src/const.ts",
+      "byte": 1661,
+      "sha256": "9136c50c85e0d270794eb9848ba111be4af280d37cb7e8cb9f40787e51c71430"
+    },
+    {
+      "dosya": "client/src/contexts/ThemeContext.tsx",
+      "byte": 1467,
+      "sha256": "e025cdb51ad747757235b16dccbb39b5e949cdf93fa9a822ff81ef6e32f65924"
+    },
+    {
+      "dosya": "client/src/hooks/useComposition.ts",
+      "byte": 2333,
+      "sha256": "674c515075a2f318d4ec2291313ba552488de0b2c1aac7f36f3d71c4e34d434e"
+    },
+    {
+      "dosya": "client/src/hooks/useMobile.tsx",
+      "byte": 584,
+      "sha256": "464e778a9da49481e3c6dac4f92ff589e01349b33063a74c45435cfeed81e1c0"
+    },
+    {
+      "dosya": "client/src/hooks/usePersistFn.ts",
+      "byte": 471,
+      "sha256": "60cc14f39a3f8b212d7baf4beeaf35f81e09a7c78e4154bcca3477e010879511"
+    },
+    {
+      "dosya": "client/src/index.css",
+      "byte": 5845,
+      "sha256": "b0f80913bdb81b376adaf666b19c438422a580bbd0bc7bbf709cd7d3b53b22e6"
+    },
+    {
+      "dosya": "client/src/lib/station-api.ts",
+      "byte": 2921,
+      "sha256": "e4b96d9f1c8266ea342596372d605da0faea14e50648b77688ca0256c96cc0c7"
+    },
+    {
+      "dosya": "client/src/lib/trpc.ts",
+      "byte": 162,
+      "sha256": "d883ad43f46eaf73342924feaf5342ce601d04abe1a828076625071931cc0ef3"
+    },
+    {
+      "dosya": "client/src/lib/utils.ts",
+      "byte": 169,
+      "sha256": "d1f1e0d62cb8d8d1e04c26e14de842d8a151f75812d81b046c65b5d1fe8e4b27"
+    },
+    {
+      "dosya": "client/src/main.tsx",
+      "byte": 3026,
+      "sha256": "20183fc72e9ce1c3226657b2e3c1526c4a4a245723ac92ed16dbc67f7e5b435a"
+    },
+    {
+      "dosya": "client/src/pages/ComponentShowcase.tsx",
+      "byte": 58315,
+      "sha256": "d3905f3521d77e97b7d7c6198a6f915bf45f68223c74552e7e728f4fe10ca79a"
+    },
+    {
+      "dosya": "client/src/pages/Home.tsx",
+      "byte": 924,
+      "sha256": "2a8726f24a490f37f368b665403609322ac7991aac9a514034b8b05b6972de55"
+    },
+    {
+      "dosya": "client/src/pages/LocalLoginForm.tsx",
+      "byte": 2169,
+      "sha256": "db77db5c4eabceb1a2ed64575a22bbd8c5c3d6d92c243e08532230e53178c40a"
+    },
+    {
+      "dosya": "client/src/pages/NotFound.tsx",
+      "byte": 1819,
+      "sha256": "4062794318dde4d0a321e0332cdee2cea68d19c1d9d81889ff425b02ed183f64"
+    },
+    {
+      "dosya": "client/src/pages/StationApp.tsx",
+      "byte": 90317,
+      "sha256": "bdfe3fb96afd927341b68a1164e414e1fe537cf316f410fd183430fbe8fc1335"
+    },
+    {
+      "dosya": "client/src/platform.d.ts",
+      "byte": 214,
+      "sha256": "010f199f453f6cfb4c7ff0a929ce10bb0c21eaf8cc6ed80d3f9b59b25c8d0011"
+    },
+    {
+      "dosya": "client/src/station.css",
+      "byte": 25400,
+      "sha256": "4cb6edfb3feceff33ec6b98a8bc6718299573ee58211512391355af0e928c8c4"
+    },
+    {
+      "dosya": "components.json",
+      "byte": 388,
+      "sha256": "8be0e54515838be398164884e96319b52bcfcbd52b2e63171d51df4131cfcb03"
+    },
+    {
+      "dosya": "compose.yaml",
+      "byte": 1323,
+      "sha256": "d72c0c8dc7c3c238c2296606481c0225f0b860278289c367601c44210738d4cd"
+    },
+    {
+      "dosya": "docs/akaryakıt.txt",
+      "byte": 10691,
+      "sha256": "735a0ccf6e59a4afdf71b44720a6351b7a0d3ddc27e70e44fa199a12c0e56318"
+    },
+    {
+      "dosya": "docs/arastirma-v2.1-uretim-maliyet-kaynaklari.md",
+      "byte": 4926,
+      "sha256": "9376012c84d07acd983095fb61e851ba6aa7fc76235ac35f91fa8a42c80512c2"
+    },
+    {
+      "dosya": "docs/arastirma-v2.2-turpak-kvkk-kaynak-notlari.md",
+      "byte": 3120,
+      "sha256": "99774ac440fae6dfcfba8f202c9be79bc0787717d5db9e7cef0e690bcbe4cc48"
+    },
+    {
+      "dosya": "docs/cari-alacak-erd-v1.2.png",
+      "byte": 744183,
+      "sha256": "a6add4abedf559ee15a65f855f908a2c714623a18434945a861bcaafd7c781b6"
+    },
+    {
+      "dosya": "docs/inceleme-onerileri.md",
+      "byte": 10214,
+      "sha256": "252bf87c9ca4ba83bacc93f4ca48511b3ad780bdc7ad8811bdb1b2b924c009fb"
+    },
+    {
+      "dosya": "docs/inceleme-v1.9-excel-likidite-grafikler.md",
+      "byte": 11116,
+      "sha256": "bd82bff9f6014508f7ce7fc8e273d2ef2091753e34c94da4df9c73e9dd95df47"
+    },
+    {
+      "dosya": "docs/kapsam-ek-v1.1-market-urun.md",
+      "byte": 20252,
+      "sha256": "69bcfd933beafa1a6a81e9bf0a0cace676dc46c27abe0c8984a864dba6280075"
+    },
+    {
+      "dosya": "docs/likidite-v1.8-detayli-inceleme.md",
+      "byte": 13631,
+      "sha256": "5d78e343bfcf7a2dce4d0b766998b652bbd2e1eeff8076f5d09215e3d879697a"
+    },
+    {
+      "dosya": "docs/likidite-v1.8-gunluk-senaryolar.csv",
+      "byte": 7346,
+      "sha256": "41216ccb8469c228272dc774dcebd7b245bcfa2d247ebd2f371f1cc37e6b3e6a"
+    },
+    {
+      "dosya": "docs/likidite-v1.8-hesap-ozeti.json",
+      "byte": 7413,
+      "sha256": "ea788aa3e48701ed3c8309b7a82b434c21c675f17c7e7f473caf5b941d5204cd"
+    },
+    {
+      "dosya": "docs/likidite-v1.8-senaryo-hesaplari.py",
+      "byte": 7918,
+      "sha256": "b649286a7be6eda9b4901e92b08f80e6b6e833177fdb403d0297e391043bfd3f"
+    },
+    {
+      "dosya": "docs/likidite-v1.9-grafik-bos-durum.png",
+      "byte": 130746,
+      "sha256": "15d9b676ff9a0867d26e20e142a9c9051fe7c8f28757e37b8d9d4cfd426b44b9"
+    },
+    {
+      "dosya": "docs/likidite-v1.9-grafik-render.py",
+      "byte": 4396,
+      "sha256": "6bd2ae9ea16435c6209c05bcb1bf73613e2cf59084a49d162f997a367d993a8e"
+    },
+    {
+      "dosya": "docs/likidite-v1.9-grafik-verisi.json",
+      "byte": 362,
+      "sha256": "9f7f2ad45438a676224f29f371f87494babc2dea3da65db24a69db742495ceec"
+    },
+    {
+      "dosya": "docs/maliyet-v2.1-aylik-senaryolar.csv",
+      "byte": 2058,
+      "sha256": "fe8f05f5d89bcf44de44f7e32f69cb1cac26ccf177eb6489af62f468eeff46e4"
+    },
+    {
+      "dosya": "docs/maliyet-v2.1-hesap-sonuclari.json",
+      "byte": 11455,
+      "sha256": "9f6cef113e792ceaa9c2cd89503661023b934a8591d90e1299e40432586b1125"
+    },
+    {
+      "dosya": "docs/maliyet-v2.1-hesapla.py",
+      "byte": 8341,
+      "sha256": "4906fe1b224938cbf9522013a5a0229bdd0719bcaf08c514695b5bdcd17671f8"
+    },
+    {
+      "dosya": "docs/maliyet-v2.1-parametreler.json",
+      "byte": 2724,
+      "sha256": "ce3f958fbcd56104aa5319cddfd491dc76cd8cc64cc37e1d635490bb51439404"
+    },
+    {
+      "dosya": "docs/mimari-v2.2-turpak-dosya-ocr-kvkk-guvenlik.md",
+      "byte": 35285,
+      "sha256": "5cdc90032ab56c493971094ed6e172a35f6fd4622d0b1fccc170c4e9a9dc97ae"
+    },
+    {
+      "dosya": "docs/ornek-kod-v1.9/README.md",
+      "byte": 16282,
+      "sha256": "5ac680f7aa06083636320b92a5704889df054a8b9c591c44de7ffae015374fa1"
+    },
+    {
+      "dosya": "docs/ornek-kod-v1.9/domain.mjs",
+      "byte": 36814,
+      "sha256": "13ea5b83cfe0533ecebac5d6550af41d814cba57c53ee04e98d4ab0daf0920c5"
+    },
+    {
+      "dosya": "docs/ornek-kod-v1.9/domain.test.mjs",
+      "byte": 21693,
+      "sha256": "2a2c0214e8a2d08a03d1f8ce9c2e6e4cdf9a30094f38236a67088820e66c318c"
+    },
+    {
+      "dosya": "docs/ornek-kod-v1.9/manifest.webmanifest",
+      "byte": 255,
+      "sha256": "d6c660c989fa3eb0eb6a0ec1d47e3b4a7a03303eae38ba5b83a40ce1130eb864"
+    },
+    {
+      "dosya": "docs/ornek-kod-v1.9/muhasebe-service.sql",
+      "byte": 12976,
+      "sha256": "84c69c88cf932d736ca4d061df693daf2f921ace2734c420ef83e0d17fe49a41"
+    },
+    {
+      "dosya": "docs/ornek-kod-v1.9/offline.html",
+      "byte": 459,
+      "sha256": "1c83990411122fcfa995383c82e10499bb8fcca14a6db75d14682b9a6701ed74"
+    },
+    {
+      "dosya": "docs/ornek-kod-v1.9/pwa-client.mjs",
+      "byte": 2643,
+      "sha256": "42df68febfd22957d6a970e1bcf88aff1abcc733532546cbdbec3329a0c9c411"
+    },
+    {
+      "dosya": "docs/ornek-kod-v1.9/pwa-client.test.mjs",
+      "byte": 2113,
+      "sha256": "217fbd0f2f456d854fb2a4628748cd9fb33fd07fa5b9a8a1bd11d9be0ebab8ed"
+    },
+    {
+      "dosya": "docs/ornek-kod-v1.9/service-worker.js",
+      "byte": 1576,
+      "sha256": "44fad6cbb3cf53a0691b0bff6314c39b8f9b262b23b4f7feca49bccc5ff8b259"
+    },
+    {
+      "dosya": "docs/ornek-v2.2-kaynak-aktarim-sozlesmesi.json",
+      "byte": 4770,
+      "sha256": "1d1333c84841707e51dc92dee09aaf21a1b7e86b8d71a140bc24082558036b4f"
+    },
+    {
+      "dosya": "docs/pilot-v1.8-canliya-gecis-kontrol-risk-plani.md",
+      "byte": 22004,
+      "sha256": "d623d02828885d40daa1942da2002baab4597122cb30af5d3e6e54144eb9b67b"
+    },
+    {
+      "dosya": "docs/pilot-v1.9-46-kontrol-uygulama-runbook.md",
+      "byte": 21453,
+      "sha256": "0611c00c5c697e5a231b38b78ae8289b372bc5f4c0ec42bdef0043b5b57c33fa"
+    },
+    {
+      "dosya": "docs/pilot-v1.9-gercek-veri-toplama.xlsx",
+      "byte": 76611,
+      "sha256": "86e8836cd55c0ed424016304e7ffa27a82d8a4fc1f69af340ac0619c06b458f2"
+    },
+    {
+      "dosya": "docs/prototip-v1.6-firma-mobil.png",
+      "byte": 108496,
+      "sha256": "cc3847fe856dc7d420445269021aa9a81df2183d13834ceeda56b04f6393f187"
+    },
+    {
+      "dosya": "docs/prototip-v1.6-onay-kuyrugu.png",
+      "byte": 171046,
+      "sha256": "ae7c3fa42cf3dca49a69adba5964ae63a8350f87577192a1cdd96d46e1d05e28"
+    },
+    {
+      "dosya": "docs/prototip-v1.7-likidite.png",
+      "byte": 198387,
+      "sha256": "649cbdc6b465028fdf244fab189fef4f8277822b90ac24a022751ef3725d0287"
+    },
+    {
+      "dosya": "docs/prototip-v1.7-raporlama.png",
+      "byte": 218845,
+      "sha256": "a5115c7b9ca53591463902158fa1b529d20f1a91437eb7bb0ed4e79ad5174791"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/README.md",
+      "byte": 4398,
+      "sha256": "d3c031d92d49d85c60238138c0ed41176d27c02015a2214bec5ba7671a1cd765"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/TODO.md",
+      "byte": 1207,
+      "sha256": "117c38b54d9de36ecc68837d8eef728c8bb83667936694e02ea17361f48899ae"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/domain.mjs",
+      "byte": 36814,
+      "sha256": "13ea5b83cfe0533ecebac5d6550af41d814cba57c53ee04e98d4ab0daf0920c5"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/plan.md",
+      "byte": 2688,
+      "sha256": "2ef42d15438c9a8c8cd82a9b48549fb2db6a97604ca2129435107ffac5a4c59d"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/public/app.css",
+      "byte": 11347,
+      "sha256": "6fd19bc7bc5e494b5811410d9f242f6815018d70251165bf1bf5119b9bc575cd"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/public/app.mjs",
+      "byte": 32485,
+      "sha256": "132683b17fd6be56a87c2ead39537f4e7ad13c7d0d2dd50b4bea1f967df5991d"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/public/index.html",
+      "byte": 2926,
+      "sha256": "62ea6022af05f42dea8f94aa038d19f6b9c8823b16f08b3a6cb60a74545b2158"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/public/manus-routes.json",
+      "byte": 228,
+      "sha256": "e8703a61029f0826b494e53e990b9e6d8e0ddb00ce0ae4f0a58dfad69d77f7a4"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/public/yonetim.html",
+      "byte": 75920,
+      "sha256": "2002587ac2cf1974fac3ea9c1de9556fb0444fa6b29ccebeaafc185d9f85f96b"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/server.mjs",
+      "byte": 48766,
+      "sha256": "70e685ab84e17eef22070349eeda58ffeab40e90ab960ddd431c6d721cd06c48"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/test-sonuclari.md",
+      "byte": 4573,
+      "sha256": "6cdd379209bfd0a126e9f997632d8b1d4d1a0bceb55cc4a9a581e1610c300317"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/tests/api.test.mjs",
+      "byte": 17687,
+      "sha256": "bd9bee15974f87a89ad4556bbcc7c19b386c8a402261da3862b9cea980edf0ea"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/tests/browser-flow.py",
+      "byte": 5378,
+      "sha256": "8e86356cd1d8ddef49f3feaf93f355ae3101493e1647768bc8d0ffdc4af80d8a"
+    },
+    {
+      "dosya": "docs/prototip-v2.0/tests/regression.test.mjs",
+      "byte": 4586,
+      "sha256": "d74f0a21d7eb58b2e9333a10b30fb15bcf47878951f3899a0436657be1fb5237"
+    },
+    {
+      "dosya": "docs/queries-v1.6-stockout-supplier-risk.sql",
+      "byte": 9916,
+      "sha256": "b58b5dbf8d0816be29722ecb94b63b4d62055081025f241398dd5845ea625be7"
+    },
+    {
+      "dosya": "docs/schema-v1.4-shift-ocr-ar-purchase.sql",
+      "byte": 47941,
+      "sha256": "4e811ddde13cf80f07dffc6bc4e01456afa99ce18c7cde76223ebe390be9752a"
+    },
+    {
+      "dosya": "docs/schema-v1.5-company-rbac-approvals.sql",
+      "byte": 34349,
+      "sha256": "8bc0c6ffacc56fac5bd358f0eba63cf9599933bf0aacb0aea974e01030ba5978"
+    },
+    {
+      "dosya": "docs/tasarim-v1.4-mobil-ui-ddl-satin-alma.md",
+      "byte": 26428,
+      "sha256": "34fcf98b4ed25d53e88571d139214c96dc26da386eb0b6241b536c7f2c81e7ae"
+    },
+    {
+      "dosya": "docs/tasarim-v1.5-mutabakat-satin-alma-firma-yetki.md",
+      "byte": 50447,
+      "sha256": "57763d8fcf1bef59ed72c8a1abcca68588042aaf0d783c4101259a20f874417f"
+    },
+    {
+      "dosya": "docs/tasarim-v1.6-yonetici-muhasebe-risk-prototip.md",
+      "byte": 17841,
+      "sha256": "1fa83e24f1b55f05b4356c5cbd87f960660115157dd4d69aed99d0f5797dbbfc"
+    },
+    {
+      "dosya": "docs/tasarim-v1.7-raporlama-finans-olay-testleri.md",
+      "byte": 11925,
+      "sha256": "0cf2d7f45bf9c1f09dbc029d2a80b31d4b70b12143b4b0e6bf28d442fc22a0b1"
+    },
+    {
+      "dosya": "docs/tasarim-v1.9-personel-mobil-vardiya-ocr-muhasebe.md",
+      "byte": 26411,
+      "sha256": "0a10a505f55b339ae9e37e58c3c976ee60922add05dde7d9826459859ef92fe2"
+    },
+    {
+      "dosya": "docs/teknik-planlama-v1.2-akaryakit-market-api-erd.md",
+      "byte": 117873,
+      "sha256": "00b89ae0f31e9d86c33e7472f7259fc66c75e345f058e6fa8d83ddc83b2c1644"
+    },
+    {
+      "dosya": "docs/teknik-planlama-v1.3-mobil-vardiya-ocr-api-migration.md",
+      "byte": 164478,
+      "sha256": "a7ad3041f4b1b64dce7a6a75d1505cebf60bb6df9bdef8a4310f708ab1eb903b"
+    },
+    {
+      "dosya": "docs/teknik-v1.9-pwa-ocr-onay-kod-rehberi.md",
+      "byte": 13465,
+      "sha256": "686ff17cfb506d0d630ede4c433ae938fddc2fd72fe9db1a2bbda7d1a0828866"
+    },
+    {
+      "dosya": "docs/test-v1.7-stok-cari-olaylar.py",
+      "byte": 44543,
+      "sha256": "2c4874892f30f552ba30464c7bc94c1615af77abc6071bab65d116c09fe88943"
+    },
+    {
+      "dosya": "docs/test-v1.7-stok-cari-sonuclari.md",
+      "byte": 7185,
+      "sha256": "d5c9e9b7f8774223dff29f872694e20b5c1ef92fd28eba174295fd3045a194c7"
+    },
+    {
+      "dosya": "docs/ui-wireframe-v1.4-01-vardiya-secimi.png",
+      "byte": 116672,
+      "sha256": "5c4830098df8ed3f08ea84357739f27251e1fac38d4b050393b1fd7b21972bf9"
+    },
+    {
+      "dosya": "docs/ui-wireframe-v1.4-02-kapanis-beyani.png",
+      "byte": 163340,
+      "sha256": "6fac9d1de6c39b651547878138dabce6fc11a0b99b3dd1eb08c2d96a2caaaf8f"
+    },
+    {
+      "dosya": "docs/ui-wireframe-v1.4-03-slip-listesi.png",
+      "byte": 120967,
+      "sha256": "e4f421fa5b4c92266912b1c0fbe8440e1a657b4df8365a7736150ecb6709bf74"
+    },
+    {
+      "dosya": "docs/ui-wireframe-v1.4-04-ocr-dogrulama.png",
+      "byte": 117908,
+      "sha256": "c3708eb856198b4d1c8b4b44e3fe6f9988372b3d2c277fcd021e9adf318c7072"
+    },
+    {
+      "dosya": "docs/ui-wireframe-v1.4-05-yetkili-mutabakat.png",
+      "byte": 165784,
+      "sha256": "fcefbec76d3118f380306fcaac1900f6ea5c9a858c578e1dfa361eb2a46b2e65"
+    },
+    {
+      "dosya": "docs/ui-wireframe-v1.4-interactive-akis.png",
+      "byte": 204327,
+      "sha256": "de69616ff1b6ea2cfea1d157e5c639c68cb03555e598ca47e77b12ad0a0d7cb6"
+    },
+    {
+      "dosya": "docs/ui-wireframe-v1.4-interactive-gallery.png",
+      "byte": 338571,
+      "sha256": "da3b08bbf1974e8ef2896825f43f548b0300beef4b1b054e0d9c76ba8851a7e6"
+    },
+    {
+      "dosya": "docs/ui-wireframe-v1.4.html",
+      "byte": 75611,
+      "sha256": "b33e95d30b37ddf7e15a62edd89f0727d939d86243031e806d09f596dcce868d"
+    },
+    {
+      "dosya": "docs/uretim-v2.1-bulut-turpak-ocr-maliyet-plani.md",
+      "byte": 25843,
+      "sha256": "5de1a5c06ecb292f8d566bc85eb9ddf753008a45e5c4de0520af8f28c2787f0e"
+    },
+    {
+      "dosya": "docs/yonetim-kurulu-sunum-senaryosu-v1.7.md",
+      "byte": 8425,
+      "sha256": "dc5bcacec57a91e9114b6e7c8823817728a97b82672d63515014bd0b924501f3"
+    },
+    {
+      "dosya": "docs/yonetim-kurulu-v1.9-sunum-senaryosu.md",
+      "byte": 5144,
+      "sha256": "5e0f50485fbb926198204bbfcf6c48ba11285ca083b85bfdd38db88f10dbb71a"
+    },
+    {
+      "dosya": "drizzle.config.ts",
+      "byte": 353,
+      "sha256": "9610673b3fe7b6b950a8e7e54cb1e91f9dd25f87d7ae6a41d2f6ada957065d01"
+    },
+    {
+      "dosya": "drizzle/0000_initial_users.sql",
+      "byte": 497,
+      "sha256": "96168d50097c6d417b7449651a2e617a98e7ffd93dbc832e9cf1d2a0c237a0ec"
+    },
+    {
+      "dosya": "drizzle/meta/0000_snapshot.json",
+      "byte": 2593,
+      "sha256": "3373992fde36bcda0608d39dc4e51274c01b9505a4616a260a3845c00afad816"
+    },
+    {
+      "dosya": "drizzle/meta/_journal.json",
+      "byte": 203,
+      "sha256": "4c8c0367ee3891ddc2aa0e4f32d26a1b7060491c515da61f4d14b90f249b0184"
+    },
+    {
+      "dosya": "drizzle/migrations/.gitkeep",
+      "byte": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "dosya": "drizzle/relations.ts",
+      "byte": 27,
+      "sha256": "85acb8ece8fbb5031fc56fa8c70338d9b8b06ef3b032391fff8532c6373c7186"
+    },
+    {
+      "dosya": "drizzle/schema.ts",
+      "byte": 1195,
+      "sha256": "4f673120db7988710f9dbe7abce5189e91af08c57cc3053069fcf9179fcd289c"
+    },
+    {
+      "dosya": "package.json",
+      "byte": 3656,
+      "sha256": "139cd2917039ce1538d5a244b6af422e9067f4332d7f4343d8d3d8d3fa999f41"
+    },
+    {
+      "dosya": "patches/wouter@3.7.1.patch",
+      "byte": 918,
+      "sha256": "4e16e6ff3fde7d6c1024d3e0c8605dc9eb6afb690d0d49958c2f449091813072"
+    },
+    {
+      "dosya": "plan.md",
+      "byte": 3594,
+      "sha256": "c9a7e88dc6f8cec7ff6e91e9a14069fbb9138e6931725729321837bd530bf941"
+    },
+    {
+      "dosya": "pnpm-lock.yaml",
+      "byte": 321757,
+      "sha256": "b82d742cc6e234262af5c95a74c4fffbb00725ad82e6c9de49e3766302d7d87f"
+    },
+    {
+      "dosya": "pnpm-workspace.yaml",
+      "byte": 179,
+      "sha256": "2dea379ce6ecf9c8a824f599e3c325188b3870e93b71885fa907e17bbd2e43a0"
+    },
+    {
+      "dosya": "scripts/cloud-config.mjs",
+      "byte": 2299,
+      "sha256": "7904d24d8d22709ea4c5a602bb0bb2bc3793f3b6ec35b0fc653d35976640e7bb"
+    },
+    {
+      "dosya": "scripts/cloud-db-start.sh",
+      "byte": 1403,
+      "sha256": "b1b1a416c74a25923f0dd9b18ce321b8dd92c67aba69e83c972a6ed2542add75"
+    },
+    {
+      "dosya": "scripts/cloud-install.sh",
+      "byte": 1613,
+      "sha256": "52d14b207cc5c71473ad8ce5ee9bdb41f9f809c3bc9ea0b62e8cb1970c55e6a7"
+    },
+    {
+      "dosya": "scripts/cloud-start.sh",
+      "byte": 157,
+      "sha256": "447c7d11e5834878acca6c62574b5dd718e80fd65d24a8525cf7c27cc34c0c6b"
+    },
+    {
+      "dosya": "scripts/container-start.mjs",
+      "byte": 882,
+      "sha256": "1b80691749cce174906f1b3d7245fea279797904de203bea80b8f002206e2697"
+    },
+    {
+      "dosya": "scripts/run.mjs",
+      "byte": 572,
+      "sha256": "f2a07a0097386302b9146df27c6a018edef65a57f172396d211d56e6a975bc6c"
+    },
+    {
+      "dosya": "scripts/smoke-local.ts",
+      "byte": 8847,
+      "sha256": "869c3131ae4098e149f8c4851fe21b41c897ef9a19e4ef8d59268ce68eaed745"
+    },
+    {
+      "dosya": "server/_core/context.ts",
+      "byte": 658,
+      "sha256": "a43ea9ca8624270a83857d61a7154f17c48bb2c19126d1ee037a37345f6bda86"
+    },
+    {
+      "dosya": "server/_core/cookies.ts",
+      "byte": 453,
+      "sha256": "49a0a33bca995949a7ee371683e07f64a20e96e7ea102deaacf6ba3c8e1490bf"
+    },
+    {
+      "dosya": "server/_core/dataApi.ts",
+      "byte": 1881,
+      "sha256": "0cc7c30454ab6ab4d1b2ca04566237cccd951ad2276cf85a510a36c142201e2c"
+    },
+    {
+      "dosya": "server/_core/env.ts",
+      "byte": 887,
+      "sha256": "04ea6e86f9b7a47b51f6a086ae42db1ba65bfa491374d9ee2b28bc19b64962c6"
+    },
+    {
+      "dosya": "server/_core/heartbeat.ts",
+      "byte": 6755,
+      "sha256": "4e939797cf350e8b05d9ac2b69be9e904f8cf2125c945d0a1fbd8b1667a38c5a"
+    },
+    {
+      "dosya": "server/_core/imageGeneration.ts",
+      "byte": 4878,
+      "sha256": "6e03c012301183c9475ea6442a7935990d9d0345d08ddb49942714ba7d31e8f5"
+    },
+    {
+      "dosya": "server/_core/index.ts",
+      "byte": 2144,
+      "sha256": "49b74d0c02289190c2431b0db1a6993e769aded08b022d4f4e4977fe86b0b85a"
+    },
+    {
+      "dosya": "server/_core/llm.ts",
+      "byte": 10884,
+      "sha256": "2c0ce0c00da78bd32cc157f9d74ac89103a628a394b1c238ff0b6ecc7e883070"
+    },
+    {
+      "dosya": "server/_core/map.ts",
+      "byte": 9126,
+      "sha256": "feb00c01c41bf3a9ab409c543018c7524c1b92179dc7fa775a197a8f2959409b"
+    },
+    {
+      "dosya": "server/_core/notification.ts",
+      "byte": 3139,
+      "sha256": "550bf6544bf792b6d13c68539679deb363b70fbf07c0dbde189a98787f66f003"
+    },
+    {
+      "dosya": "server/_core/oauth.ts",
+      "byte": 2480,
+      "sha256": "ee81d03837e70e7d9ec409f5477aaead1522554ef3113c7787a1bfc8e146af56"
+    },
+    {
+      "dosya": "server/_core/publicConfig.ts",
+      "byte": 648,
+      "sha256": "4cb0e99904c50e203c85e02d14b3ffe96a884315f1ab9b86020aaa2459bf6101"
+    },
+    {
+      "dosya": "server/_core/sdk.ts",
+      "byte": 10555,
+      "sha256": "3deca71ea42bccb8b2f63fc2271cb2ca774e2a83c8819dac14913fa317173d5e"
+    },
+    {
+      "dosya": "server/_core/storageProxy.ts",
+      "byte": 1392,
+      "sha256": "dec37a868cf4d82d4cadf18ba279e3aa60ff863c9026ecd2a2165650d2d968e0"
+    },
+    {
+      "dosya": "server/_core/systemRouter.ts",
+      "byte": 709,
+      "sha256": "61bb2c904da1fa08a425f8882aa3b23003bba7266ce00b2d9fcd685e5d4bffaf"
+    },
+    {
+      "dosya": "server/_core/trpc.ts",
+      "byte": 1033,
+      "sha256": "95679492e0478938f9bab6e3388ba6a95d3ab3329e6ff2eb9686e638cd07d98e"
+    },
+    {
+      "dosya": "server/_core/types/cookie.d.ts",
+      "byte": 137,
+      "sha256": "c2ed733d67b16ae4621164dbce09e99de0233b4a0ed05227bc35096822173c05"
+    },
+    {
+      "dosya": "server/_core/types/manusTypes.ts",
+      "byte": 1406,
+      "sha256": "d073995b792a4376177bf7270cbcf3a670d4e72efb8eb6a83ecb55043cc729c3"
+    },
+    {
+      "dosya": "server/_core/vite.ts",
+      "byte": 1901,
+      "sha256": "957da5abe4ca740e48fedf9cd3c26ce1c9eca473ed50d7e7588f2173798f6b1b"
+    },
+    {
+      "dosya": "server/_core/voiceTranscription.ts",
+      "byte": 8026,
+      "sha256": "6d59dce1eb7f40ab6a9d2203cbd49bb90eb1141bc3389ff3c8a57987b62901c7"
+    },
+    {
+      "dosya": "server/auth.logout.test.ts",
+      "byte": 1721,
+      "sha256": "eeddbdaa93cd8287db2ea91305a6c3b3e0a1a6134b4d9840abe4d97f538d9abb"
+    },
+    {
+      "dosya": "server/db.ts",
+      "byte": 2474,
+      "sha256": "2fb0fab1b6f5ed492180fed6901abe9518ce6d86f2954461f7e8e2fcd7cf6ad7"
+    },
+    {
+      "dosya": "server/local-auth.test.ts",
+      "byte": 1168,
+      "sha256": "60554d889b15a75a17d11dcebfaf6ef78f77af40dd9d99ca2cbf86d85d511262"
+    },
+    {
+      "dosya": "server/local-auth.ts",
+      "byte": 6259,
+      "sha256": "7485aa81a081857a435f2145d01738161c476432fc01ba387e79f7ef2a2b0ba4"
+    },
+    {
+      "dosya": "server/platform.test.ts",
+      "byte": 3695,
+      "sha256": "3e401caf9a96a23a275e6c0fc0d8d00a758cc34eecf12de05613a9fafb4673da"
+    },
+    {
+      "dosya": "server/routers.ts",
+      "byte": 1384,
+      "sha256": "d62dd6a1d7641ab95a456b5cd9e0fbf1f0dae9ea41f5cbf805715280805fe67f"
+    },
+    {
+      "dosya": "server/stationos/README.md",
+      "byte": 4024,
+      "sha256": "bde9b2b8933dc5e1647dc168d812cc0fcf9b3fca9d8fa7be48fc75a2c4d3e324"
+    },
+    {
+      "dosya": "server/stationos/assistant.test.ts",
+      "byte": 2684,
+      "sha256": "363f4413a38295ccde051503d7bdfdc782000ecc1e16b673c4ac6d17b171eacf"
+    },
+    {
+      "dosya": "server/stationos/assistant.ts",
+      "byte": 6363,
+      "sha256": "6f6f85223d7f22a7872b3bca0f88f4dfd23a096dd1cf887a05c57ed52795cd7d"
+    },
+    {
+      "dosya": "server/stationos/client-contract.test.ts",
+      "byte": 3355,
+      "sha256": "e87966d8a7f8fb7301520a5338ded1c7714943479da0c33a0a16e73d0ee7d4f4"
+    },
+    {
+      "dosya": "server/stationos/database-rollback-check.ts",
+      "byte": 5105,
+      "sha256": "3d25166793b2b413fc8337ac6eeb8c06810308dc605716ccbf04f3e364cd7351"
+    },
+    {
+      "dosya": "server/stationos/db.ts",
+      "byte": 1976,
+      "sha256": "cc7b64d677525fa09c0aebb7e494a48d239b02c30def247465ebc9a5eb43f759"
+    },
+    {
+      "dosya": "server/stationos/domain.test.ts",
+      "byte": 1554,
+      "sha256": "0636ddf345af7a0878ebccf09a41dedffa7d1c84101291d34477a20e866d366d"
+    },
+    {
+      "dosya": "server/stationos/domain.ts",
+      "byte": 7492,
+      "sha256": "a672e1a44923ff07074dbbdb103a5613fb51d019f02296ff8e9158f0358dcb54"
+    },
+    {
+      "dosya": "server/stationos/index.ts",
+      "byte": 84763,
+      "sha256": "21c97f9b00beb23325f814a4bea33f1fda78b3a8a37b7a4ac713ead2748ec955"
+    },
+    {
+      "dosya": "server/stationos/migrate.ts",
+      "byte": 1754,
+      "sha256": "025940672878b1f8c04423c33d0533f40549ca0c9d52bd079adf54d8ee5b38a1"
+    },
+    {
+      "dosya": "server/stationos/migrations/0001_stationos.sql",
+      "byte": 15080,
+      "sha256": "c5d797d7e57f82329eb0fc1742c6df10067db9bde9bbb63a7b8b684a641b2965"
+    },
+    {
+      "dosya": "server/stationos/migrations/0002_slip_identity.sql",
+      "byte": 209,
+      "sha256": "6e2b6cc6ed7b615686c0e35a124116385a8a79de7e3c8f1ea3c7c74f2bb0ea06"
+    },
+    {
+      "dosya": "server/stationos/migrations/0003_slip_identity_index.sql",
+      "byte": 199,
+      "sha256": "8fc73483ba2d908ba0c94ea2e2a1b51b098e61f8c2ec90d52505c811cb6a5db1"
+    },
+    {
+      "dosya": "server/stationos/migrations/0004_account_events.sql",
+      "byte": 608,
+      "sha256": "df16f1203b524f4df1e8ee2a70cb9941b59f309d949d19f384197d6c2af3c903"
+    },
+    {
+      "dosya": "server/stationos/migrations/0005_assistant_requests.sql",
+      "byte": 578,
+      "sha256": "8175cf276ca96bd12dfb52397bb2db2fbe2bab307c01106def78868aec2a5901"
+    },
+    {
+      "dosya": "server/stationos/migrations/0006_local_auth.sql",
+      "byte": 628,
+      "sha256": "970137e338f550271cbc1472e2b4c9d6ba0db4820384bfb17dfcc43b600354b0"
+    },
+    {
+      "dosya": "server/stationos/safety.test.ts",
+      "byte": 1417,
+      "sha256": "4e87222c1f4cf3ceff2967e0006fda9acb478239b9fcb6921f5d1e0386d91d7c"
+    },
+    {
+      "dosya": "server/stationos/safety.ts",
+      "byte": 2139,
+      "sha256": "99defa91c125b6161a0b1840be98b8785bddec5d659c1d681cdabc439778e494"
+    },
+    {
+      "dosya": "server/stationos/types.ts",
+      "byte": 1274,
+      "sha256": "5c14a5a3a2b94b1c5f53d87f4ebfe159f17a2521d17d3a5d0dd6c101d0747d8e"
+    },
+    {
+      "dosya": "server/storage.ts",
+      "byte": 3104,
+      "sha256": "9b463c87c12c95d13281e8d27ed330470ce1be238a986e632b9ff644c9d31a1d"
+    },
+    {
+      "dosya": "shared/_core/errors.ts",
+      "byte": 601,
+      "sha256": "52bee7d152045eaa009083e26a4cbc21d413c80b0403a23c4b5572141dec942a"
+    },
+    {
+      "dosya": "shared/const.ts",
+      "byte": 1553,
+      "sha256": "551e9fdceccab8baeff81a29886871b7b870ed0d2095cfdf4d6718742b0e0479"
+    },
+    {
+      "dosya": "shared/station-contract.md",
+      "byte": 6051,
+      "sha256": "f5d2286f650b0f87388b681c737d146a491207e7fccbd4014c092e0b0215157a"
+    },
+    {
+      "dosya": "shared/station.ts",
+      "byte": 4855,
+      "sha256": "912a248e8112c011fbf54d78207e952ff30be3f0e9f547d33882c6c3974f0ded"
+    },
+    {
+      "dosya": "shared/types.ts",
+      "byte": 158,
+      "sha256": "959aeb30b032e203677e278922e97988b7cbcb56485694458298859af5589974"
+    },
+    {
+      "dosya": "template.json",
+      "byte": 636,
+      "sha256": "12bbe98cce88cbf629a0a626be64329fc656c312039b8790f8c30b8e916c0002"
+    },
+    {
+      "dosya": "tsconfig.json",
+      "byte": 681,
+      "sha256": "d45d3c5a9d90eba9871d4221a3539ce36524f8e84094890389b2e690905bfa91"
+    },
+    {
+      "dosya": "vite.config.ts",
+      "byte": 6563,
+      "sha256": "6608673603d333359b4e1e238dfb3c72e9e64caba1cce029d61ed6484c262b1a"
+    },
+    {
+      "dosya": "vitest.config.ts",
+      "byte": 499,
+      "sha256": "a0de83b3967226a98302bbb34aa2e1321890dba9ac1d1c8ce8a6b7989af87e44"
+    }
+  ]
+}

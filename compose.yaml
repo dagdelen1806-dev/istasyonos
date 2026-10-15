@@ -1,0 +1,45 @@
+name: istasyonos-masaustu
+services:
+  db:
+    image: mariadb:11.8
+    environment:
+      MARIADB_DATABASE: istasyonos
+      MARIADB_USER: istasyonos
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Run KUR.ps1 first}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Run KUR.ps1 first}
+    ports:
+      - "127.0.0.1:${DB_PORT:-3307}:3306"
+    volumes:
+      - database:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    restart: unless-stopped
+  app:
+    build: .
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      AUTH_PROVIDER: local
+      APP_ID: istasyonos-desktop
+      SESSION_SECRET: ${SESSION_SECRET:?Run KUR.ps1 first}
+      DATABASE_URL: mysql://istasyonos:${DB_PASSWORD}@db:3306/istasyonos
+      COOKIE_SECURE: "false"
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["node", "scripts/container-start.mjs"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+volumes:
+  database:

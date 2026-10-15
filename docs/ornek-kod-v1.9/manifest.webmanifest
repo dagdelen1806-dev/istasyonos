@@ -1,0 +1,11 @@
+{
+  "id": "/personel/",
+  "name": "Akaryakıt Personel Vardiya",
+  "short_name": "Vardiyam",
+  "lang": "tr-TR",
+  "start_url": "/personel/",
+  "scope": "/personel/",
+  "display": "standalone",
+  "theme_color": "#0F766E",
+  "background_color": "#F8FAFC"
+}

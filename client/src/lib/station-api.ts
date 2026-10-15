@@ -1,0 +1,100 @@
+import type { AppState } from "@shared/station";
+import { COOKIE_NAME } from "@shared/const";
+
+let memoryDeviceId: string | undefined;
+export function getDeviceIdentity() {
+  if (!memoryDeviceId) {
+    try {
+      memoryDeviceId = localStorage.getItem("stationos-device-id") || undefined;
+    } catch {
+      /* memory fallback */
+    }
+    if (!memoryDeviceId) memoryDeviceId = crypto.randomUUID();
+    try {
+      localStorage.setItem("stationos-device-id", memoryDeviceId);
+    } catch {
+      /* memory fallback */
+    }
+  }
+  const kind = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    ? "MOBILE"
+    : "DESKTOP";
+  return { deviceId: memoryDeviceId, kind };
+}
+
+export class ApiError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public status = 0
+  ) {
+    super(message);
+  }
+}
+function headers(csrf?: string): Record<string, string> {
+  const device = getDeviceIdentity();
+  const h: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Stationos-Request": "1",
+    "X-Stationos-Device-Id": device.deviceId,
+    "X-Stationos-Device-Kind": device.kind,
+  };
+  if (csrf) h["X-CSRF-Token"] = csrf;
+  try {
+    const raw = window.__MANUS_CONFIG__?.authProvider === "manus" ? sessionStorage.getItem("manus-cookie") : null;
+    const prefix = `${COOKIE_NAME}=`;
+    const pair = raw?.split(";").find(s => s.trim().startsWith(prefix));
+    const token = pair?.trim().slice(prefix.length);
+    if (token) h.Authorization = `Bearer ${token}`;
+  } catch {
+    /* cookie is primary */
+  }
+  return h;
+}
+async function request(path: string, body?: object, csrf?: string) {
+  let response: Response;
+  try {
+    response = await fetch(`/api/stationos${path}`, {
+      method: body ? "POST" : "GET",
+      credentials: "include",
+      cache: "no-store",
+      headers: headers(csrf),
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(
+      "NETWORK_UNCERTAIN",
+      "Sunucu yanıtı alınamadı. İşlem kaydedilmiş olabilir; aynı işlem kimliğiyle tekrar deneyin."
+    );
+  }
+  let data: any;
+  try {
+    data = await response.json();
+  } catch {
+    throw new ApiError(
+      "RESPONSE_UNCERTAIN",
+      "Sunucudan geçerli yanıt alınamadı; aynı işlem kimliği korunuyor."
+    );
+  }
+  if (!response.ok || data.ok === false)
+    throw new ApiError(
+      data.error?.code || "REQUEST_FAILED",
+      data.error?.message || "İşlem tamamlanamadı.",
+      response.status
+    );
+  return data;
+}
+export async function loadState(stationId?: string): Promise<AppState> {
+  const data = await request(
+    `/state${stationId ? `?stationId=${encodeURIComponent(stationId)}` : ""}`
+  );
+  return data.state || data;
+}
+export async function mutate(
+  path: string,
+  payload: Record<string, unknown>,
+  requestId: string,
+  csrf?: string
+) {
+  return request(path, { ...payload, requestId }, csrf);
+}

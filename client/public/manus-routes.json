@@ -1,0 +1,52 @@
+{
+  "routes": [
+    {
+      "path": "/",
+      "title": "Genel bakış"
+    },
+    {
+      "path": "/vardiyalar",
+      "title": "Vardiya hesapları"
+    },
+    {
+      "path": "/slipler",
+      "title": "Slip ve ödeme"
+    },
+    {
+      "path": "/muhasebe",
+      "title": "Muhasebe onay kuyruğu"
+    },
+    {
+      "path": "/market",
+      "title": "Market ve stok"
+    },
+    {
+      "path": "/satinalma",
+      "title": "Satın alma"
+    },
+    {
+      "path": "/cari",
+      "title": "Cari ve alacak"
+    },
+    {
+      "path": "/finans",
+      "title": "Finansal görünüm"
+    },
+    {
+      "path": "/kurulum",
+      "title": "Firma ve istasyon"
+    },
+    {
+      "path": "/entegrasyon",
+      "title": "Entegrasyonlar"
+    },
+    {
+      "path": "/denetim",
+      "title": "İşlem geçmişi"
+    },
+    {
+      "path": "/asistan",
+      "title": "Rol bazlı operasyon asistanı"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "proje": "İstasyonOS — Windows masaüstü geliştirme paketi",
+  "hazirlanma": "2026-10-15T15:58:17.610542+03:00",
+  "baslangic": "WINDOWS-BASLANGIC.md / BASLAT.cmd",
+  "orijinal_kaynak_tarihi": "2026-10-14",
+  "manus_gerekli": false,
+  "icermez": [
+    ".env",
+    "gerçek veya bulut demo parolaları",
+    "veritabanı dökümü",
+    ".git",
+    "node_modules",
+    "dist",
+    "platform proxy sertifikası"
+  ],
+  "dogrulama": {
+    "typescript": "başarılı",
+    "birim_sozlesme_testleri": 28,
+    "docker_build": "başarılı; Node 22 resmi image, sertifika doğrulaması açık",
+    "compose_bos_db": "başarılı",
+    "http_is_akisi": "kayıt/giriş/davet/yetki/ödeme/iki imza/çıkış başarılı",
+    "down_up_veri_kaliciligi": "başarılı",
+    "capraz_platform_dev_start": "Linux üzerinde başarılı",
+    "windows_powershell": "Gerçek Windows üzerinde henüz çalıştırılmadı"
+  }
+}
