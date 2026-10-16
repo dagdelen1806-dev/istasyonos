@@ -13,6 +13,7 @@ const routes = [
   "/slipler",
   "/muhasebe",
   "/market",
+  "/kasa",
   "/satinalma",
   "/cari",
   "/finans",

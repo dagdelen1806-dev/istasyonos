@@ -1,3 +1,4 @@
+import { registerMarketPosRoutes } from "./market-pos";
 import {
   anonymousSummary,
   classifyQuestion,
@@ -1044,6 +1045,7 @@ async function setup(
 
 export function registerStationRoutes(app: Express): void {
   app.use("/api/stationos", authenticated);
+  registerMarketPosRoutes(app, { actor: stationActor, assertMutation: assertMutationRequest, error: responseError, requireStation, mutation, audit });
   app.get(
     "/api/stationos/state",
     handler(async (req, res) => {

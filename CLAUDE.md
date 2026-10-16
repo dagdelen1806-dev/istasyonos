@@ -1,3 +1,5 @@
+> **16 Ekim 2026 kasa pilotu:** Güncel market POS rehberi `docs/market-kasa-pilotu-2026-10-16.md`. `/kasa` çok kasa oturumları, atomik DEMO sepet satışları ve kapanış içerir; 0007 migration gereklidir. Gerçek mali belge, yazıcı/çekmece/banka ve merkez sync henüz bağlı değildir. Finans ve tenant sınırlarını koruyun.
+
 > **15 Ekim 2026 bağımsız sürüm güncellemesi:** Güncel kurulum kaynağı kök `README.md` ve `scripts/cloud-*.sh` dosyalarıdır. Varsayılan `AUTH_PROVIDER=local`: e-posta/parola, scrypt, DB’de hash’li ve iptal edilebilir oturumlar; Manus zorunlu değildir. Mevcut mali/tenant kuralları korunur. `0006_local_auth.sql` eklendi. Asistan yerel kural tabanlı özet verir; haricî OCR/banka/Turpak kapalıdır. Aşağıdaki 14 Ekim aktarım notları önceki sürümün tarihsel bağlamıdır; Manus zorunluluğuna ilişkin ifadeler yalnız isteğe bağlı eski adaptöre uygulanır. Kullanıcı bu oturumda kod uyarlamasını ve DEMO veri kullanımını yetkilendirdi.
 
 # CLAUDE.md — İstasyonOS / AKARYAKIT V1

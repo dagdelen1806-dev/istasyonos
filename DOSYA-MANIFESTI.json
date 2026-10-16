@@ -1,6 +1,6 @@
 {
-  "not": "Güncel bağımsız Windows kaynak sürümü; manifest kendisi hariç tüm Git kaynakları.",
-  "dosya_sayisi": 257,
+  "not": "Güncel kaynak sürümü; manifest kendisi hariç tüm Git kaynakları.",
+  "dosya_sayisi": 267,
   "dosyalar": [
     {
       "dosya": ".dockerignore",
@@ -34,8 +34,8 @@
     },
     {
       "dosya": "CLAUDE.md",
-      "byte": 15517,
-      "sha256": "680bfbe95770c260557ad820b91594e59ce9a885c5bf65543ba5a6167de3bac1"
+      "byte": 15856,
+      "sha256": "94bab0cbd08b0e31988aec214645396881698dc731fdd0d4ae25903fef39d215"
     },
     {
       "dosya": "Dockerfile",
@@ -49,8 +49,8 @@
     },
     {
       "dosya": "PAKET-BILGISI.json",
-      "byte": 920,
-      "sha256": "21761f28f1cb53d12d7bc685ddac730ff1a0be3290b06e4f9a227f513692d28a"
+      "byte": 1174,
+      "sha256": "ab4049e0e4aea2bfb312e832bcbbc59cc9da2c51be1c0c769fa86e76ca827770"
     },
     {
       "dosya": "README-PAKET.md",
@@ -59,8 +59,8 @@
     },
     {
       "dosya": "README.md",
-      "byte": 4445,
-      "sha256": "65b1fa0775a0e9dfa12e175776bf72191b8581566beb08db870982f7b147f120"
+      "byte": 5233,
+      "sha256": "43cfdcd3f551fa888344c4b5cb801de5cf75b2233f87e605afeee90c3eeebb10"
     },
     {
       "dosya": "TODO.md",
@@ -129,8 +129,8 @@
     },
     {
       "dosya": "client/src/App.tsx",
-      "byte": 982,
-      "sha256": "537ff092ae24c0281a9f713804c40d5f1582c8912e3553fda8c1ec6106ae58e7"
+      "byte": 993,
+      "sha256": "d172c3db42b5bd80b9d98a019c45489d9ecc2e6ee1526d3b0226925051b90388"
     },
     {
       "dosya": "client/src/_core/hooks/useAuth.ts",
@@ -169,13 +169,13 @@
     },
     {
       "dosya": "client/src/components/stationos/AssistantPanel.tsx",
-      "byte": 6166,
-      "sha256": "2ed8af548c95d45c152ed4adbcfb40577680f619fd93a014c602d44a795a07d6"
+      "byte": 6202,
+      "sha256": "e9af92c2a7801de645179383651dcd802dbecdf53394407de76bbfd187ff5bbd"
     },
     {
       "dosya": "client/src/components/stationos/BusinessModules.tsx",
-      "byte": 55596,
-      "sha256": "4048047c98f33f0ca636f62814eac37aabe9e14211c33e7d70d623f8ab7b87b4"
+      "byte": 55467,
+      "sha256": "5fbf929767a9d880d51aa817bdb57c53113fba147e8986c1198dd6b0b77ea3f3"
     },
     {
       "dosya": "client/src/components/stationos/Common.tsx",
@@ -183,9 +183,19 @@
       "sha256": "53a64f3cd5c5937751f656b64fc67723586bbca2d4779cfb6862cc74e3a68348"
     },
     {
+      "dosya": "client/src/components/stationos/MarketPos.tsx",
+      "byte": 22825,
+      "sha256": "c035554224211a825de60e9cf8199342630137b9235cdefb89af1b65949dde0e"
+    },
+    {
       "dosya": "client/src/components/stationos/business.css",
       "byte": 15500,
       "sha256": "3a2e2ca091153c2311be6b2f1569a7b7e2198851d2908ca18f240e91def64304"
+    },
+    {
+      "dosya": "client/src/components/stationos/pos.css",
+      "byte": 2823,
+      "sha256": "6186157fdd4782768f3437f308f19e6d0125d1b5b4c44b4b8c379a160548f59c"
     },
     {
       "dosya": "client/src/components/ui/accordion.tsx",
@@ -483,9 +493,14 @@
       "sha256": "b0f80913bdb81b376adaf666b19c438422a580bbd0bc7bbf709cd7d3b53b22e6"
     },
     {
+      "dosya": "client/src/lib/id.ts",
+      "byte": 581,
+      "sha256": "5a36f217707ff1e8b99d00fede9bbf2e1ed0b2d4254c29b1acd0f92695bd7aaf"
+    },
+    {
       "dosya": "client/src/lib/station-api.ts",
-      "byte": 2921,
-      "sha256": "e4b96d9f1c8266ea342596372d605da0faea14e50648b77688ca0256c96cc0c7"
+      "byte": 3126,
+      "sha256": "8300421d40ea0ace34ff499ed4ed9c12cd6a9d394c6597ced6731891d7105286"
     },
     {
       "dosya": "client/src/lib/trpc.ts",
@@ -524,8 +539,8 @@
     },
     {
       "dosya": "client/src/pages/StationApp.tsx",
-      "byte": 90317,
-      "sha256": "bdfe3fb96afd927341b68a1164e414e1fe537cf316f410fd183430fbe8fc1335"
+      "byte": 90928,
+      "sha256": "778cc166cdad7ad1d67c95b94f2fa21be8dfea9783765d3ef4581f533e726f3e"
     },
     {
       "dosya": "client/src/platform.d.ts",
@@ -636,6 +651,11 @@
       "dosya": "docs/maliyet-v2.1-parametreler.json",
       "byte": 2724,
       "sha256": "ce3f958fbcd56104aa5319cddfd491dc76cd8cc64cc37e1d635490bb51439404"
+    },
+    {
+      "dosya": "docs/market-kasa-pilotu-2026-10-16.md",
+      "byte": 7492,
+      "sha256": "6073f72bc671a27026f63e5c7511165e96c69c3bf70d22592063d1144445dd65"
     },
     {
       "dosya": "docs/mimari-v2.2-turpak-dosya-ocr-kvkk-guvenlik.md",
@@ -1013,6 +1033,11 @@
       "sha256": "869c3131ae4098e149f8c4851fe21b41c897ef9a19e4ef8d59268ce68eaed745"
     },
     {
+      "dosya": "scripts/smoke-pos.ts",
+      "byte": 9674,
+      "sha256": "b9a25493309650fdc76e03eed00293ec1ea572f7d7abb45dc29425599f8d832b"
+    },
+    {
       "dosya": "server/_core/context.ts",
       "byte": 658,
       "sha256": "a43ea9ca8624270a83857d61a7154f17c48bb2c19126d1ee037a37345f6bda86"
@@ -1184,8 +1209,13 @@
     },
     {
       "dosya": "server/stationos/index.ts",
-      "byte": 84763,
-      "sha256": "21c97f9b00beb23325f814a4bea33f1fda78b3a8a37b7a4ac713ead2748ec955"
+      "byte": 84970,
+      "sha256": "52ddd4267181ccf0703045a3156429aa952bacb9d188b1e326e9e0f3db58092f"
+    },
+    {
+      "dosya": "server/stationos/market-pos.ts",
+      "byte": 17833,
+      "sha256": "c41b236a6df77c59cee94e76c99fb18cd98929138f896598ab63e3704c53d7be"
     },
     {
       "dosya": "server/stationos/migrate.ts",
@@ -1223,6 +1253,21 @@
       "sha256": "970137e338f550271cbc1472e2b4c9d6ba0db4820384bfb17dfcc43b600354b0"
     },
     {
+      "dosya": "server/stationos/migrations/0007_market_pos.sql",
+      "byte": 3581,
+      "sha256": "f22ce59f1aa60373557f49b95e7fb6c41f2397a8120afd2c70a35f50b625f2a8"
+    },
+    {
+      "dosya": "server/stationos/pos-domain.test.ts",
+      "byte": 2769,
+      "sha256": "39bd76ffec1eaf015e7a58db41cdf20c0220d06293745315fa8c66df0e6dee3b"
+    },
+    {
+      "dosya": "server/stationos/pos-domain.ts",
+      "byte": 1998,
+      "sha256": "b5965e280954b5d3a7e8495be30594605b7b7b1360f00d43e2361c1768939955"
+    },
+    {
       "dosya": "server/stationos/safety.test.ts",
       "byte": 1417,
       "sha256": "4e87222c1f4cf3ceff2967e0006fda9acb478239b9fcb6921f5d1e0386d91d7c"
@@ -1251,6 +1296,11 @@
       "dosya": "shared/const.ts",
       "byte": 1553,
       "sha256": "551e9fdceccab8baeff81a29886871b7b870ed0d2095cfdf4d6718742b0e0479"
+    },
+    {
+      "dosya": "shared/pos.ts",
+      "byte": 1120,
+      "sha256": "2bf03d31be400d552bd2d9c6d46b843bd716d0739f1b2e958605baa428474dcb"
     },
     {
       "dosya": "shared/station-contract.md",

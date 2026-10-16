@@ -1,3 +1,4 @@
+import { newRequestId } from "@/lib/id";
 import type { AppState } from "@shared/station";
 import { COOKIE_NAME } from "@shared/const";
 
@@ -9,7 +10,7 @@ export function getDeviceIdentity() {
     } catch {
       /* memory fallback */
     }
-    if (!memoryDeviceId) memoryDeviceId = crypto.randomUUID();
+    if (!memoryDeviceId) memoryDeviceId = newRequestId();
     try {
       localStorage.setItem("stationos-device-id", memoryDeviceId);
     } catch {
@@ -97,4 +98,8 @@ export async function mutate(
   csrf?: string
 ) {
   return request(path, { ...payload, requestId }, csrf);
+}
+
+export async function loadPosState(stationId: string): Promise<import("@shared/pos").PosState> {
+  return request(`/pos?stationId=${encodeURIComponent(stationId)}`);
 }

@@ -1,6 +1,8 @@
+import { newRequestId } from "@/lib/id";
 import LocalLoginForm from "./LocalLoginForm";
 import { MessageSquare } from "lucide-react";
 import { lazy, Suspense } from "react";
+const MarketPos = lazy(() => import("@/components/stationos/MarketPos"));
 const AssistantPanel = lazy(
   () => import("@/components/stationos/AssistantPanel")
 );
@@ -88,6 +90,7 @@ const navItems = [
   { path: "/vardiyalar", label: "Vardiya hesapları", icon: Clock3 },
   { path: "/slipler", label: "Slip ve ödeme", icon: CreditCard },
   { path: "/muhasebe", label: "Onay kuyruğu", icon: FileCheck2 },
+  { path: "/kasa", label: "Satış kasası", icon: ShoppingCart },
   { path: "/market", label: "Market ve stok", icon: Package, group: "İŞLETME" },
   { path: "/satinalma", label: "Satın alma", icon: ShoppingCart },
   { path: "/cari", label: "Cari ve alacak", icon: Users },
@@ -103,6 +106,7 @@ const navItems = [
   { path: "/denetim", label: "İşlem geçmişi", icon: ShieldCheck },
 ];
 const pageInfo: Record<string, [string, string]> = {
+  "/kasa": ["Market satış kasası", "Barkod, sepet ve birbirinden ayrı kasa oturumları · DEMO pilot"],
   "/": [
     "İşletmenizin operasyon görünümü",
     "Seçili kapsamdaki kayıtlar, vardiyadan merkeze tek ekranda.",
@@ -261,7 +265,7 @@ export default function StationApp() {
     retry?: { id: string }
   ) => {
     if (busy || (pending && !retry)) return false;
-    const id = retry?.id || crypto.randomUUID();
+    const id = retry?.id || newRequestId();
     setBusy(true);
     setFormError("");
     try {
@@ -518,15 +522,16 @@ export default function StationApp() {
           {navItems
             .filter(
               n =>
-                !staff ||
+                (n.path !== "/kasa" || ["OWNER", "MANAGER", "MARKET_STAFF", "ACCOUNTANT"].includes(state?.member?.role ?? "")) && (!staff ||
                 [
                   "/",
                   "/vardiyalar",
                   "/slipler",
                   "/market",
+                  "/kasa",
                   "/cari",
                   "/entegrasyon",
-                ].includes(n.path)
+                ].includes(n.path))
             )
             .map(item => (
               <div key={item.path}>
@@ -1347,6 +1352,7 @@ export default function StationApp() {
                   </Panel>
                 </>
               )}
+              {path === "/kasa" && <Suspense fallback={<p>Kasa yükleniyor…</p>}><MarketPos key={`${state.user.id}:${stationId}`} state={state} stationId={stationId} /></Suspense>}
               {["/market", "/satinalma", "/cari", "/finans"].includes(path) && (
                 <BusinessModules
                   view={

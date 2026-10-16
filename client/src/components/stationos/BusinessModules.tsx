@@ -1,3 +1,4 @@
+import { newRequestId } from "@/lib/id";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   ArrowDownToLine,
@@ -105,11 +106,7 @@ const viewMeta: Record<
   },
 };
 
-function requestId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
-    return crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
+const requestId = newRequestId;
 
 function numberText(
   value: number | null | undefined,

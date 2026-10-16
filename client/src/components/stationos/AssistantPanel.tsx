@@ -1,3 +1,4 @@
+import { newRequestId } from "@/lib/id";
 import { useRef, useState } from "react";
 import { ArrowUpRight, Sparkles, ShieldCheck, RefreshCw } from "lucide-react";
 import type { AppState } from "@shared/station";
@@ -39,7 +40,7 @@ export default function AssistantPanel({ state }: { state: AppState }) {
     const job = retry
       ? pending.current
       : {
-          id: crypto.randomUUID(),
+          id: newRequestId(),
           question: question.trim(),
           stationId:
             state.member?.stationIds.length === 1

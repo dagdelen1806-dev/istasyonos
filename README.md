@@ -46,3 +46,9 @@ node --env-file=.env --import tsx server/stationos/database-rollback-check.ts --
 HTTP smoke testi kayıt/giriş, davet, tenant izolasyonu, CSRF, idempotency, vardiya ödemeleri, fizikî nakit teslimi, iki farklı mali imza, IBAN bekleyen kapanış ve çıkışta oturum iptalini kontrol eder. Sonuç `.local/smoke-result.json`, oluşturulan DEMO hesap erişimleri `.local/demo-access.json` dosyasında tutulur. Bu dosyaları paylaşmayın. Her smoke çalışması yeni ve açıkça DEMO işaretli kayıtlar oluşturur.
 
 Finans işlemleri integer kuruş kullanır. Banka teyidi, gerçek Turpak/OCR verisi veya üretim güvenlik/hukuk kabulü bu testlerden çıkarılamaz. Mevcut frontend derlemesinde büyük chunk ve runtime config script uyarıları bulunur.
+
+## Market satış kasası pilotu — 16 Ekim 2026
+
+Yeni **Satış kasası** menüsü (`/kasa`), barkod/ürün seçimi, sepet, ayrı kasa oturumları ve kasa kapanışı sunar. Aynı kullanıcı farklı tarayıcılarda farklı kasaları açabilir; çekmece tutarları birleştirilmez. Yeni kayıtlar `0007_market_pos.sql` migration’ıyla eklenir. Güncelleme ve sınırlar için [market kasa pilotu rehberi](docs/market-kasa-pilotu-2026-10-16.md) dosyasını okuyun.
+
+Satış kaydı ilk aşamada yalnız DEMO firmada açıktır. Banka cihazı, mali belge, yazıcı/çekmece protokolü ve merkez senkronizasyonu henüz bağlı değildir. Satışın stok hareketi aynı DB transaction’ında kaydedilir; bu kayıtlar eski personel vardiya hesabına otomatik ödeme/slip olarak eklenmez.
