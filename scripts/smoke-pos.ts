@@ -293,6 +293,82 @@ const saved = await pos();
 assert.equal(saved.sales.length, 4);
 assert.equal(saved.capabilities.printer, "NOT_CONFIGURED");
 assert.equal(saved.capabilities.sync, "NOT_CONFIGURED");
+// Two computers explicitly join ONE open register, retaining separate devices.
+const sharedSession = saved.sessions.find(
+  (s: any) => s.registerId === ra && !s.closedAt
+).id;
+await mutate(b, "/pos/checkout", sale(sharedSession), 403);
+await mutate(
+  staff,
+  "/pos/join",
+  { registerId: ra, sessionId: sharedSession },
+  403
+);
+await mutate(
+  outsider,
+  "/pos/join",
+  { registerId: ra, sessionId: sharedSession },
+  403
+);
+await mutate(b, "/pos/join", { registerId: ra, sessionId: sa }, 409);
+const joinRequest = {
+  requestId: randomUUID(),
+  stationId: station,
+  registerId: ra,
+  sessionId: sharedSession,
+  openingFloatMinor: 999999,
+};
+const joined = await Promise.all([
+  http("/api/stationos/pos/join", b, joinRequest),
+  http("/api/stationos/pos/join", b, joinRequest),
+]);
+assert.equal(joined[0].status, 200);
+assert.equal(joined[1].status, 200);
+assert.deepEqual(joined[0].data, joined[1].data);
+assert.equal(joined[0].data.result.id, sharedSession);
+assert.equal(joined[0].data.result.openingFloatMinor, 0);
+let sharedState = await pos(b);
+let shared = sharedState.sessions.find((s: any) => s.id === sharedSession);
+assert.deepEqual(new Set(shared.deviceIds), new Set([a.device, b.device]));
+assert.equal(
+  sharedState.sessions.filter((s: any) => s.registerId === ra && !s.closedAt)
+    .length,
+  1
+);
+await mutate(owner, "/stock", { productId: p, kind: "RECEIPT", quantity: 3 });
+const sharedPayments = await Promise.all([
+  mutate(a, "/pos/checkout", sale(sharedSession)),
+  mutate(b, "/pos/checkout", sale(sharedSession)),
+]);
+assert.notEqual(sharedPayments[0].result.id, sharedPayments[1].result.id);
+sharedState = await pos(b);
+shared = sharedState.sessions.find((s: any) => s.id === sharedSession);
+assert.equal(shared.openingFloatMinor, 0);
+assert.equal(shared.cashSalesMinor, 500);
+assert.equal(shared.expectedCashMinor, 500);
+assert.equal(sharedState.products.find((x: any) => x.id === p).stockQty, 2);
+for (const [i, result] of sharedPayments.entries())
+  assert.equal(
+    sharedState.sales.find((s: any) => s.id === result.result.id).deviceId,
+    [a, b][i].device
+  );
+await mutate(b, "/pos/close", {
+  sessionId: sharedSession,
+  countedCashMinor: 500,
+});
+await mutate(a, "/pos/checkout", sale(sharedSession), 409);
+await mutate(b, "/pos/join", { registerId: ra, sessionId: sharedSession }, 409);
+shared = (await pos(a)).sessions.find((s: any) => s.id === sharedSession);
+assert.ok(shared.closedAt);
+assert.equal(shared.closedByDeviceId, b.device);
+const reopened = (
+  await mutate(a, "/pos/open", { registerId: ra, openingFloatMinor: 0 })
+).result.id;
+await mutate(b, "/pos/checkout", sale(reopened), 403);
+assert.deepEqual(
+  (await pos()).sessions.find((s: any) => s.id === reopened).deviceIds,
+  [a.device]
+);
 const output = process.env.SMOKE_OUTPUT_DIR ?? ".local/pos-smoke";
 await mkdir(output, { recursive: true, mode: 0o700 });
 await writeFile(
@@ -306,6 +382,8 @@ await writeFile(
       product: p,
       barcode: `${tag}-test-urun`,
       saleId: receipt.result.id,
+      sharedDevice: b.device,
+      activeSession: reopened,
     },
     null,
     2
@@ -321,6 +399,9 @@ const checks = [
   "Kart beyanı çekmece nakdine eklenmedi",
   "Kapanış farkı kaydı, kapanmış kasa reddi ve yeniden açılış",
   "Gerçek firmada DEMO kapısı; cihaz/senkronizasyon durumları doğru",
+  "Tek kasada iki bilgisayar; katılımda açılış parası ikinci kez eklenmedi",
+  "Ortak bakiyeye eşzamanlı satış ve satış başına bilgisayar izi",
+  "Ortak kapanış her iki bilgisayarı durdurdu; yeniden açılış eski bağlantıyı devralmadı",
 ];
 await writeFile(
   join(output, "result.json"),

@@ -1,6 +1,6 @@
 {
   "proje": "İstasyonOS — Windows masaüstü geliştirme paketi",
-  "hazirlanma": "2026-10-16T11:14:34.227647+03:00",
+  "hazirlanma": "2026-10-16T11:24:46.078811+03:00",
   "baslangic": "WINDOWS-BASLANGIC.md / BASLAT.cmd",
   "orijinal_kaynak_tarihi": "2026-10-14",
   "manus_gerekli": false,
@@ -23,7 +23,8 @@
     "onceki_vardiya_http_smoke": "başarılı",
     "tarayici": "barkod, dokunmatik boyut, haricî ağ engeli, randomUUID fallback ve kayıp yanıt/sayfa yenileme sonrası tek satış başarılı",
     "docker": "15 Ekim bağımsız sürümünde doğrulandı; bu kasa pilotunda yeniden Docker build yapılmadı",
-    "fiziksel_windows_donanim": "henüz denenmedi"
+    "fiziksel_windows_donanim": "henüz denenmedi",
+    "ortak_kasa": "Geliştirme/üretim HTTP testleri ve iki ayrı Chromium oturumunda katılım, paralel satış, tek açılış parası, cihaz izi ve ortak kapanış başarılı."
   },
-  "surum_notu": "16 Ekim market kasa DEMO pilotu; gerçek mali cihaz ve merkez senkronizasyonu içermez."
+  "surum_notu": "Ortak kasa: aynı kullanıcı farklı bilgisayarlarda tek oturuma katılır; sepetler ayrı, bakiye/kapanış ortak. DEMO sınırı sürüyor."
 }

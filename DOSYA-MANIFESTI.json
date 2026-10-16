@@ -1,6 +1,6 @@
 {
   "not": "Güncel kaynak sürümü; manifest kendisi hariç tüm Git kaynakları.",
-  "dosya_sayisi": 267,
+  "dosya_sayisi": 268,
   "dosyalar": [
     {
       "dosya": ".dockerignore",
@@ -34,8 +34,8 @@
     },
     {
       "dosya": "CLAUDE.md",
-      "byte": 15856,
-      "sha256": "94bab0cbd08b0e31988aec214645396881698dc731fdd0d4ae25903fef39d215"
+      "byte": 16163,
+      "sha256": "30084420cf1f258f0e86975f7b1ddb3cad6f13a9b9044a905948f2067442aeab"
     },
     {
       "dosya": "Dockerfile",
@@ -49,8 +49,8 @@
     },
     {
       "dosya": "PAKET-BILGISI.json",
-      "byte": 1174,
-      "sha256": "ab4049e0e4aea2bfb312e832bcbbc59cc9da2c51be1c0c769fa86e76ca827770"
+      "byte": 1411,
+      "sha256": "c005fd64804c226a8336bb9dd24b69535275c3ea5c25309bb9e66778896b7738"
     },
     {
       "dosya": "README-PAKET.md",
@@ -59,8 +59,8 @@
     },
     {
       "dosya": "README.md",
-      "byte": 5233,
-      "sha256": "43cfdcd3f551fa888344c4b5cb801de5cf75b2233f87e605afeee90c3eeebb10"
+      "byte": 5460,
+      "sha256": "0db04ee708ca8c9ba2b785002fd37c0846e1d004a7d13a941b967f1769ca9ef8"
     },
     {
       "dosya": "TODO.md",
@@ -184,8 +184,8 @@
     },
     {
       "dosya": "client/src/components/stationos/MarketPos.tsx",
-      "byte": 22825,
-      "sha256": "c035554224211a825de60e9cf8199342630137b9235cdefb89af1b65949dde0e"
+      "byte": 24660,
+      "sha256": "dd10c6daa6440236a26876437d3b5e42d95e65e00187332799e6740c8db19af5"
     },
     {
       "dosya": "client/src/components/stationos/business.css",
@@ -654,8 +654,8 @@
     },
     {
       "dosya": "docs/market-kasa-pilotu-2026-10-16.md",
-      "byte": 7492,
-      "sha256": "6073f72bc671a27026f63e5c7511165e96c69c3bf70d22592063d1144445dd65"
+      "byte": 10074,
+      "sha256": "ac132353022d25fd6aef892d177833ff1acdfc33af43b0b4d4352f66e524c568"
     },
     {
       "dosya": "docs/mimari-v2.2-turpak-dosya-ocr-kvkk-guvenlik.md",
@@ -1034,8 +1034,8 @@
     },
     {
       "dosya": "scripts/smoke-pos.ts",
-      "byte": 9674,
-      "sha256": "b9a25493309650fdc76e03eed00293ec1ea572f7d7abb45dc29425599f8d832b"
+      "byte": 12748,
+      "sha256": "3df3129b2e8ba16c3768e40b00831ba2a4ee16c239c51de398fec2f0a9fc6a64"
     },
     {
       "dosya": "server/_core/context.ts",
@@ -1214,8 +1214,8 @@
     },
     {
       "dosya": "server/stationos/market-pos.ts",
-      "byte": 17833,
-      "sha256": "c41b236a6df77c59cee94e76c99fb18cd98929138f896598ab63e3704c53d7be"
+      "byte": 20364,
+      "sha256": "aed95f55161ec3ddb3cb55705974410975458416fec8cac0c751bce1c7695aef"
     },
     {
       "dosya": "server/stationos/migrate.ts",
@@ -1256,6 +1256,11 @@
       "dosya": "server/stationos/migrations/0007_market_pos.sql",
       "byte": 3581,
       "sha256": "f22ce59f1aa60373557f49b95e7fb6c41f2397a8120afd2c70a35f50b625f2a8"
+    },
+    {
+      "dosya": "server/stationos/migrations/0008_shared_register_devices.sql",
+      "byte": 1149,
+      "sha256": "e33385b90410a3bf49bb93f9769885f9cbf0804cceeb653f26abe6a4ab8e3406"
     },
     {
       "dosya": "server/stationos/pos-domain.test.ts",
@@ -1299,8 +1304,8 @@
     },
     {
       "dosya": "shared/pos.ts",
-      "byte": 1120,
-      "sha256": "2bf03d31be400d552bd2d9c6d46b843bd716d0739f1b2e958605baa428474dcb"
+      "byte": 1198,
+      "sha256": "c9c70e3983d58c05dc8065bc04d9416508e8b165907147a31d5fb2e480695199"
     },
     {
       "dosya": "shared/station-contract.md",

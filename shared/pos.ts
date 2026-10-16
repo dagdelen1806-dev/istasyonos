@@ -10,6 +10,8 @@ export interface PosSession {
   registerId: string;
   userId: number;
   deviceId: string;
+  deviceIds: string[];
+  closedByDeviceId: string | null;
   openedAt: string;
   closedAt: string | null;
   openingFloatMinor: number;
@@ -23,6 +25,7 @@ export interface PosSale {
   id: string;
   sessionId: string;
   registerId: string;
+  deviceId: string;
   totalMinor: number;
   paymentKind: "CASH" | "CARD_MANUAL";
   createdAt: string;

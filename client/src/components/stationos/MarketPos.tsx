@@ -12,7 +12,13 @@ import { newRequestId } from "@/lib/id";
 import "./pos.css";
 
 type Pending = { path: string; payload: Record<string, unknown>; id: string };
-const paths = ["/pos/register", "/pos/open", "/pos/checkout", "/pos/close"];
+const paths = [
+  "/pos/register",
+  "/pos/open",
+  "/pos/join",
+  "/pos/checkout",
+  "/pos/close",
+];
 
 export default function MarketPos({
   state,
@@ -50,7 +56,11 @@ export default function MarketPos({
       s.registerId === registerId &&
       !s.closedAt &&
       s.userId === state.user.id &&
-      s.deviceId === deviceId
+      s.deviceIds.includes(deviceId)
+  );
+  const ownOpenSession = data?.sessions.find(
+    s =>
+      s.registerId === registerId && !s.closedAt && s.userId === state.user.id
   );
   const occupied = data?.sessions.some(
     s => s.registerId === registerId && !s.closedAt
@@ -170,7 +180,11 @@ export default function MarketPos({
         setNotice(
           `Kasa kapandı. Nakit farkı: ${money(result.result.differenceMinor)}.`
         );
-      } else setNotice("Kasa oturumu açıldı.");
+      } else if (operation.path === "/pos/join")
+        setNotice(
+          "Ortak kasaya katıldınız. Açılış para üstü yeniden eklenmedi."
+        );
+      else setNotice("Kasa oturumu açıldı.");
       await refresh();
       scanInput.current?.focus();
     } catch (e) {
@@ -310,7 +324,7 @@ export default function MarketPos({
             </label>
             <span>
               {session
-                ? "Kasa açık · bu tarayıcı"
+                ? `Kasa açık · ${session.deviceIds.length} bilgisayar · ortak bakiye`
                 : "Bu tarayıcıda açık kasa yok"}
             </span>
             <button
@@ -376,11 +390,28 @@ export default function MarketPos({
                 }
               }}
             >
-              {occupied ? (
-                <p>
-                  Bu kasa başka kullanıcı veya tarayıcıda açık. Uygun başka kasa
-                  seçin.
-                </p>
+              {ownOpenSession ? (
+                <>
+                  <p>
+                    Bu kullanıcıyla açık kasa var. Aynı kasa bakiyesine
+                    katılabilirsiniz; sepetler bilgisayarlarda ayrı tutulur.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn primary"
+                    disabled={locked}
+                    onClick={() =>
+                      void action("/pos/join", {
+                        registerId,
+                        sessionId: ownOpenSession.id,
+                      })
+                    }
+                  >
+                    Mevcut kasaya katıl
+                  </button>
+                </>
+              ) : occupied ? (
+                <p>Bu kasa başka kullanıcıda açık. Uygun başka kasa seçin.</p>
               ) : (
                 <>
                   <label>
@@ -596,6 +627,13 @@ export default function MarketPos({
               </div>
             </section>
           </div>
+          {session && session.deviceIds.length > 1 && (
+            <p>
+              Bu kasa {session.deviceIds.length} bilgisayarda ortak
+              kullanılıyor. Bakiye en geç 15 saniyede veya Yenile ile
+              güncellenir. Bir bilgisayardan kapanış tüm kasa oturumunu kapatır.
+            </p>
+          )}
           {session && (
             <details className="pos-close">
               <summary>Kasa özeti ve kapanış</summary>
@@ -622,6 +660,13 @@ export default function MarketPos({
                         "Kapanıştan önce sepeti tamamlayın veya temizleyin."
                       );
                     const f = new FormData(e.currentTarget);
+                    if (
+                      session.deviceIds.length > 1 &&
+                      !window.confirm(
+                        "Bu kasayı kapatmak bağlı bütün bilgisayarlarda yeni satışı durdurur. Diğer bilgisayarlardaki sepetleri kontrol ettiniz mi?"
+                      )
+                    )
+                      return;
                     void action("/pos/close", {
                       sessionId: session.id,
                       countedCashMinor: parseMoney(String(f.get("counted"))),
@@ -662,6 +707,9 @@ export default function MarketPos({
                 </span>
                 <strong>{money(s.totalMinor)}</strong>
                 <small>Mali belge yok</small>
+                <small title={s.deviceId}>
+                  Bilgisayar: {s.deviceId.slice(0, 8)}
+                </small>
               </div>
             ))}
           </details>

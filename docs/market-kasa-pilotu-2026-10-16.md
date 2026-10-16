@@ -1,11 +1,13 @@
 # Market satış kasası — ilk pilot
 
+**Ortak kasa güncellemesi:** `0008_shared_register_devices.sql` migration’ı ile aynı kullanıcı iki bilgisayarda aynı açık kasa oturumuna katılabilir. Ayrıntılar aşağıdadır.
+
 Hedef aynı donanımda İstasyonOS çalıştırmaktır; görseldeki başka satış yazılımıyla veri alışverişi kapsamda değildir. Dokunmatik Windows kasa ekranı, klavye gibi veri gönderen barkod okuyucu ve market içindeki yerel sunucu temel alınır. IROMX WR982DM’nin gerçek ayarları/protokolü henüz cihaz üzerinde doğrulanmadı; bu sürüm HID klavye girişi + Enter davranışını bekler. Yazıcı ve para çekmecesi için modele özgü SDK/ESC-POS bağlantısı henüz yoktur.
 
 ## Çalışan kapsam
 
 - `/kasa` ve **Satış kasası** menüsü: firma sahibi/yönetici kasa tanımlar, sahibi/yönetici/market personeli kasa açıp kullanır. Muhasebeci okuyabilir. Akaryakıt personeli ve satın alma rolü kasa uçlarına erişemez.
-- Aynı kullanıcı farklı tarayıcılarda birden fazla kasada açık kalabilir. Her kasanın açılış para üstü, nakit satışı, kart beyanı, sayımı ve farkı ayrıdır. Bir fiziksel kasa kodunda aynı anda yalnız bir açık oturum bulunur. Browser cihaz kimliği yerel eşleştirmedir; donanım sertifikası veya güçlü cihaz enrollment değildir.
+- Aynı kullanıcı farklı tarayıcılarda birden fazla kasada açık kalabilir. Farklı kasa kodlarının açılış para üstü, nakit satışı, kart beyanı, sayımı ve farkı ayrıdır. İki bilgisayarda aynı kasa kodu seçilirse ikinci bilgisayar **Mevcut kasaya katıl** ile aynı oturuma katılır. Sepetler bilgisayarlarda ayrıdır; bakiye ve kapanış ortaktır. Katılım açılış parasını tekrar eklemez. Bir fiziksel kasa kodunda aynı anda yalnız bir açık oturum bulunur. Browser cihaz kimliği yerel eşleştirmedir; donanım sertifikası veya güçlü cihaz enrollment değildir.
 - Dokunmatik ürün düğmeleri, tam barkod eşleme, ürün arama, adetli sepet ve para üstü hesabı.
 - Fiyat sunucudan alınır; istemcinin gördüğü fiyat değişmişse sessizce satış yapılmaz. Ürün adı/barkodu/fiyatı/adedi satış anlık kopyasına yazılır. KDV oranı/hesabı ve mali belge bu pilotta tanımlı değildir.
 - Satış + satırlar + stok düşümü + stok hareket defteri + yerel olay kaydı tek transaction içindedir. Kasa oturumu ve ürünler kilitlenir. Son ürünü iki kasa aynı anda satamaz.
@@ -44,7 +46,7 @@ pnpm dev
 
 Migration additive’dir; mevcut kullanıcı ve finans tablolarını silmez. Yeni kasa tabloları eklenir. MySQL DDL tam transaction rollback garantisi vermez; migration öncesi yedek alın. MySQL 8/MariaDB modern sürüm hedeflenir; bu turda MariaDB 11.8.6 üzerinde test edildi, gerçek Windows/Laragon sürümü ayrıca doğrulanmalıdır.
 
-Yeni test kullanıcısıyla firma kurarken **DEMO** seçin. Mevcut gerçek firmayı SQL ile DEMO’ya çevirmeyin. Test kullanıcısıyla bir DEMO istasyon kurup Market ve stok ekranından ürün/mal kabul ekleyin. Satış kasası ekranında istasyonu seçin, kasa tanımlayın, açılış para üstüyle açın ve barkod okutun. İkinci cihazda aynı kullanıcıyla giriş yapıp **farklı kasa** seçin. Aynı tarayıcının sekmeleri aynı yerel cihaz kimliğini paylaşır; kasa seçimleri kendiliğinden fiziksel cihaz kaydı değildir.
+Yeni test kullanıcısıyla firma kurarken **DEMO** seçin. Mevcut gerçek firmayı SQL ile DEMO’ya çevirmeyin. Test kullanıcısıyla bir DEMO istasyon kurup Market ve stok ekranından ürün/mal kabul ekleyin. Satış kasası ekranında istasyonu seçin, kasa tanımlayın, açılış para üstüyle açın ve barkod okutun. İkinci cihazda aynı kullanıcıyla giriş yapın: ortak bakiye istiyorsanız **aynı kasayı** seçip **Mevcut kasaya katıl** düğmesine basın; ayrı çekmece istiyorsanız **farklı kasa** açın. Aynı tarayıcının sekmeleri aynı yerel cihaz kimliğini paylaşır; kasa seçimleri kendiliğinden fiziksel cihaz kaydı değildir.
 
 `istasyonos.test` için mevcut Laragon reverse proxy ayarı korunabilir. `randomUUID` bulunmayan yerel HTTP alan adlarında UUID üretimi kriptografik `getRandomValues` ile yapılır. Birden fazla sunucuyu aynı 3000 portunda açmayın.
 
@@ -65,3 +67,15 @@ node --import tsx scripts/smoke-pos.ts
 ```
 
 Fixture erişimleri varsayılan olarak ignored `.local/pos-smoke/` altında saklanır; paylaşmayın. Bu komut fiziksel cihaz veya mevzuat kabul testi yerine geçmez.
+
+## İki bilgisayarda tek kasa
+
+İlk bilgisayarda kasa açılır; ikinci bilgisayarda aynı kullanıcı ve istasyonla aynı kasa seçilip **Mevcut kasaya katıl** denir. Katılım yalnız bu kullanıcının açık oturumuna ve seçilen oturum sürümüne yapılır; kapanmış veya başka kullanıcının kasasına katılım reddedilir. Katılım isteğini tekrar göndermek ikinci oturum ya da ikinci açılış parası oluşturmaz.
+
+Her bilgisayarın sepeti ve sonuç bekleyen istek kimliği ayrıdır. Satışlar aynı açık kasa oturumu altında tek bakiyeye eklenir. Satışın kaynak bilgisayar kimliği DB’de ayrıca tutulur ve son satışlarda gösterilir. Eski satışların cihaz kimliği migration sırasında eski tek cihazlı kasa oturumundan alınır.
+
+Bakiye diğer bilgisayarda en geç 15 saniyede veya **Yenile** ile görünür. Kasa herhangi bir katılımcı bilgisayardan kapatılabilir; bu bütün katılımcılarda aynı oturumu kapatır. Sunucu kapalı oturuma yeni satış kabul etmez; ekran bunu sonraki yenilemede gösterir. Paylaşılan kasa kapanışında diğer bilgisayarların sepetlerini kontrol etmek için onay sorulur. Diğer bilgisayarda kalan sepet kendiliğinden satılmış veya iptal edilmiş sayılmaz.
+
+Kasa tekrar açıldığında eski cihaz katılımları yeni oturuma otomatik taşınmaz. İkinci bilgisayar yeni oturuma tekrar katılır. `closed_by_device_id` kapanış yapılan bilgisayarı tutar. Tarayıcı kimlikleri fiziksel cihaz sertifikası değildir; gerçek cihaz enrollment ayrı iştir. Aynı kullanıcıyla birden fazla bilgisayar iki farklı mali onay kişisi sayılmaz.
+
+Ortak kasa API ve iki ayrı Chromium oturumuyla doğrulandı: aynı kullanıcı/aynı kasa, katılım ekranı, paralel satışlar, tek açılış parası, satış başına cihaz izi, ortak kapanış ve yeniden açılışta eski katılımın taşınmaması. Fiziksel Windows kasalarındaki test hâlâ yapılmalıdır. DEMO sınırı ve mali cihaz/senkronizasyon eksikleri değişmedi.

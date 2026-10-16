@@ -150,16 +150,16 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       [id, scope.tenantId, stationId]
     );
     if (!session) fail("NOT_FOUND", "Kasa oturumu bulunamadı.", 404);
-    if (
-      number(session.user_id) !== actor.id ||
-      session.device_id !== device(req)
-    )
-      fail(
-        "REGISTER_FORBIDDEN",
-        "Bu kasa oturumu başka kullanıcıya veya tarayıcıya bağlı.",
-        403
-      );
+    if (number(session.user_id) !== actor.id)
+      fail("REGISTER_FORBIDDEN", "Bu kasa oturumu başka kullanıcıya ait.", 403);
     if (session.closed_at) fail("REGISTER_CLOSED", "Kasa oturumu kapalı.", 409);
+    const binding = await first<Row>(
+      c,
+      "SELECT device_id FROM st_pos_session_devices WHERE session_id=? AND device_id=? AND user_id=?",
+      [session.id, device(req), actor.id]
+    );
+    if (!binding)
+      fail("REGISTER_FORBIDDEN", "Önce bu bilgisayarı açık kasaya katın.", 403);
     return session;
   }
 
@@ -198,9 +198,16 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
           "SELECT id,station_id,name,barcode,stock_qty,minimum_qty,sale_price_minor,supplier_id FROM st_products WHERE tenant_id=? AND station_id=? ORDER BY name LIMIT 5000",
           [scope.tenantId, stationId]
         );
+        const bindings = sessions.length
+          ? await rows<Row[]>(
+              c,
+              `SELECT session_id,device_id FROM st_pos_session_devices WHERE session_id IN (${sessions.map(() => "?").join(",")})`,
+              sessions.map(s => s.id)
+            )
+          : [];
         const sales = await rows<Row[]>(
           c,
-          `SELECT id,session_id,register_id,total_minor,payment_kind,created_at,fiscal_status FROM st_pos_sales WHERE tenant_id=? AND station_id=? ${ownOnly ? "AND user_id=?" : ""} ORDER BY created_at DESC,id LIMIT 50`,
+          `SELECT id,session_id,register_id,device_id,total_minor,payment_kind,created_at,fiscal_status FROM st_pos_sales WHERE tenant_id=? AND station_id=? ${ownOnly ? "AND user_id=?" : ""} ORDER BY created_at DESC,id LIMIT 50`,
           params
         );
         return {
@@ -215,6 +222,10 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
             registerId: s.register_id,
             userId: number(s.user_id),
             deviceId: s.device_id,
+            deviceIds: bindings
+              .filter(d => d.session_id === s.id)
+              .map(d => d.device_id),
+            closedByDeviceId: s.closed_by_device_id ?? null,
             openedAt: s.opened_at,
             closedAt: s.closed_at,
             openingFloatMinor: number(s.opening_float_minor),
@@ -245,6 +256,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
             id: s.id,
             sessionId: s.session_id,
             registerId: s.register_id,
+            deviceId: s.device_id,
             totalMinor: number(s.total_minor),
             paymentKind: s.payment_kind,
             createdAt: s.created_at,
@@ -332,7 +344,56 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       "POS_SESSION_OPEN",
       id
     );
+    await execute(
+      c,
+      "INSERT INTO st_pos_session_devices (session_id,device_id,user_id) VALUES (?,?,?)",
+      [id, deviceId, actor.id]
+    );
     return { id };
+  });
+
+  post("join", SELL, async (c, actor, body, scope, req, stationId) => {
+    const registerId = requireId(body.registerId, "registerId");
+    const sessionId = requireId(body.sessionId, "sessionId");
+    const register = await first<Row>(
+      c,
+      "SELECT id FROM st_pos_registers WHERE id=? AND tenant_id=? AND station_id=? FOR UPDATE",
+      [registerId, scope.tenantId, stationId]
+    );
+    if (!register) fail("NOT_FOUND", "Kasa bulunamadı.", 404);
+    const session = await first<Row>(
+      c,
+      "SELECT id,user_id,closed_at,opening_float_minor FROM st_pos_sessions WHERE id=? AND register_id=? AND tenant_id=? AND station_id=? FOR UPDATE",
+      [sessionId, registerId, scope.tenantId, stationId]
+    );
+    if (!session) fail("NOT_FOUND", "Kasa oturumu bulunamadı.", 404);
+    if (number(session.user_id) !== actor.id)
+      fail(
+        "REGISTER_FORBIDDEN",
+        "Yalnız kendi kullanıcınızın açık kasasına katılabilirsiniz.",
+        403
+      );
+    if (session.closed_at)
+      fail("REGISTER_CLOSED", "Bu kasa kapanmış; ekranı yenileyin.", 409);
+    const binding = await execute(
+      c,
+      "INSERT IGNORE INTO st_pos_session_devices (session_id,device_id,user_id) VALUES (?,?,?)",
+      [session.id, device(req), actor.id]
+    );
+    if (binding.affectedRows > 0)
+      await services.audit(
+        c,
+        scope.tenantId,
+        stationId,
+        actor.id,
+        "POS_SESSION_JOIN",
+        session.id
+      );
+    return {
+      id: session.id,
+      joined: true,
+      openingFloatMinor: number(session.opening_float_minor),
+    };
   });
 
   post("checkout", SELL, async (c, actor, body, scope, req, stationId) => {
@@ -405,7 +466,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
     const id = randomUUID();
     await execute(
       c,
-      "INSERT INTO st_pos_sales (id,tenant_id,station_id,register_id,session_id,user_id,request_id,total_minor,payment_kind,payment_status,tendered_minor,change_minor) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO st_pos_sales (id,tenant_id,station_id,register_id,session_id,user_id,request_id,total_minor,payment_kind,payment_status,tendered_minor,change_minor,device_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
       [
         id,
         scope.tenantId,
@@ -419,6 +480,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
         paymentKind === "CASH" ? "CASH_RECORDED" : "CASHIER_DECLARED",
         tendered,
         tendered === null ? null : tendered - total,
+        device(req),
       ]
     );
     for (const line of snapshots) {
@@ -505,8 +567,8 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       );
     await execute(
       c,
-      "UPDATE st_pos_sessions SET closed_at=UTC_TIMESTAMP(3),open_register_id=NULL,counted_cash_minor=?,expected_cash_minor=?,difference_minor=?,close_note=? WHERE id=?",
-      [counted, expected, difference, note, session.id]
+      "UPDATE st_pos_sessions SET closed_at=UTC_TIMESTAMP(3),open_register_id=NULL,counted_cash_minor=?,expected_cash_minor=?,difference_minor=?,close_note=?,closed_by_device_id=? WHERE id=?",
+      [counted, expected, difference, note, device(req), session.id]
     );
     await services.audit(
       c,
