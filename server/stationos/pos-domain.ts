@@ -17,6 +17,10 @@ export function normalizePosLines(value: unknown): PosLineInput[] {
     if (!isRecord(raw)) fail("INVALID_CART", "Ürün satırı geçersiz.");
     const productId = requireId(raw.productId, "productId");
     const quantity = requireInteger(raw.quantity, "quantity");
+    const priceListId =
+      raw.priceListId == null || raw.priceListId === ""
+        ? undefined
+        : requireId(raw.priceListId, "priceListId");
     if (quantity > 10000)
       fail("INVALID_CART", "Satır adedi 10.000 sınırını aşıyor.");
     const expectedUnitPriceMinor = requireMoney(
@@ -25,7 +29,11 @@ export function normalizePosLines(value: unknown): PosLineInput[] {
       { allowZero: true }
     );
     const previous = lines.get(productId);
-    if (previous && previous.expectedUnitPriceMinor !== expectedUnitPriceMinor)
+    if (
+      previous &&
+      (previous.expectedUnitPriceMinor !== expectedUnitPriceMinor ||
+        previous.priceListId !== priceListId)
+    )
       fail(
         "PRICE_CONFLICT",
         "Aynı ürün için farklı fiyatlar gönderilemez.",
@@ -38,6 +46,7 @@ export function normalizePosLines(value: unknown): PosLineInput[] {
       productId,
       quantity: totalQuantity,
       expectedUnitPriceMinor,
+      ...(priceListId ? { priceListId } : {}),
     });
   }
   // All checkout transactions acquire product locks in the same order.

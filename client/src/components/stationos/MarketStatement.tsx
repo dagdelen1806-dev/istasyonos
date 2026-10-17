@@ -46,6 +46,7 @@ export const marketKindLabels: Record<string, string> = {
   CAPITAL: "Kaynak girişi",
   BANK_SETTLEMENT: "Kart → banka",
   STOCK_ADJUST: "Stok sayımı",
+  STOCK_COUNT: "Terminal stok sayımı",
   REGISTER_OPEN: "Kasa açılışı",
   REGISTER_CLOSE: "Kasa devri",
   DAY_VARIANCE: "Gün sonu farkı",

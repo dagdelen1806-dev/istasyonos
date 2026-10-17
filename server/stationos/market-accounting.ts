@@ -1,3 +1,8 @@
+import { registerInventoryReports } from "./inventory-reports";
+import { buildMarketDaily } from "./market-report-domain";
+import { recordMarketPurchase } from "./market-purchase";
+import { registerInventory } from "./market-inventory";
+import { registerInventoryTerminal } from "./inventory-terminal";
 import { registerMarketStatement } from "./market-accounting-statement";
 import { registerMarketReturns } from "./market-returns";
 import { randomUUID } from "node:crypto";
@@ -91,45 +96,9 @@ export async function dailyReport(
     "SELECT COALESCE(SUM(CASE WHEN r.kind='SALE_RETURN' THEN r.gross_minor ELSE 0 END),0) AS sale_gross,COALESCE(SUM(CASE WHEN r.kind='PURCHASE_RETURN' THEN r.gross_minor ELSE 0 END),0) AS purchase_gross,COALESCE(SUM(CASE WHEN r.kind='PURCHASE_RETURN' THEN r.net_minor ELSE 0 END),0) AS purchase_net,COALESCE(SUM(r.kind='SALE_RETURN'),0) AS sale_count FROM st_market_returns r JOIN st_market_entries e ON e.id=r.entry_id WHERE r.station_id=? AND e.business_date=?",
     [station, date]
   );
-  const variance = b.PURCHASE_RETURN_VARIANCE ?? 0;
-  const salesNet = -safeAdd(b.SALES ?? 0, b.SALES_RETURNS ?? 0),
-    vat = -(b.OUTPUT_VAT ?? 0),
-    cogs = b.COGS ?? 0,
-    expense = safeAdd(
-      b.EXPENSE ?? 0,
-      b.BANK_FEES ?? 0,
-      b.STOCK_LOSS ?? 0,
-      b.CASH_LOSS ?? 0,
-      Math.max(0, variance)
-    ),
-    gains = -safeAdd(
-      b.STOCK_GAIN ?? 0,
-      b.CASH_GAIN ?? 0,
-      Math.min(0, variance)
-    );
-  return {
-    date,
-    salesNetMinor: salesNet,
-    outputVatMinor: vat,
-    salesGrossMinor: safeAdd(salesNet, vat),
-    cogsMinor: cogs,
-    grossProfitMinor: safeAdd(salesNet, -cogs),
-    expensesMinor: expense,
-    gainsMinor: gains,
-    operatingResultMinor: safeAdd(salesNet, -cogs, -expense, gains),
-    purchasesNetMinor: safeAdd(
-      integer(totals?.purchase),
-      -integer(returns?.purchase_net)
-    ),
-    inputVatMinor: b.INPUT_VAT ?? 0,
-    collectionsMinor: integer(totals?.collection),
-    supplierPaymentsMinor: integer(totals?.payment),
-    saleCount: integer(count?.n),
-    salesReturnsGrossMinor: integer(returns?.sale_gross),
-    purchaseReturnsGrossMinor: integer(returns?.purchase_gross),
-    saleReturnCount: integer(returns?.sale_count),
-  };
+  return buildMarketDaily(date, b, totals ?? {}, count ?? {}, returns ?? {});
 }
+
 async function party(
   c: PoolConnection,
   scope: Scope,
@@ -222,6 +191,10 @@ export function registerMarketAccountingRoutes(
         services.assertMutation(req, actor);
         const body = req.body as Record<string, unknown>,
           station = requireId(body?.stationId, "stationId");
+        Object.defineProperty(body, "__stationDevice", {
+          value: req.get("X-Stationos-Device-Id"),
+          enumerable: false,
+        });
         await withTransaction(c =>
           services.requireStation(c, actor, station, roles)
         );
@@ -229,7 +202,13 @@ export function registerMarketAccountingRoutes(
           try {
             const result = await services.mutation(
               actor,
-              { ...body, _marketAction: path },
+              {
+                ...body,
+                _marketAction: path,
+                ...(path.startsWith("inventory/")
+                  ? { _inventoryDevice: body.__stationDevice ?? null }
+                  : {}),
+              },
               async c => {
                 const { scope } = await services.requireStation(
                   c,
@@ -283,6 +262,9 @@ export function registerMarketAccountingRoutes(
     );
   }
   registerMarketReturns(app, services, post);
+  registerInventory(app, services, post);
+  registerInventoryTerminal(app, services, post);
+  registerInventoryReports(app, services);
   app.get(
     "/api/stationos/market-accounting",
     handle(async (req, res) => {
@@ -600,7 +582,7 @@ export function registerMarketAccountingRoutes(
   post(
     "party-update",
     READ,
-    async (c, _actor, body, scope, station) => {
+    async (c, actor, body, scope, station) => {
       const p = await party(c, scope, station, body.partyId),
         name = requireString(body.name, "Cari adı", { max: 190 }),
         ar = requireMoney(body.receivableLimitMinor, "Müşteri limiti", {
@@ -740,7 +722,7 @@ export function registerMarketAccountingRoutes(
   post(
     "product",
     READ,
-    async (c, _actor, body, scope, station) => {
+    async (c, actor, body, scope, station) => {
       const id = requireId(body.productId, "productId"),
         vat = vatRate(body.vatBps),
         price = requireMoney(body.salePriceMinor, "Satış fiyatı", {
@@ -748,10 +730,16 @@ export function registerMarketAccountingRoutes(
         });
       const p = await first<Row>(
         c,
-        "SELECT id FROM st_products WHERE id=? AND tenant_id=? AND station_id=? FOR UPDATE",
+        "SELECT id,sale_price_minor FROM st_products WHERE id=? AND tenant_id=? AND station_id=? FOR UPDATE",
         [id, scope.tenantId, station]
       );
       if (!p) fail("NOT_FOUND", "Ürün bulunamadı.", 404);
+      if (integer(p.sale_price_minor) !== price)
+        await execute(
+          c,
+          "INSERT INTO st_market_price_history(station_id,product_id,list_id,old_minor,new_minor,actor_user_id) VALUES (?,?,NULL,?,?,?)",
+          [station, id, p.sale_price_minor, price, actor.id]
+        );
       await execute(
         c,
         "UPDATE st_products SET market_vat_bps=?,sale_price_minor=? WHERE id=?",
@@ -762,116 +750,7 @@ export function registerMarketAccountingRoutes(
     true,
     true
   );
-  post("purchase", READ, async (c, actor, body, scope, station, book) => {
-    const p = await party(c, scope, station, body.partyId, "SUPPLIER"),
-      ref = requireString(body.reference, "Belge no", { max: 100 }),
-      due = calendarDate(body.dueDate, "Vade");
-    if (
-      !Array.isArray(body.lines) ||
-      body.lines.length < 1 ||
-      body.lines.length > 100
-    )
-      fail("INVALID_INPUT", "Alış 1–100 ürün satırı içermelidir.");
-    const seen = new Set<string>();
-    let net = 0,
-      tax = 0;
-    const items = body.lines
-      .map(x => {
-        if (!isRecord(x)) fail("INVALID_INPUT", "Alış satırı geçersiz.");
-        const id = requireId(x.productId, "productId"),
-          qty = requireInteger(x.quantity, "quantity"),
-          cost = requireMoney(x.unitNetMinor, "KDV hariç birim maliyet", {
-            allowZero: true,
-          }),
-          vat = vatRate(x.vatBps);
-        if (seen.has(id) || qty > 10000)
-          fail(
-            "INVALID_INPUT",
-            "Ürün satırı tekrarlanamaz; adet en fazla 10.000 olmalıdır."
-          );
-        seen.add(id);
-        const n = posLineTotal(cost, qty),
-          t = netTax(n, vat);
-        net = safeAdd(net, n);
-        tax = safeAdd(tax, t);
-        return {
-          productId: id,
-          quantity: qty,
-          unitNetMinor: cost,
-          vatBps: vat,
-          netMinor: n,
-          vatMinor: t,
-        };
-      })
-      .sort((a, b) => a.productId.localeCompare(b.productId));
-    const gross = safeAdd(net, tax);
-    requireMoney(gross, "Alış toplamı");
-    if (requireMoney(body.expectedTotalMinor, "Belge toplamı") !== gross)
-      fail(
-        "PURCHASE_TOTAL_CHANGED",
-        "Belge toplamı hesaplanan satır toplamıyla uyuşmuyor.",
-        409
-      );
-    const payable = -(await accountBalance(c, station, "PAYABLE", p.id));
-    if (
-      p.payable_limit_minor !== null &&
-      safeAdd(payable, gross) > integer(p.payable_limit_minor)
-    )
-      fail("CREDIT_LIMIT", "Tedarikçi cari limiti yetersiz.", 409);
-    const id = randomUUID();
-    for (const l of items) {
-      const product = await first<Row>(
-        c,
-        "SELECT * FROM st_products WHERE id=? AND tenant_id=? AND station_id=? FOR UPDATE",
-        [l.productId, scope.tenantId, station]
-      );
-      if (!product) fail("NOT_FOUND", "Ürün bu istasyonda bulunamadı.", 404);
-      const inv = await inventoryRow(c, book!, product),
-        qty = safeAdd(integer(inv.quantity), l.quantity),
-        value = safeAdd(integer(inv.value_minor), l.netMinor);
-      await execute(
-        c,
-        "UPDATE st_market_inventory SET quantity=?,value_minor=? WHERE product_id=?",
-        [qty, value, l.productId]
-      );
-      await execute(
-        c,
-        "UPDATE st_products SET stock_qty=?,purchase_price_minor=? WHERE id=?",
-        [qty, ratioRound(value, 1, qty), l.productId]
-      );
-      await execute(
-        c,
-        "INSERT INTO st_stock_movements (id,tenant_id,station_id,product_id,kind,quantity,unit_price_minor,reference,created_by_user_id) VALUES (?,?,?,?,'RECEIPT',?,?,?,?)",
-        [
-          randomUUID(),
-          scope.tenantId,
-          station,
-          l.productId,
-          l.quantity,
-          l.unitNetMinor,
-          `MARKET:${id}`,
-          actor.id,
-        ]
-      );
-    }
-    const entry = await ledgerEntry(
-      c,
-      book!,
-      actor.id,
-      "PURCHASE",
-      id,
-      "Mal kabul ve tedarikçi borcu",
-      [
-        { account: "INVENTORY", debit: net },
-        { account: "INPUT_VAT", debit: tax },
-        { account: "PAYABLE", partyId: p.id, credit: gross },
-      ],
-      { partyId: p.id, items, dueDate: due },
-      ref
-    );
-    await document(c, book!, p.id, entry, "PURCHASE", ref, due, gross);
-    return { id, totalMinor: gross };
-  });
+  post("purchase", READ, recordMarketPurchase);
   post("settlement", CLOSE, async (c, actor, body, scope, station, book) => {
     const direction = requireEnum(body.direction, "direction", [
         "COLLECTION",
@@ -1103,10 +982,11 @@ export function registerMarketAccountingRoutes(
             )
           : stockCost(integer(inv.value_minor), expected, -delta),
       value = safeAdd(integer(inv.value_minor), delta > 0 ? amount : -amount);
-    await execute(c, "UPDATE st_products SET stock_qty=? WHERE id=?", [
-      counted,
-      id,
-    ]);
+    await execute(
+      c,
+      "UPDATE st_products SET stock_qty=?,stock_version=stock_version+1 WHERE id=?",
+      [counted, id]
+    );
     await execute(
       c,
       "UPDATE st_market_inventory SET quantity=?,value_minor=? WHERE product_id=?",

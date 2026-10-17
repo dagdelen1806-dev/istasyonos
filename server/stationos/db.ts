@@ -19,6 +19,13 @@ export function getStationPool(): Pool {
     bigNumberStrings: true,
     connectionLimit: 8,
   });
+  // mysql2's timezone controls JS date encoding, not CURRENT_TIMESTAMP in SQL.
+  // Keep newly recorded stock/device events in UTC on Windows/Laragon too.
+  pool.on("connection", connection => {
+    connection.query("SET time_zone = '+00:00'", (error: Error | null) => {
+      if (error) connection.destroy();
+    });
+  });
   return pool;
 }
 

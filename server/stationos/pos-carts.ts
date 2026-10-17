@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { productPrice } from "./market-pricing";
 import type { Request } from "express";
 import type { PoolConnection } from "mysql2/promise";
 import type { PosCart, PosCartLine, PosCartEvent } from "../../shared/pos";
@@ -264,7 +265,22 @@ export function registerCartRoutes(
     );
     if (!p) fail("NOT_FOUND", "Ürün bu istasyonda bulunamadı.", 404);
     const old = cart.lines.find(l => l.productId === productId);
-    if (old && old.expectedUnitPriceMinor !== Number(p.sale_price_minor))
+    const chosen =
+      body.priceListId === undefined ? old?.priceListId : body.priceListId;
+    const price = await productPrice(
+      c,
+      stationId,
+      p,
+      chosen,
+      scope.member.role
+    );
+    if (old && old.priceListId !== (price.listId ?? undefined))
+      fail(
+        "PRICE_CONFLICT",
+        "Bu ürün sepette başka fiyat listesiyle var. Önce ilgili satırı açıklamayla iptal edin.",
+        409
+      );
+    if (old && old.expectedUnitPriceMinor !== price.price)
       fail("PRICE_CHANGED", "Fiyat değişmiş; önce güncel fiyatları alın.", 409);
     const merged = normalizePosLines(
       old
@@ -278,7 +294,8 @@ export function registerCartRoutes(
             {
               productId,
               quantity,
-              expectedUnitPriceMinor: Number(p.sale_price_minor),
+              expectedUnitPriceMinor: price.price,
+              ...(price.listId ? { priceListId: price.listId } : {}),
             },
           ]
     );
@@ -297,6 +314,15 @@ export function registerCartRoutes(
         l.productId === productId
           ? p.barcode
           : cart.lines.find(x => x.productId === l.productId)!.barcode,
+      ...(l.priceListId
+        ? {
+            priceListName:
+              l.productId === productId
+                ? price.listName!
+                : cart.lines.find(x => x.productId === l.productId)!
+                    .priceListName,
+          }
+        : {}),
     }));
     lines.reduce(
       (sum, l) =>
@@ -437,15 +463,23 @@ export function registerCartRoutes(
     for (const l of cart.lines) {
       const p = await first<Row>(
         c,
-        "SELECT name,barcode,sale_price_minor FROM st_products WHERE id=? AND tenant_id=? AND station_id=?",
+        "SELECT id,name,barcode,sale_price_minor FROM st_products WHERE id=? AND tenant_id=? AND station_id=?",
         [l.productId, scope.tenantId, stationId]
       );
       if (!p) fail("NOT_FOUND", "Sepetteki ürün bulunamadı.", 404);
+      const price = await productPrice(
+        c,
+        stationId,
+        p,
+        l.priceListId,
+        scope.member.role
+      );
       lines.push({
         ...l,
         productName: p.name,
         barcode: p.barcode,
-        expectedUnitPriceMinor: Number(p.sale_price_minor),
+        expectedUnitPriceMinor: price.price,
+        ...(price.listName ? { priceListName: price.listName } : {}),
       });
     }
     lines.reduce(

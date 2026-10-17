@@ -48,6 +48,9 @@ export interface PosState {
   registers: PosRegister[];
   sessions: PosSession[];
   products: Product[];
+  barcodes: import("./inventory").Barcode[];
+  priceLists: import("./inventory").PriceList[];
+  prices: import("./inventory").ProductPrice[];
   sales: PosSale[];
   activeCart: PosCart | null;
   heldCarts: PosCart[];
@@ -65,11 +68,13 @@ export interface PosLineInput {
   productId: string;
   quantity: number;
   expectedUnitPriceMinor: number;
+  priceListId?: string;
 }
 
 export interface PosCartLine extends PosLineInput {
   productName: string;
   barcode: string;
+  priceListName?: string;
 }
 export interface PosCart {
   id: string;

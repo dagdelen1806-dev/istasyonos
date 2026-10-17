@@ -459,7 +459,7 @@ export function registerMarketReturns(
         );
         await execute(
           c,
-          "UPDATE st_products SET stock_qty=?,purchase_price_minor=? WHERE id=?",
+          "UPDATE st_products SET stock_qty=?,purchase_price_minor=?,stock_version=stock_version+1 WHERE id=?",
           [quantity, quantity ? ratioRound(value, 1, quantity) : 0, l.productId]
         );
         await execute(

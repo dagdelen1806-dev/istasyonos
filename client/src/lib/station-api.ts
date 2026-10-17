@@ -152,3 +152,45 @@ export async function loadMarketReturnSource(
     `/market-accounting/return-source?${new URLSearchParams({ stationId, entryId })}`
   );
 }
+
+export async function loadInventory(
+  stationId: string
+): Promise<import("@shared/inventory").InventoryState> {
+  return request(
+    `/market-accounting/inventory?${new URLSearchParams({ stationId })}`
+  );
+}
+export async function loadInventoryTerminal(
+  stationId: string
+): Promise<import("@shared/inventory").TerminalState> {
+  return request(
+    `/market-accounting/inventory/terminal?${new URLSearchParams({ stationId })}`
+  );
+}
+export async function loadInventoryDraft(
+  stationId: string,
+  draftId: string
+): Promise<import("@shared/inventory").InventoryDraft> {
+  return request(
+    `/market-accounting/inventory/draft?${new URLSearchParams({ stationId, draftId })}`
+  );
+}
+export async function loadInventoryMovements(
+  stationId: string,
+  productId: string,
+  from: string,
+  to: string,
+  cursor = ""
+): Promise<import("@shared/inventory").InventoryMovements> {
+  return request(
+    `/market-accounting/inventory/movements?${new URLSearchParams({ stationId, productId, from, to, cursor })}`
+  );
+}
+export async function loadMonthlyReport(
+  stationId: string,
+  month: string
+): Promise<import("@shared/inventory").MonthlyReport> {
+  return request(
+    `/market-accounting/monthly?${new URLSearchParams({ stationId, month })}`
+  );
+}

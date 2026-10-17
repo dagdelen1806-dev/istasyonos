@@ -1,3 +1,5 @@
+import { InventoryManagement } from "./InventoryManagement";
+import { MonthlyMarketReport } from "./MonthlyMarketReport";
 import { useState } from "react";
 import {
   BookOpen,
@@ -38,9 +40,11 @@ import {
   marketKindLabels,
 } from "./MarketStatement";
 import "./market-accounting.css";
+import "./inventory.css";
 const tabs = [
   ["overview", "Özet", BookOpen],
   ["stock", "Stok ve fiyat", Package],
+  ["monthly", "Aylık kâr–zarar", BookOpen],
   ["purchase", "Alış ve mal kabul", Receipt],
   ["returns", "İadeler", Undo2],
   ["parties", "Cariler", Users],
@@ -384,106 +388,21 @@ function MarketAccountingWorkspace({
             </>
           )}
           {tab === "stock" && (
-            <section className="ma-panel">
-              <div className="ma-panel-head">
-                <div>
-                  <h2>Stok, maliyet ve satış fiyatı</h2>
-                  <p>
-                    Alışlar maliyet değerini artırır; satış ve sayım eksiği
-                    ağırlıklı maliyetten düşer.
-                  </p>
-                </div>
-                {canProduct && (
-                  <button
-                    className="btn primary"
-                    disabled={w.locked}
-                    onClick={() => setModal({ kind: "new-product" })}
-                  >
-                    <Plus size={16} />
-                    Yeni ürün
-                  </button>
-                )}
-              </div>
-              <label className="ma-search">
-                <Search size={17} />
-                <input
-                  aria-label="Market stok ara"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Ad veya barkod ile ara"
-                />
-              </label>
-              <div className="ma-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Ürün / Barkod</th>
-                      <th>Adet</th>
-                      <th>Ort. maliyet</th>
-                      <th>Stok değeri</th>
-                      <th>Satış fiyatı</th>
-                      <th>KDV</th>
-                      <th>İşlem</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stock.map(p => (
-                      <tr key={p.id}>
-                        <td>
-                          <b>{p.name}</b>
-                          <small>{p.barcode}</small>
-                        </td>
-                        <td>
-                          <span
-                            className={
-                              p.quantity <= p.minimumQty ? "ma-warn-badge" : ""
-                            }
-                          >
-                            {p.quantity}
-                          </span>
-                        </td>
-                        <td>{money(p.averageCostMinor)}</td>
-                        <td>{money(p.valueMinor)}</td>
-                        <td>{money(p.salePriceMinor)}</td>
-                        <td>
-                          {p.vatBps === null ? (
-                            <span className="ma-warn-badge">Tanımlanmalı</span>
-                          ) : (
-                            `%${p.vatBps / 100}`
-                          )}
-                        </td>
-                        <td>
-                          <div className="ma-row-actions">
-                            <button
-                              className="btn"
-                              disabled={w.locked}
-                              onClick={() =>
-                                setModal({ kind: "product", product: p })
-                              }
-                            >
-                              Fiyat / KDV
-                            </button>
-                            <button
-                              className="btn"
-                              disabled={locked}
-                              onClick={() =>
-                                setModal({ kind: "stock", product: p })
-                              }
-                            >
-                              Sayım
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <small>
-                İlk 100 eşleşme gösterilir. Yeni stok Alış ve mal kabul
-                bölümünden girilir.
-              </small>
-            </section>
+            <InventoryManagement
+              stationId={stationId}
+              ledger={d}
+              locked={w.locked}
+              canCreate={canProduct}
+              onCreate={() => setModal({ kind: "new-product" })}
+              onBasePrice={id => {
+                const product = d.stock.find(p => p.id === id);
+                if (product) setModal({ kind: "product", product });
+              }}
+              action={w.action}
+            />
+          )}
+          {tab === "monthly" && (
+            <MonthlyMarketReport stationId={stationId} today={d.today} />
           )}
           {tab === "purchase" && (
             <MarketPurchase

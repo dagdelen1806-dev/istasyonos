@@ -6,6 +6,9 @@ const MarketAccounting = lazy(
   () => import("@/components/stationos/MarketAccounting")
 );
 const MarketPos = lazy(() => import("@/components/stationos/MarketPos"));
+const InventoryTerminal = lazy(
+  () => import("@/components/stationos/InventoryTerminal")
+);
 const AssistantPanel = lazy(
   () => import("@/components/stationos/AssistantPanel")
 );
@@ -99,6 +102,7 @@ const navItems = [
   { path: "/cari", label: "Cari ve alacak", icon: Users },
   { path: "/finans", label: "Finansal görünüm", icon: Wallet },
   { path: "/market-muhasebe", label: "Market muhasebesi", icon: Wallet },
+  { path: "/el-terminali", label: "El terminali", icon: Smartphone },
   {
     path: "/kurulum",
     label: "Firma ve istasyon",
@@ -110,6 +114,10 @@ const navItems = [
   { path: "/denetim", label: "İşlem geçmişi", icon: ShieldCheck },
 ];
 const pageInfo: Record<string, [string, string]> = {
+  "/el-terminali": [
+    "El terminali",
+    "Cihaz tanımı, ortak mal kabul ve sayım taslakları.",
+  ],
   "/market-muhasebe": [
     "Market ön muhasebesi",
     "Stok maliyeti, cari, ödeme ve gün sonu aynı hareket defterinde.",
@@ -533,6 +541,14 @@ export default function StationApp() {
           {navItems
             .filter(
               n =>
+                (n.path !== "/el-terminali" ||
+                  [
+                    "OWNER",
+                    "MANAGER",
+                    "ACCOUNTANT",
+                    "MARKET_STAFF",
+                    "PURCHASER",
+                  ].includes(state?.member?.role ?? "")) &&
                 (n.path !== "/kasa" ||
                   ["OWNER", "MANAGER", "MARKET_STAFF", "ACCOUNTANT"].includes(
                     state?.member?.role ?? ""
@@ -544,6 +560,7 @@ export default function StationApp() {
                     "/slipler",
                     "/market",
                     "/kasa",
+                    "/el-terminali",
                     "/cari",
                     "/entegrasyon",
                   ].includes(n.path))
@@ -1370,6 +1387,11 @@ export default function StationApp() {
               {path === "/market-muhasebe" && (
                 <Suspense fallback={<p>Market muhasebesi yükleniyor…</p>}>
                   <MarketAccounting state={state} stationId={stationId} />
+                </Suspense>
+              )}
+              {path === "/el-terminali" && (
+                <Suspense fallback={<p>El terminali yükleniyor…</p>}>
+                  <InventoryTerminal state={state} stationId={stationId} />
                 </Suspense>
               )}
               {path === "/kasa" && (

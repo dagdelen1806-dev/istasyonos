@@ -1029,6 +1029,11 @@ async function setup(
       );
       await execute(
         connection,
+        "INSERT INTO st_product_barcodes(station_id,barcode,product_id,pack_qty,label) VALUES (?,?,?,1,'Ana barkod')",
+        [stationId, `DEMO-${stationCode}`, productId]
+      );
+      await execute(
+        connection,
         `INSERT INTO st_shifts (id, tenant_id, station_id, label, starts_at, status) VALUES (?, ?, ?, 'DEMO - Örnek Vardiya', CURRENT_TIMESTAMP(3), 'OPEN')`,
         [shiftId, tenantId, stationId]
       );
@@ -2206,6 +2211,11 @@ export function registerStationRoutes(app: Express): void {
             actor.id,
           ]
         );
+        await execute(
+          connection,
+          "INSERT INTO st_product_barcodes(station_id,barcode,product_id,pack_qty,label) VALUES (?,?,?,1,'Ana barkod')",
+          [stationId, barcode, id]
+        );
         await audit(
           connection,
           scope.tenantId,
@@ -2280,7 +2290,7 @@ export function registerStationRoutes(app: Express): void {
         );
         await execute(
           connection,
-          `UPDATE st_products SET stock_qty = ? WHERE id = ?`,
+          `UPDATE st_products SET stock_qty = ?,stock_version=stock_version+1 WHERE id = ?`,
           [nextStock, productId]
         );
         await audit(

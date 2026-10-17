@@ -69,6 +69,7 @@ function PosWorkspace({
   const [barcode, setBarcode] = useState("");
   const [search, setSearch] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const [priceList, setPriceList] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const favoriteKey = `stationos-pos-favorites:${state.user.id}:${stationId}`;
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -107,9 +108,17 @@ function PosWorkspace({
   const editable =
     !!session && (!cart || cart.sessionId === session.id) && canSell;
   const total = cart ? cartTotal(cart) : 0;
+  function currentPrice(productId: string, listId = priceList) {
+    if (!listId)
+      return data?.products.find(p => p.id === productId)?.salePriceMinor;
+    if (!data?.priceLists.some(l => l.id === listId)) return undefined;
+    return data.prices.find(
+      p => p.productId === productId && p.listId === listId
+    )?.unitPriceMinor;
+  }
   const priceChanged = lines.some(
     l =>
-      data?.products.find(p => p.id === l.productId)?.salePriceMinor !==
+      currentPrice(l.productId, l.priceListId ?? "") !==
       l.expectedUnitPriceMinor
   );
   useEffect(() => {
@@ -143,10 +152,17 @@ function PosWorkspace({
   function cartPayload() {
     return cart ? { cartId: cart.id, cartVersion: cart.version } : {};
   }
-  async function add(productId: string) {
+  async function add(productId: string, pack = 1, listId = priceList) {
     if (locked || !editable || !session) return;
-    const count = Number(quantity);
-    if (!Number.isSafeInteger(count) || count < 1 || count > 10000) {
+    const units = Number(quantity),
+      count = units * pack;
+    if (
+      !Number.isSafeInteger(units) ||
+      units < 1 ||
+      !Number.isSafeInteger(count) ||
+      count < 1 ||
+      count > 10000
+    ) {
       w.setError("Adet 1–10.000 arasında tam sayı olmalıdır.");
       return;
     }
@@ -155,6 +171,7 @@ function PosWorkspace({
       ...cartPayload(),
       productId,
       quantity: count,
+      priceListId: listId || null,
     });
     if (success) {
       setBarcode("");
@@ -383,10 +400,14 @@ function PosWorkspace({
                 className="pos-scan"
                 onSubmit={e => {
                   e.preventDefault();
+                  const alias = data.barcodes.find(
+                    b => b.barcode === barcode.trim()
+                  );
                   const p = data.products.find(
                     p => p.barcode === barcode.trim()
                   );
-                  if (p) void add(p.id);
+                  if (alias) void add(alias.productId, alias.packQty);
+                  else if (p) void add(p.id);
                   else w.setError("Barkod bu istasyonda bulunamadı.");
                 }}
               >
@@ -419,6 +440,26 @@ function PosWorkspace({
                   Ekle
                 </button>
               </form>
+              <label className="pos-price-list">
+                Satış fiyat listesi
+                <select
+                  aria-label="Satış fiyat listesi"
+                  value={priceList}
+                  disabled={locked}
+                  onChange={e => setPriceList(e.target.value)}
+                >
+                  <option value="">Perakende</option>
+                  {data.priceLists.map(l => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+                <small>
+                  Yeni eklenen ürünlerde uygulanır; sepet satırı kendi listesini
+                  korur.
+                </small>
+              </label>
               <div className="pos-search">
                 <Search size={18} />
                 <input
@@ -452,13 +493,22 @@ function PosWorkspace({
                     <button
                       className="pos-product"
                       onClick={() => void add(p.id)}
-                      disabled={!editable || locked || p.stockQty < 1}
+                      disabled={
+                        !editable ||
+                        locked ||
+                        p.stockQty < 1 ||
+                        currentPrice(p.id) === undefined
+                      }
                     >
                       <span className="pos-product-symbol">
                         {p.name.slice(0, 1).toLocaleUpperCase("tr-TR")}
                       </span>
                       <b>{p.name}</b>
-                      <strong>{money(p.salePriceMinor)}</strong>
+                      <strong>
+                        {currentPrice(p.id) === undefined
+                          ? "Fiyat tanımsız"
+                          : money(currentPrice(p.id)!)}
+                      </strong>
                       <small>
                         {p.stockQty > 0
                           ? `${p.stockQty} adet stok`
@@ -535,6 +585,9 @@ function PosWorkspace({
                       <b>{l.productName}</b>
                       <small>
                         {l.quantity} × {money(l.expectedUnitPriceMinor)}
+                        {l.priceListName
+                          ? ` · ${l.priceListName}`
+                          : " · Perakende"}
                       </small>
                       <div className="pos-stepper">
                         <button
@@ -550,7 +603,9 @@ function PosWorkspace({
                         <button
                           aria-label={`${l.productName} adet artır`}
                           disabled={locked || !editable}
-                          onClick={() => void add(l.productId)}
+                          onClick={() =>
+                            void add(l.productId, 1, l.priceListId ?? "")
+                          }
                         >
                           <Plus size={14} />
                         </button>

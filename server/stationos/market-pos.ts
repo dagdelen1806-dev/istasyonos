@@ -5,6 +5,7 @@ import {
   marketSale,
   marketCustomers,
 } from "./market-accounting-ledger";
+import { productPrice } from "./market-pricing";
 import { randomUUID } from "node:crypto";
 import type { Express, Request, Response } from "express";
 import type { PoolConnection, RowDataPacket } from "mysql2/promise";
@@ -216,6 +217,27 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
           "SELECT id,station_id,name,barcode,stock_qty,minimum_qty,sale_price_minor,supplier_id FROM st_products WHERE tenant_id=? AND station_id=? ORDER BY name LIMIT 5000",
           [scope.tenantId, stationId]
         );
+        const barcodes = await rows<Row[]>(
+          c,
+          "SELECT b.* FROM st_product_barcodes b JOIN st_products p ON p.id=b.product_id WHERE b.station_id=? AND p.tenant_id=?",
+          [stationId, scope.tenantId]
+        );
+        const lists = await rows<Row[]>(
+          c,
+          "SELECT * FROM st_market_price_lists WHERE station_id=? AND tenant_id=? AND active=1 AND (?=0 OR staff_enabled=1) ORDER BY name",
+          [
+            stationId,
+            scope.tenantId,
+            scope.member.role === "MARKET_STAFF" ? 1 : 0,
+          ]
+        );
+        const prices = lists.length
+          ? await rows<Row[]>(
+              c,
+              `SELECT * FROM st_market_prices WHERE list_id IN (${lists.map(() => "?").join(",")})`,
+              lists.map(l => l.id)
+            )
+          : [];
         const bindings = sessions.length
           ? await rows<Row[]>(
               c,
@@ -277,6 +299,23 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
             purchasePriceMinor: null,
             salePriceMinor: number(p.sale_price_minor),
             supplierId: p.supplier_id,
+          })),
+          barcodes: barcodes.map(b => ({
+            barcode: b.barcode,
+            productId: b.product_id,
+            packQty: number(b.pack_qty),
+            label: b.label,
+          })),
+          priceLists: lists.map(l => ({
+            id: l.id,
+            name: l.name,
+            active: !!l.active,
+            staffEnabled: !!l.staff_enabled,
+          })),
+          prices: prices.map(p => ({
+            productId: p.product_id,
+            listId: p.list_id,
+            unitPriceMinor: number(p.unit_price_minor),
           })),
           sales: sales.map(s => ({
             id: s.id,
@@ -481,7 +520,15 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       );
       if (!p)
         fail("NOT_FOUND", "Sepetteki ürün bu istasyonda bulunamadı.", 404);
-      if (number(p.sale_price_minor) !== line.expectedUnitPriceMinor)
+      const price = await productPrice(
+        c,
+        stationId,
+        p,
+        line.priceListId,
+        scope.member.role,
+        true
+      );
+      if (price.price !== line.expectedUnitPriceMinor)
         fail(
           "PRICE_CHANGED",
           "Ürün fiyatı değişti. Sepeti güncelleyip tekrar inceleyin.",
@@ -489,9 +536,15 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
         );
       if (number(p.stock_qty) < line.quantity)
         fail("NEGATIVE_INVENTORY", `${p.name}: yeterli stok yok.`, 409);
-      const lineTotal = posLineTotal(number(p.sale_price_minor), line.quantity);
+      const lineTotal = posLineTotal(price.price, line.quantity);
       total = safeAdd(total, lineTotal);
-      snapshots.push({ ...line, name: p.name, barcode: p.barcode, lineTotal });
+      snapshots.push({
+        ...line,
+        name: p.name,
+        barcode: p.barcode,
+        lineTotal,
+        priceListName: price.listName,
+      });
     }
     const payment = posPayment(body, total);
     if (payment.paymentKind === "ON_ACCOUNT" && !marketBook)
@@ -555,7 +608,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
     for (const line of snapshots) {
       await execute(
         c,
-        "INSERT INTO st_pos_sale_lines (id,sale_id,product_id,product_name,barcode,quantity,unit_price_minor,total_minor) VALUES (?,?,?,?,?,?,?,?)",
+        "INSERT INTO st_pos_sale_lines (id,sale_id,product_id,product_name,barcode,quantity,unit_price_minor,total_minor,price_list_id,price_list_name) VALUES (?,?,?,?,?,?,?,?,?,?)",
         [
           randomUUID(),
           id,
@@ -565,11 +618,13 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
           line.quantity,
           line.expectedUnitPriceMinor,
           line.lineTotal,
+          line.priceListId ?? null,
+          line.priceListName,
         ]
       );
       await execute(
         c,
-        "UPDATE st_products SET stock_qty=stock_qty-? WHERE id=? AND tenant_id=? AND station_id=?",
+        "UPDATE st_products SET stock_qty=stock_qty-?,stock_version=stock_version+1 WHERE id=? AND tenant_id=? AND station_id=?",
         [line.quantity, line.productId, scope.tenantId, stationId]
       );
       await execute(
