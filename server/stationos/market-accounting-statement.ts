@@ -53,8 +53,8 @@ export function registerMarketStatement(app: Express, services: Services) {
           closing = await sum("e.business_date<=?", [to]);
         const es = await rows<Row[]>(
           c,
-          "SELECT e.* FROM st_market_entries e WHERE e.station_id=? AND e.tenant_id=? AND e.business_date BETWEEN ? AND ? AND e.seq>? AND EXISTS(SELECT 1 FROM st_market_lines l WHERE l.entry_id=e.id AND l.party_id=?) ORDER BY e.seq LIMIT 101",
-          [station, scope.tenantId, from, to, cursor, partyId]
+          "SELECT e.*,r.gross_minor AS return_gross,r.refund_minor AS return_refund FROM st_market_entries e LEFT JOIN st_market_returns r ON r.entry_id=e.id WHERE e.station_id=? AND e.tenant_id=? AND e.business_date BETWEEN ? AND ? AND e.seq>? AND (EXISTS(SELECT 1 FROM st_market_lines l WHERE l.entry_id=e.id AND l.party_id=?) OR EXISTS(SELECT 1 FROM st_market_documents d WHERE d.id=r.document_id AND d.party_id=?)) ORDER BY e.seq LIMIT 101",
+          [station, scope.tenantId, from, to, cursor, partyId, partyId]
         );
         const selected = es.slice(0, 100),
           ls = selected.length
@@ -81,6 +81,8 @@ export function registerMarketStatement(app: Express, services: Services) {
             description: e.description,
             reference: e.reference,
             receivableDeltaMinor: a,
+            returnGrossMinor: integer(e.return_gross),
+            returnRefundMinor: integer(e.return_refund),
             payableDeltaMinor: p,
             receivableBalanceMinor: ar,
             payableBalanceMinor: ap,

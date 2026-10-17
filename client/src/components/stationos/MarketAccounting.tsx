@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Search,
   Receipt,
+  Undo2,
 } from "lucide-react";
 import type { AppState } from "@shared/station";
 import { money, parseMoney } from "@shared/station";
@@ -23,6 +24,7 @@ import {
   type MarketAccountingState,
 } from "@shared/market-accounting";
 import { useMarketAccounting } from "./useMarketAccounting";
+import { MarketReturns } from "./MarketReturns";
 import {
   MarketAccountingDialog,
   MarketPurchase,
@@ -40,6 +42,7 @@ const tabs = [
   ["overview", "Özet", BookOpen],
   ["stock", "Stok ve fiyat", Package],
   ["purchase", "Alış ve mal kabul", Receipt],
+  ["returns", "İadeler", Undo2],
   ["parties", "Cariler", Users],
   ["money", "Kasa ve banka", Wallet],
   ["dayend", "Gün sonu", CalendarCheck],
@@ -220,7 +223,7 @@ function MarketAccountingWorkspace({
             <>
               <div className="ma-metrics">
                 <Metric
-                  label="KDV hariç satış"
+                  label="İade sonrası net satış"
                   value={money(d.daily.salesNetMinor)}
                   detail={`${d.daily.date} · ${d.daily.saleCount} satış`}
                 />
@@ -304,8 +307,16 @@ function MarketAccountingWorkspace({
                   <h2>Günün hareketleri</h2>
                   <dl className="ma-totals">
                     <div>
-                      <dt>KDV dahil kasa satışı</dt>
+                      <dt>İade sonrası KDV dahil satış</dt>
                       <dd>{money(d.daily.salesGrossMinor)}</dd>
+                    </div>
+                    <div>
+                      <dt>Satış iadesi · {d.daily.saleReturnCount} belge</dt>
+                      <dd>{money(d.daily.salesReturnsGrossMinor)}</dd>
+                    </div>
+                    <div>
+                      <dt>Alış iadesi · KDV dahil</dt>
+                      <dd>{money(d.daily.purchaseReturnsGrossMinor)}</dd>
                     </div>
                     <div>
                       <dt>Cari tahsilat</dt>
@@ -316,7 +327,7 @@ function MarketAccountingWorkspace({
                       <dd>{money(d.daily.supplierPaymentsMinor)}</dd>
                     </div>
                     <div>
-                      <dt>Mal kabul · KDV hariç</dt>
+                      <dt>İade sonrası mal kabul · KDV hariç</dt>
                       <dd>{money(d.daily.purchasesNetMinor)}</dd>
                     </div>
                     <div>
@@ -479,6 +490,16 @@ function MarketAccountingWorkspace({
               data={d}
               locked={locked}
               error={w.error}
+              action={w.action}
+            />
+          )}
+          {tab === "returns" && (
+            <MarketReturns
+              stationId={stationId}
+              data={d}
+              locked={locked}
+              readLocked={w.locked}
+              canWrite={canClose}
               action={w.action}
             />
           )}
@@ -860,6 +881,7 @@ function Documents({ data }: { data: MarketAccountingState }) {
               <th>Vade</th>
               <th>Toplam</th>
               <th>Kapanan</th>
+              <th>İade mahsubu</th>
               <th>Kalan</th>
             </tr>
           </thead>
@@ -880,7 +902,8 @@ function Documents({ data }: { data: MarketAccountingState }) {
                 <td>
                   <span
                     className={
-                      d.totalMinor > d.settledMinor && d.dueDate < data.today
+                      d.totalMinor > d.settledMinor + d.creditedMinor &&
+                      d.dueDate < data.today
                         ? "ma-warn-badge"
                         : ""
                     }
@@ -890,7 +913,10 @@ function Documents({ data }: { data: MarketAccountingState }) {
                 </td>
                 <td>{money(d.totalMinor)}</td>
                 <td>{money(d.settledMinor)}</td>
-                <td>{money(d.totalMinor - d.settledMinor)}</td>
+                <td>{money(d.creditedMinor)}</td>
+                <td>
+                  {money(d.totalMinor - d.settledMinor - d.creditedMinor)}
+                </td>
               </tr>
             ))}
           </tbody>

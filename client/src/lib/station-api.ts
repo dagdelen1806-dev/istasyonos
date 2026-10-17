@@ -128,3 +128,27 @@ export async function loadMarketStatement(
     `/market-accounting/statement?stationId=${encodeURIComponent(stationId)}&partyId=${encodeURIComponent(partyId)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&cursor=${cursor}`
   );
 }
+
+export async function loadMarketReturnSources(
+  stationId: string,
+  kind: "POS_SALE" | "PURCHASE",
+  from: string,
+  to: string,
+  q: string,
+  cursor = 0
+): Promise<{
+  rows: import("@shared/market-accounting").MarketReturnSummary[];
+  nextCursor: number | null;
+}> {
+  return request(
+    `/market-accounting/return-sources?${new URLSearchParams({ stationId, kind, from, to, q, cursor: String(cursor) })}`
+  );
+}
+export async function loadMarketReturnSource(
+  stationId: string,
+  entryId: string
+): Promise<import("@shared/market-accounting").MarketReturnSource> {
+  return request(
+    `/market-accounting/return-source?${new URLSearchParams({ stationId, entryId })}`
+  );
+}

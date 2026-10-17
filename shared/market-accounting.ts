@@ -10,6 +10,8 @@ export const marketAccounts = {
   OUTPUT_VAT: "Satış KDV",
   OPENING: "Açılış karşılığı",
   SALES: "KDV hariç satış",
+  SALES_RETURNS: "KDV hariç satış iadesi",
+  PURCHASE_RETURN_VARIANCE: "Alış iadesi maliyet farkı",
   COGS: "Satılan mal maliyeti",
   EXPENSE: "İşletme gideri",
   BANK_FEES: "Banka komisyonu",
@@ -41,6 +43,7 @@ export interface MarketDocument {
   dueDate: string;
   totalMinor: number;
   settledMinor: number;
+  creditedMinor: number;
 }
 export interface MarketStock {
   id: string;
@@ -87,6 +90,9 @@ export interface MarketDaily {
   collectionsMinor: number;
   supplierPaymentsMinor: number;
   saleCount: number;
+  salesReturnsGrossMinor: number;
+  purchaseReturnsGrossMinor: number;
+  saleReturnCount: number;
 }
 export interface MarketClose {
   id: string;
@@ -122,6 +128,48 @@ export interface MarketAccountingState {
   openRegisterCount: number;
   stockValueMinor: number;
   trialDifferenceMinor: number;
+  returns: MarketReturnRecord[];
+}
+export interface MarketReturnSummary {
+  id: string;
+  number: number;
+  date: string;
+  kind: "POS_SALE" | "PURCHASE";
+  reference: string | null;
+  partyName: string | null;
+  grossMinor: number;
+}
+export interface MarketReturnSource extends MarketReturnSummary {
+  revision: number;
+  openDocumentMinor: number;
+  items: {
+    productId: string;
+    name: string;
+    barcode: string;
+    quantity: number;
+    grossMinor: number;
+    netMinor: number;
+    costMinor: number;
+    returnedQuantity: number;
+    returnedGrossMinor: number;
+    returnedNetMinor: number;
+    returnedCostMinor: number;
+    stockQuantity: number;
+    stockValueMinor: number;
+  }[];
+}
+export interface MarketReturnRecord {
+  id: string;
+  date: string;
+  kind: "SALE_RETURN" | "PURCHASE_RETURN";
+  reference: string;
+  sourceEntryId: string;
+  sourceReference: string | null;
+  reason: string;
+  grossMinor: number;
+  creditedMinor: number;
+  refundMinor: number;
+  wallet: "CASH_SAFE" | "BANK" | null;
 }
 export interface MarketStatementPage {
   party: { id: string; name: string };
@@ -140,6 +188,8 @@ export interface MarketStatementPage {
     description: string;
     reference: string | null;
     receivableDeltaMinor: number;
+    returnGrossMinor: number;
+    returnRefundMinor: number;
     payableDeltaMinor: number;
     receivableBalanceMinor: number;
     payableBalanceMinor: number;

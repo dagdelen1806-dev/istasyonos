@@ -66,7 +66,7 @@ Gün sonu, Türkiye takvim gününe (`Europe/Istanbul`) göre çalışır. Geri 
 
 **Bugünün gün sonunu kapatmak bugüne yeni mali kaydı durdurur.** Yeni kayıtlar sonraki Türkiye takvim gününde alınabilir; aynı günü yeniden açma akışı yoktur. Fiyat/KDV ve cari limit gibi mali olmayan metadata düzenlemeleri kapanmış günün eski fişlerini değiştirmez. Geçmiş kayıtlı kapanış görüntüleri sonraki işlemlerden yeniden hesaplanmaz. Bu özet uygulama düzeyinde izlenebilirlik sağlar; veritabanı yöneticisine karşı değiştirilemez resmî arşiv iddiası değildir.
 
-Tahsilat, ödeme, gider, hesap transferi, kaynak girişi ve kart–banka kayıtları ters fişle düzeltilebilir. Eski fiş ve ödeme dağılımları korunur; ters fiş ilgili kaynak kayda bağlanır, belge kapanan tutarı geri alınır. İkinci ters kayıt ve yetersiz bakiyeli ters çıkış engellenir. Bankadan otomatik para iadesi yapılmaz. Alış/satış ve stok kaydını genel ters fişle bozmak engellenir; bunlar ayrı iade belgesi geliştirmesi gerektirir.
+Tahsilat, ödeme, gider, hesap transferi, kaynak girişi ve kart–banka kayıtları ters fişle düzeltilebilir. Eski fiş ve ödeme dağılımları korunur; ters fiş ilgili kaynak kayda bağlanır, belge kapanan tutarı geri alınır. İkinci ters kayıt ve yetersiz bakiyeli ters çıkış engellenir. Bankadan otomatik para iadesi yapılmaz. Alış/satış ve stok kaydını genel ters fişle bozmak engellenir; kaynak belgeli iadeler için 0012 göçü ve İadeler sekmesi kullanılır.
 
 ## Yetki ve tekrar güvenliği
 
@@ -111,4 +111,4 @@ HTTP paketi yalnız açık opt-in, loopback sunucusu ve tam adı `istasyonos_pos
 SMOKE_TEST=1 SMOKE_BASE_URL=http://127.0.0.1:3303 SMOKE_OUTPUT_DIR=/workspace/market-accounting-test/dev node --env-file=/workspace/pos-v2-test/.env --import tsx scripts/smoke-market-accounting.ts
 ```
 
-Fiziksel Windows cihazları, gerçek banka/mali cihaz/e-belge servisleri ve yedek geri yükleme kabulü yapılmış değildir. Satış/alış iadeleri, depo/şube transferi, merkez eşitleme ve resmî muhasebe entegrasyonları sonraki teslimatlardır.
+Fiziksel Windows cihazları, gerçek banka/mali cihaz/e-belge servisleri ve yedek geri yükleme kabulü yapılmış değildir. Kaynak belgeli satış/alış iadeleri 0012 göçüyle eklendi: [iade rehberi](market-iadeleri-2026-10-17.md). Depo/şube transferi, merkez eşitleme ve resmî muhasebe entegrasyonları sonraki teslimatlardır.

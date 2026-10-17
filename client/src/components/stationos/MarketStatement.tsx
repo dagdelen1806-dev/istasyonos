@@ -37,6 +37,8 @@ export const marketKindLabels: Record<string, string> = {
   PARTY_OPENING: "Cari açılışı",
   POS_SALE: "Kasa satışı",
   PURCHASE: "Mal kabul",
+  SALE_RETURN: "Satış iadesi",
+  PURCHASE_RETURN: "Alış iadesi",
   COLLECTION: "Tahsilat",
   PAYMENT: "Tedarikçi ödemesi",
   EXPENSE: "Gider",
@@ -137,6 +139,8 @@ export function MarketStatement({
                     "Borç değişimi TL",
                     "Müşteri alacağı TL",
                     "Tedarikçi borcu TL",
+                    "İade toplamı TL",
+                    "İade para hareketi TL",
                   ],
                   ...data.rows.map(r => [
                     r.date,
@@ -147,6 +151,8 @@ export function MarketStatement({
                     r.payableDeltaMinor / 100,
                     r.receivableBalanceMinor / 100,
                     r.payableBalanceMinor / 100,
+                    (r.returnGrossMinor ?? 0) / 100,
+                    (r.returnRefundMinor ?? 0) / 100,
                   ]),
                 ]);
             }}
@@ -201,6 +207,14 @@ export function MarketStatement({
                       <td>
                         {r.description}
                         <small>{r.reference}</small>
+                        {["SALE_RETURN", "PURCHASE_RETURN"].includes(
+                          r.kind
+                        ) && (
+                          <small>
+                            İade {money(r.returnGrossMinor ?? 0)} · para
+                            hareketi {money(r.returnRefundMinor ?? 0)}
+                          </small>
+                        )}
                       </td>
                       <td>{money(r.receivableDeltaMinor)}</td>
                       <td>{money(r.payableDeltaMinor)}</td>

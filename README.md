@@ -55,6 +55,8 @@ Finans işlemleri integer kuruş kullanır. Banka teyidi, gerçek Turpak/OCR ver
 
 ## Market ön muhasebesi — 17 Ekim 2026
 
+**İadeler güncellemesi:** Kaynak belgeli kısmi satış/alış iadesi, özgün fiyat/KDV, stok maliyeti, cari mahsup ve teyitli manuel para iadesi eklendi. `0012_market_returns` göçü gerekir. Kullanım ve sınırlar için [market iadeleri rehberini](docs/market-iadeleri-2026-10-17.md) okuyun.
+
 **Market muhasebesi** (`/market-muhasebe`), POS satışlarını stok maliyeti, müşteri/tedarikçi carisi ve kasa/banka defterine bağlar. Mal kabul, veresiye, kısmi tahsilat/ödeme, KDV ayrımı, ağırlıklı maliyet, gider/komisyon, açıklamalı ters fiş, cari ekstre/CSV ve gün sonu vardır. `0011_market_accounting` göçü gerekir. Açılış koşulları, Windows/Laragon güncellemesi, resmî rakip kaynakları ve mali kapsam için [Market ön muhasebe rehberini](docs/market-on-muhasebe-2026-10-17.md) okuyun. POS’un DEMO sınırı, mevcut vardiya onayları ve banka/mali belge entegrasyonu sınırları sürer.
 
 ## Market satış kasası pilotu — 16 Ekim 2026

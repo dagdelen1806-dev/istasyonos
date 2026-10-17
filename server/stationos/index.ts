@@ -603,8 +603,8 @@ async function stateFor(
     const saleTotals = mayRecommend
       ? await rows<DbRow[]>(
           connection,
-          `SELECT product_id, SUM(quantity) AS quantity28 FROM st_stock_movements
-       WHERE tenant_id = ? AND station_id IN (${placeholders}) AND kind='SALE'
+          `SELECT product_id, SUM(CASE WHEN kind='SALE' THEN quantity ELSE -quantity END) AS quantity28 FROM st_stock_movements
+       WHERE tenant_id = ? AND station_id IN (${placeholders}) AND kind IN ('SALE','SALE_RETURN')
        AND created_at >= DATE_SUB(CURRENT_TIMESTAMP(3), INTERVAL 28 DAY)
        GROUP BY product_id`,
           [scope.tenantId, ...stationIds]
@@ -626,7 +626,7 @@ async function stateFor(
       ? productRows
           .map(product => {
             const averageDaily =
-              (salesByProduct.get(String(product.id)) || 0) / 28;
+              Math.max(0, salesByProduct.get(String(product.id)) || 0) / 28;
             const stockQty = n(product.stock_qty);
             const recommendedQty = recommendationQuantity(
               stockQty,

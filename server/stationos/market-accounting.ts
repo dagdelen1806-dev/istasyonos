@@ -1,4 +1,5 @@
 import { registerMarketStatement } from "./market-accounting-statement";
+import { registerMarketReturns } from "./market-returns";
 import { randomUUID } from "node:crypto";
 import type { Express, Request, Response } from "express";
 import type { PoolConnection } from "mysql2/promise";
@@ -85,16 +86,27 @@ export async function dailyReport(
     "SELECT COUNT(*) AS n FROM st_market_entries WHERE station_id=? AND business_date=? AND kind='POS_SALE'",
     [station, date]
   );
-  const salesNet = -(b.SALES ?? 0),
+  const returns = await first<Row>(
+    c,
+    "SELECT COALESCE(SUM(CASE WHEN r.kind='SALE_RETURN' THEN r.gross_minor ELSE 0 END),0) AS sale_gross,COALESCE(SUM(CASE WHEN r.kind='PURCHASE_RETURN' THEN r.gross_minor ELSE 0 END),0) AS purchase_gross,COALESCE(SUM(CASE WHEN r.kind='PURCHASE_RETURN' THEN r.net_minor ELSE 0 END),0) AS purchase_net,COALESCE(SUM(r.kind='SALE_RETURN'),0) AS sale_count FROM st_market_returns r JOIN st_market_entries e ON e.id=r.entry_id WHERE r.station_id=? AND e.business_date=?",
+    [station, date]
+  );
+  const variance = b.PURCHASE_RETURN_VARIANCE ?? 0;
+  const salesNet = -safeAdd(b.SALES ?? 0, b.SALES_RETURNS ?? 0),
     vat = -(b.OUTPUT_VAT ?? 0),
     cogs = b.COGS ?? 0,
     expense = safeAdd(
       b.EXPENSE ?? 0,
       b.BANK_FEES ?? 0,
       b.STOCK_LOSS ?? 0,
-      b.CASH_LOSS ?? 0
+      b.CASH_LOSS ?? 0,
+      Math.max(0, variance)
     ),
-    gains = -safeAdd(b.STOCK_GAIN ?? 0, b.CASH_GAIN ?? 0);
+    gains = -safeAdd(
+      b.STOCK_GAIN ?? 0,
+      b.CASH_GAIN ?? 0,
+      Math.min(0, variance)
+    );
   return {
     date,
     salesNetMinor: salesNet,
@@ -105,11 +117,17 @@ export async function dailyReport(
     expensesMinor: expense,
     gainsMinor: gains,
     operatingResultMinor: safeAdd(salesNet, -cogs, -expense, gains),
-    purchasesNetMinor: integer(totals?.purchase),
+    purchasesNetMinor: safeAdd(
+      integer(totals?.purchase),
+      -integer(returns?.purchase_net)
+    ),
     inputVatMinor: b.INPUT_VAT ?? 0,
     collectionsMinor: integer(totals?.collection),
     supplierPaymentsMinor: integer(totals?.payment),
     saleCount: integer(count?.n),
+    salesReturnsGrossMinor: integer(returns?.sale_gross),
+    purchaseReturnsGrossMinor: integer(returns?.purchase_gross),
+    saleReturnCount: integer(returns?.sale_count),
   };
 }
 async function party(
@@ -264,6 +282,7 @@ export function registerMarketAccountingRoutes(
       })
     );
   }
+  registerMarketReturns(app, services, post);
   app.get(
     "/api/stationos/market-accounting",
     handle(async (req, res) => {
@@ -327,14 +346,14 @@ export function registerMarketAccountingRoutes(
         const ps = await rows<Row[]>(
           c,
           `SELECT p.*,COALESCE(ar.balance_minor,0) AS ar,COALESCE(ap.balance_minor,0) AS ap,
-    COALESCE((SELECT SUM(total_minor-settled_minor) FROM st_market_documents WHERE party_id=p.id AND kind IN ('CREDIT_SALE','OPENING_AR') AND due_date<?),0) AS overdue_ar,
-    COALESCE((SELECT SUM(total_minor-settled_minor) FROM st_market_documents WHERE party_id=p.id AND kind IN ('PURCHASE','OPENING_AP') AND due_date<?),0) AS overdue_ap
+    COALESCE((SELECT SUM(total_minor-settled_minor-credited_minor) FROM st_market_documents WHERE party_id=p.id AND kind IN ('CREDIT_SALE','OPENING_AR') AND due_date<?),0) AS overdue_ar,
+    COALESCE((SELECT SUM(total_minor-settled_minor-credited_minor) FROM st_market_documents WHERE party_id=p.id AND kind IN ('PURCHASE','OPENING_AP') AND due_date<?),0) AS overdue_ap
     FROM st_market_parties p LEFT JOIN st_market_balances ar ON ar.station_id=p.station_id AND ar.account_code='RECEIVABLE' AND ar.party_key=p.id AND ar.register_key='' LEFT JOIN st_market_balances ap ON ap.station_id=p.station_id AND ap.account_code='PAYABLE' AND ap.party_key=p.id AND ap.register_key='' WHERE p.tenant_id=? AND p.station_id=? ORDER BY p.name LIMIT 5000`,
           [today, today, scope.tenantId, station]
         );
         const docs = await rows<Row[]>(
           c,
-          "SELECT d.*,p.name AS party_name FROM st_market_documents d JOIN st_market_parties p ON p.id=d.party_id WHERE d.tenant_id=? AND d.station_id=? ORDER BY d.settled_minor<d.total_minor DESC,d.due_date,d.id LIMIT 200",
+          "SELECT d.*,p.name AS party_name FROM st_market_documents d JOIN st_market_parties p ON p.id=d.party_id WHERE d.tenant_id=? AND d.station_id=? ORDER BY d.settled_minor+d.credited_minor<d.total_minor DESC,d.due_date,d.id LIMIT 200",
           [scope.tenantId, station]
         );
         const entries = await rows<Row[]>(
@@ -357,6 +376,11 @@ export function registerMarketAccountingRoutes(
         const open = await first<Row>(
           c,
           "SELECT COUNT(*) AS n FROM st_pos_sessions WHERE tenant_id=? AND station_id=? AND closed_at IS NULL",
+          [scope.tenantId, station]
+        );
+        const returns = await rows<Row[]>(
+          c,
+          "SELECT r.*,e.business_date,s.reference AS source_reference FROM st_market_returns r JOIN st_market_entries e ON e.id=r.entry_id JOIN st_market_entries s ON s.id=r.source_entry_id WHERE r.tenant_id=? AND r.station_id=? ORDER BY e.seq DESC LIMIT 50",
           [scope.tenantId, station]
         );
         return {
@@ -403,6 +427,20 @@ export function registerMarketAccountingRoutes(
             dueDate: d.due_date,
             totalMinor: integer(d.total_minor),
             settledMinor: integer(d.settled_minor),
+            creditedMinor: integer(d.credited_minor),
+          })),
+          returns: returns.map(r => ({
+            id: r.id,
+            date: r.business_date,
+            kind: r.kind,
+            reference: r.reference,
+            sourceEntryId: r.source_entry_id,
+            sourceReference: r.source_reference,
+            reason: r.reason,
+            grossMinor: integer(r.gross_minor),
+            creditedMinor: integer(r.credited_minor),
+            refundMinor: integer(r.refund_minor),
+            wallet: r.wallet,
           })),
           journal: entries.map(
             e =>
@@ -866,12 +904,18 @@ export function registerMarketAccountingRoutes(
         : "'PURCHASE','OPENING_AP'";
     const docs = await rows<Row[]>(
       c,
-      `SELECT * FROM st_market_documents WHERE station_id=? AND party_id=? AND kind IN (${kinds}) AND settled_minor<total_minor ORDER BY due_date,created_at,id FOR UPDATE`,
+      `SELECT * FROM st_market_documents WHERE station_id=? AND party_id=? AND kind IN (${kinds}) AND settled_minor+credited_minor<total_minor ORDER BY due_date,created_at,id FOR UPDATE`,
       [station, p.id]
     );
     if (
       docs.reduce(
-        (s, d) => safeAdd(s, integer(d.total_minor), -integer(d.settled_minor)),
+        (s, d) =>
+          safeAdd(
+            s,
+            integer(d.total_minor),
+            -integer(d.settled_minor),
+            -integer(d.credited_minor)
+          ),
         0
       ) !== balance
     )
@@ -905,7 +949,11 @@ export function registerMarketAccountingRoutes(
       if (!left) break;
       const paid = Math.min(
         left,
-        integer(d.total_minor) - integer(d.settled_minor)
+        safeAdd(
+          integer(d.total_minor),
+          -integer(d.settled_minor),
+          -integer(d.credited_minor)
+        )
       );
       await execute(
         c,

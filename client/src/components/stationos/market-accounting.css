@@ -552,6 +552,13 @@
     grid-template-columns: 1fr;
   }
 }
+.ma-return-quantity {
+  width: 90px;
+  min-width: 70px;
+}
+.ma-return-panel form {
+  margin-bottom: 18px;
+}
 @media (max-width: 750px) {
   .ma-purchase-line {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

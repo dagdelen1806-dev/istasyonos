@@ -16,6 +16,7 @@ const allowed = [
   "party-update",
   "product",
   "purchase",
+  "return",
   "settlement",
   "expense",
   "transfer",
