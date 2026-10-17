@@ -1,4 +1,5 @@
 import { registerMarketAccountingRoutes } from "./market-accounting";
+import { stationErrorLog } from "./error-log";
 import { lockMarketBook } from "./market-accounting-ledger";
 import { registerMarketPosRoutes } from "./market-pos";
 import {
@@ -17,7 +18,6 @@ import { execute, first, query, rows, withTransaction } from "./db";
 import {
   accountTotals,
   csrfToken,
-  dbErrorCode,
   invitationHash,
   isRecord,
   isValidCsrf,
@@ -126,7 +126,7 @@ function stationActor(req: StationRequest): StationActor {
 function responseError(res: Response, error: unknown): void {
   const mapped = error instanceof StationError ? error : mapDbError(error);
   if (!(error instanceof StationError))
-    console.error(`[StationOS] ${dbErrorCode(error) ?? "internal_error"}`);
+    console.error(stationErrorLog(error, res.req));
   res
     .status(mapped.status)
     .json({ ok: false, error: { code: mapped.code, message: mapped.message } });

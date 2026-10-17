@@ -1,6 +1,6 @@
 {
   "not": "Güncel kaynak sürümü; manifest kendisi hariç tüm Git kaynakları.",
-  "dosya_sayisi": 289,
+  "dosya_sayisi": 292,
   "dosyalar": [
     {
       "dosya": ".dockerignore",
@@ -49,8 +49,8 @@
     },
     {
       "dosya": "PAKET-BILGISI.json",
-      "byte": 2505,
-      "sha256": "e4a30e48a491d136e06ec4244990959974aa009ffdd0406dddfdbbefa7063e5f"
+      "byte": 2819,
+      "sha256": "a40bbc14571c0f960c05e965d81d1c79657296a810995224923cc58fb6a2c1a1"
     },
     {
       "dosya": "README-PAKET.md",
@@ -59,8 +59,8 @@
     },
     {
       "dosya": "README.md",
-      "byte": 6552,
-      "sha256": "09a38b2da8be4720862550a75ad9e0a218245ab4aafee3ee19bdfba91cfc0686"
+      "byte": 7613,
+      "sha256": "97aa4324bd1217f60548bd17e6ee38b3e5af75833fd7342adc76cb2952358320"
     },
     {
       "dosya": "TODO.md",
@@ -1068,6 +1068,11 @@
       "sha256": "1b80691749cce174906f1b3d7245fea279797904de203bea80b8f002206e2697"
     },
     {
+      "dosya": "scripts/diagnose-local.mjs",
+      "byte": 4716,
+      "sha256": "a5a66031754b4e20458d1e9897b72caaf849b60c056adc88df79f126e38df8c1"
+    },
+    {
       "dosya": "scripts/run.mjs",
       "byte": 572,
       "sha256": "f2a07a0097386302b9146df27c6a018edef65a57f172396d211d56e6a975bc6c"
@@ -1194,8 +1199,8 @@
     },
     {
       "dosya": "server/auth.logout.test.ts",
-      "byte": 1721,
-      "sha256": "eeddbdaa93cd8287db2ea91305a6c3b3e0a1a6134b4d9840abe4d97f538d9abb"
+      "byte": 1842,
+      "sha256": "87972788bfdcbe7e043a591ff9a6213d0b88095207862d37656a35ae8e1ef252"
     },
     {
       "dosya": "server/db.ts",
@@ -1219,8 +1224,8 @@
     },
     {
       "dosya": "server/routers.ts",
-      "byte": 1384,
-      "sha256": "d62dd6a1d7641ab95a456b5cd9e0fbf1f0dae9ea41f5cbf805715280805fe67f"
+      "byte": 1365,
+      "sha256": "ded5d43ff58b5b1f1fc6bf3615605de5e12b03889f6ee1c89b57221139814d0d"
     },
     {
       "dosya": "server/stationos/README.md",
@@ -1263,9 +1268,19 @@
       "sha256": "a672e1a44923ff07074dbbdb103a5613fb51d019f02296ff8e9158f0358dcb54"
     },
     {
+      "dosya": "server/stationos/error-log.test.ts",
+      "byte": 1285,
+      "sha256": "f399c683ddaefb95f694f0ec69614672f9f41d730bef5765d3be9947791e8620"
+    },
+    {
+      "dosya": "server/stationos/error-log.ts",
+      "byte": 866,
+      "sha256": "acf03516323d8bc356c2761944df27376213b84f4df92ed5eb9540f735b69458"
+    },
+    {
       "dosya": "server/stationos/index.ts",
-      "byte": 86179,
-      "sha256": "2454e002ae117fafb6b72d1b2cc587745d0f807b53587971ea174c4c8db4b831"
+      "byte": 86187,
+      "sha256": "e1a7a419d4d20893e23e36b37b21e4734f3dc2dcd86474ab3758781666a95bb5"
     },
     {
       "dosya": "server/stationos/market-accounting-domain.test.ts",

@@ -31,6 +31,12 @@ Giriş ekranında kendi hesabınızı oluşturabilirsiniz. Yeni hesap mevcut şi
 
 Eski Manus adaptörü yalnız `AUTH_PROVIDER=manus` ile açıkça seçildiğinde kullanılabilir; bağımsız modda OAuth, AI veya debug kayıt toplayıcısı için Manus çağrısı yapılmaz. Asistan bağımsız modda **kural tabanlı yerel özet** verir; yapay zekâ yanıtı diye sunulmaz. Turpak, banka, görsel yükleme ve OCR entegrasyonları kapalıdır.
 
+## Laragon / sayfa açılmıyor
+
+`pnpm dev` açık kalırken ikinci terminalde `node scripts/diagnose-local.mjs` çalıştırın. Komut yalnız okuma yapar: yerel sunucu, HTML/JavaScript, girişsiz API koruması, DB bağlantısı ve bekleyen migration'ları kontrol eder. Parola, `.env` veya kayıt içeriği yazdırmaz; tanı çıktısı paylaşılabilir. Tarayıcıdaki oturumlu iş akışını veya Laragon alan adı/proxy ayarını doğrulamaz.
+
+`Server listening on port 3000` sonrasında önce Windows'taki tarayıcıdan `http://localhost:3000` deneyin. Bu açılıyor, `http://istasyonos.test` açılmıyorsa Laragon yönlendirmesini inceleyin. `baseline-browser-mapping` güncellik uyarısı tek başına başlatma hatası değildir. `ER_DUP_ENTRY` bir kayıt/tekillik çakışmasıdır; veritabanını veya kayıtları silmeyin. Yeni terminal kaydı `method=... route=...` ile hatalı isteği belirtir, SQL/kayıt değerlerini içermez. Bu rota ve ekrandaki hata ile teşhis edin; kayıt çakışmasını sayfa bağlantı hatası olarak varsaymayın.
+
 ## Doğrulama
 
 ```bash
