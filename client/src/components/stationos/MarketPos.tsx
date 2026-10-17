@@ -621,6 +621,8 @@ function PosWorkspace({
               <PosPayment
                 key={`${cart?.id}:${cart?.version}`}
                 total={total}
+                customers={data.marketCustomers}
+                creditEnabled={data.marketAccountingEnabled}
                 busy={w.busy}
                 cashInput={cashInput}
                 disabled={
@@ -660,6 +662,11 @@ function PosWorkspace({
                   <span>
                     Kart beyanı<b>{money(session.cardDeclaredMinor)}</b>
                   </span>
+                  {data.marketAccountingEnabled && (
+                    <span>
+                      Veresiye satış<b>{money(session.receivableSalesMinor)}</b>
+                    </span>
+                  )}
                   <span>
                     Beklenen çekmece<b>{money(session.expectedCashMinor)}</b>
                   </span>
@@ -685,6 +692,7 @@ function PosWorkspace({
                         sessionId: session.id,
                         countedCashMinor: parseMoney(String(f.get("counted"))),
                         note: f.get("note"),
+                        cashTransferred: f.get("transferred") === "on",
                       });
                     } catch (e) {
                       w.setError((e as Error).message);
@@ -704,6 +712,17 @@ function PosWorkspace({
                     Fark açıklaması
                     <input name="note" maxLength={500} disabled={locked} />
                   </label>
+                  {data.marketAccountingEnabled && (
+                    <label className="pos-check">
+                      <input
+                        name="transferred"
+                        type="checkbox"
+                        required
+                        disabled={locked}
+                      />
+                      Sayılan nakdi merkez kasaya devrettim.
+                    </label>
+                  )}
                   <button className="btn" disabled={locked || !!cart}>
                     Kasayı kapat
                   </button>
@@ -728,7 +747,9 @@ function PosWorkspace({
                         ? "Nakit"
                         : s.paymentKind === "MIXED"
                           ? "Nakit + kart beyanı"
-                          : "Kart beyanı"}{" "}
+                          : s.paymentKind === "ON_ACCOUNT"
+                            ? "Veresiye satış"
+                            : "Kart beyanı"}{" "}
                       · Bilgisayar {s.deviceId.slice(0, 8)}
                     </small>
                     {s.paymentKind === "MIXED" && (

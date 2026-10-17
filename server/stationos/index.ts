@@ -1,3 +1,5 @@
+import { registerMarketAccountingRoutes } from "./market-accounting";
+import { lockMarketBook } from "./market-accounting-ledger";
 import { registerMarketPosRoutes } from "./market-pos";
 import {
   anonymousSummary,
@@ -1045,7 +1047,22 @@ async function setup(
 
 export function registerStationRoutes(app: Express): void {
   app.use("/api/stationos", authenticated);
-  registerMarketPosRoutes(app, { actor: stationActor, assertMutation: assertMutationRequest, error: responseError, requireStation, mutation, audit });
+  registerMarketPosRoutes(app, {
+    actor: stationActor,
+    assertMutation: assertMutationRequest,
+    error: responseError,
+    requireStation,
+    mutation,
+    audit,
+  });
+  registerMarketAccountingRoutes(app, {
+    actor: stationActor,
+    assertMutation: assertMutationRequest,
+    error: responseError,
+    requireStation,
+    mutation,
+    audit,
+  });
   app.get(
     "/api/stationos/state",
     handler(async (req, res) => {
@@ -1152,9 +1169,10 @@ export function registerStationRoutes(app: Express): void {
               "Market stok hareketleri",
               "Cari alacaklar ve açık toptancı borçları",
             ],
-            privacy: ENV.authProvider === "local"
-              ? "Yerel kural tabanlı özet üretildi. Haricî AI servisine veri gönderilmedi."
-              : "Ham soru, kişi/ad/IBAN/ref ve slip görselleri dış modele gönderilmedi; yalnız anonim sayısal özet kullanıldı.",
+            privacy:
+              ENV.authProvider === "local"
+                ? "Yerel kural tabanlı özet üretildi. Haricî AI servisine veri gönderilmedi."
+                : "Ham soru, kişi/ad/IBAN/ref ve slip görselleri dış modele gönderilmedi; yalnız anonim sayısal özet kullanıldı.",
           },
         };
         await query(
@@ -1453,6 +1471,15 @@ export function registerStationRoutes(app: Express): void {
             "UNIT_FORBIDDEN",
             "Satış rolünüz bu iş alanına izin vermiyor.",
             403
+          );
+        if (
+          businessUnit === "MARKET" &&
+          (await lockMarketBook(connection, scope.tenantId, stationId, true))
+        )
+          fail(
+            "MARKET_ACCOUNTING_ACTIVE",
+            "Market işlemleri için Satış kasası ve Market muhasebesi modüllerini kullanın.",
+            409
           );
         const openingFloatMinor = requireMoney(
           body.openingFloatMinor,
@@ -2207,6 +2234,12 @@ export function registerStationRoutes(app: Express): void {
           stationId,
           roles
         );
+        if (await lockMarketBook(connection, scope.tenantId, stationId, true))
+          fail(
+            "MARKET_ACCOUNTING_ACTIVE",
+            "Stok hareketini Market muhasebesi / Alış veya Stok sayımı ekranından kaydedin.",
+            409
+          );
         const productId = requireId(body.productId, "productId");
         const product = await first<DbRow>(
           connection,
@@ -2305,6 +2338,12 @@ export function registerStationRoutes(app: Express): void {
           "ACCOUNTANT",
           "PURCHASER",
         ]);
+        if (await lockMarketBook(connection, scope.tenantId, stationId, true))
+          fail(
+            "MARKET_ACCOUNTING_ACTIVE",
+            "Market borçlarını Market muhasebesi / Cariler ve Alış ekranından kaydedin.",
+            409
+          );
         const supplierId = requireId(body.supplierId, "supplierId");
         const supplier = await first<DbRow>(
           connection,

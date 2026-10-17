@@ -17,6 +17,7 @@ export interface PosSession {
   openingFloatMinor: number;
   cashSalesMinor: number;
   cardDeclaredMinor: number;
+  receivableSalesMinor: number;
   expectedCashMinor: number;
   countedCashMinor: number | null;
   differenceMinor: number | null;
@@ -27,14 +28,23 @@ export interface PosSale {
   registerId: string;
   deviceId: string;
   totalMinor: number;
-  paymentKind: "CASH" | "CARD_MANUAL" | "MIXED";
+  paymentKind: "CASH" | "CARD_MANUAL" | "MIXED" | "ON_ACCOUNT";
   cashAmountMinor: number;
   cardAmountMinor: number;
+  receivableAmountMinor: number;
+  customerPartyId: string | null;
   createdAt: string;
   fiscalStatus: "NOT_ISSUED_DEMO";
 }
 export interface PosState {
   isDemo: boolean;
+  marketAccountingEnabled: boolean;
+  marketCustomers: {
+    id: string;
+    name: string;
+    balanceMinor: number;
+    availableCreditMinor: number;
+  }[];
   registers: PosRegister[];
   sessions: PosSession[];
   products: Product[];

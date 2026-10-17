@@ -1,6 +1,6 @@
 {
   "not": "Güncel kaynak sürümü; manifest kendisi hariç tüm Git kaynakları.",
-  "dosya_sayisi": 275,
+  "dosya_sayisi": 289,
   "dosyalar": [
     {
       "dosya": ".dockerignore",
@@ -34,8 +34,8 @@
     },
     {
       "dosya": "CLAUDE.md",
-      "byte": 16522,
-      "sha256": "ca3296827035970a43cfb1cc8a064972ddee1cc973a95f73dbb3c88a6763f23f"
+      "byte": 17151,
+      "sha256": "b721dba74da7b501dbf2c320e232d8a610c9034ab47716b9f1cda3d9ebb87034"
     },
     {
       "dosya": "Dockerfile",
@@ -49,8 +49,8 @@
     },
     {
       "dosya": "PAKET-BILGISI.json",
-      "byte": 1884,
-      "sha256": "68fc4cd71f50d9f988851714e81ecf503c54f80eb146e916b00ae4c566906e12"
+      "byte": 2505,
+      "sha256": "e4a30e48a491d136e06ec4244990959974aa009ffdd0406dddfdbbefa7063e5f"
     },
     {
       "dosya": "README-PAKET.md",
@@ -59,8 +59,8 @@
     },
     {
       "dosya": "README.md",
-      "byte": 5881,
-      "sha256": "205c4f769690940f7af888598ac4830091741044653fb9d5b34180afb1f7d655"
+      "byte": 6552,
+      "sha256": "09a38b2da8be4720862550a75ad9e0a218245ab4aafee3ee19bdfba91cfc0686"
     },
     {
       "dosya": "TODO.md",
@@ -129,8 +129,8 @@
     },
     {
       "dosya": "client/src/App.tsx",
-      "byte": 993,
-      "sha256": "d172c3db42b5bd80b9d98a019c45489d9ecc2e6ee1526d3b0226925051b90388"
+      "byte": 1015,
+      "sha256": "1bf0a4fdcc173104ef060fc0955827264e904b380096488d7bcdcf6ed045e6aa"
     },
     {
       "dosya": "client/src/_core/hooks/useAuth.ts",
@@ -174,8 +174,8 @@
     },
     {
       "dosya": "client/src/components/stationos/BusinessModules.tsx",
-      "byte": 55467,
-      "sha256": "5fbf929767a9d880d51aa817bdb57c53113fba147e8986c1198dd6b0b77ea3f3"
+      "byte": 55653,
+      "sha256": "a089a1300d01d2d2d31a04ba75b2a24c581b7f4c7436443eb878806100dccb9a"
     },
     {
       "dosya": "client/src/components/stationos/Common.tsx",
@@ -183,14 +183,29 @@
       "sha256": "53a64f3cd5c5937751f656b64fc67723586bbca2d4779cfb6862cc74e3a68348"
     },
     {
+      "dosya": "client/src/components/stationos/MarketAccounting.tsx",
+      "byte": 37536,
+      "sha256": "8c265c2ddf8497796f49af2d52ede7139b64a25bc22289e86c705dafdd1ffc76"
+    },
+    {
+      "dosya": "client/src/components/stationos/MarketAccountingForms.tsx",
+      "byte": 30257,
+      "sha256": "579ab923750c235d98e8f480e63633e7c71e3c79b64c149dc2604bbd62cc448a"
+    },
+    {
       "dosya": "client/src/components/stationos/MarketPos.tsx",
-      "byte": 35825,
-      "sha256": "04eea3486023648fa85503f3bd2c78214e6be66b2a1a68257738b6d110b0ec79"
+      "byte": 36756,
+      "sha256": "11822991fe32f13de6388851cfd90934840cf23ea37023d1bbe59297747e1657"
+    },
+    {
+      "dosya": "client/src/components/stationos/MarketStatement.tsx",
+      "byte": 7272,
+      "sha256": "3bd61b3035539525972028c4daabd53b1b92493ea9cf4c274949a55438ea15ac"
     },
     {
       "dosya": "client/src/components/stationos/PosPayment.tsx",
-      "byte": 4839,
-      "sha256": "955a6daaa5794379899b250695aa2e4ca3cfa7960d4c92c970899cc1906f31ba"
+      "byte": 6259,
+      "sha256": "bca6b66561f6cf138274b8d30ede56e0a778e64a02f15c990c21e0b9289dd2f2"
     },
     {
       "dosya": "client/src/components/stationos/business.css",
@@ -198,9 +213,19 @@
       "sha256": "3a2e2ca091153c2311be6b2f1569a7b7e2198851d2908ca18f240e91def64304"
     },
     {
+      "dosya": "client/src/components/stationos/market-accounting.css",
+      "byte": 10579,
+      "sha256": "10f08a7b929031bbb966e6ce1e6cdd5edffc2860681968d621bc4c580315dc35"
+    },
+    {
       "dosya": "client/src/components/stationos/pos.css",
-      "byte": 11888,
-      "sha256": "3a1a61df44c58aed91ebb7a79cb2267e0b120e76d96ca600574f40c94f2887f7"
+      "byte": 11909,
+      "sha256": "8c9e9bd6d2f9a1a29b0ee437a712ab35957a9c665ec4e60fe2865270860355d3"
+    },
+    {
+      "dosya": "client/src/components/stationos/useMarketAccounting.ts",
+      "byte": 4560,
+      "sha256": "465bcf175917abd7ca06f5ecf2dcedd110ebf3f6d520ddf3fa5c70530fb6bb1f"
     },
     {
       "dosya": "client/src/components/stationos/usePosWorkspace.ts",
@@ -509,8 +534,8 @@
     },
     {
       "dosya": "client/src/lib/station-api.ts",
-      "byte": 3126,
-      "sha256": "8300421d40ea0ace34ff499ed4ed9c12cd6a9d394c6597ced6731891d7105286"
+      "byte": 3853,
+      "sha256": "6e69de70c224a34c9d1b4a80a93f3360d31734c124c9116674d2912c8d832604"
     },
     {
       "dosya": "client/src/lib/trpc.ts",
@@ -549,8 +574,8 @@
     },
     {
       "dosya": "client/src/pages/StationApp.tsx",
-      "byte": 90928,
-      "sha256": "778cc166cdad7ad1d67c95b94f2fa21be8dfea9783765d3ef4581f533e726f3e"
+      "byte": 91751,
+      "sha256": "cda058b183e17c98c17e2a2b8a05f09a4ba1048f2de62811c37e822b29d9fa3d"
     },
     {
       "dosya": "client/src/platform.d.ts",
@@ -671,6 +696,11 @@
       "dosya": "docs/market-kasa-v2-2026-10-17.md",
       "byte": 10576,
       "sha256": "154aa4f9ec3ad9208abdf50b5d4550dc33743e2f26e2615bcf86e2e9c5a25469"
+    },
+    {
+      "dosya": "docs/market-on-muhasebe-2026-10-17.md",
+      "byte": 14437,
+      "sha256": "f02925d4bfe51ec602c082b75de44802e48c7fb745ec23cda0bb11246e0a18ba"
     },
     {
       "dosya": "docs/mimari-v2.2-turpak-dosya-ocr-kvkk-guvenlik.md",
@@ -1048,6 +1078,11 @@
       "sha256": "869c3131ae4098e149f8c4851fe21b41c897ef9a19e4ef8d59268ce68eaed745"
     },
     {
+      "dosya": "scripts/smoke-market-accounting.ts",
+      "byte": 16541,
+      "sha256": "c0ecf96a76b7f290b88410f51a1facb2b3383f19e2cf2032ade71924578d9c86"
+    },
+    {
       "dosya": "scripts/smoke-pos-carts.ts",
       "byte": 11332,
       "sha256": "2e8ae1a0dccd99d13f86935760d82d897e9e5b57787da60fa77c53ad4d53806e"
@@ -1229,13 +1264,38 @@
     },
     {
       "dosya": "server/stationos/index.ts",
-      "byte": 84970,
-      "sha256": "52ddd4267181ccf0703045a3156429aa952bacb9d188b1e326e9e0f3db58092f"
+      "byte": 86179,
+      "sha256": "2454e002ae117fafb6b72d1b2cc587745d0f807b53587971ea174c4c8db4b831"
+    },
+    {
+      "dosya": "server/stationos/market-accounting-domain.test.ts",
+      "byte": 2890,
+      "sha256": "8a1bec5c4f1250e1514a63c81c84754cd00b974700ebebf40e824bf23fb59c95"
+    },
+    {
+      "dosya": "server/stationos/market-accounting-domain.ts",
+      "byte": 3120,
+      "sha256": "432fb753ac814fc4f05306259e814ba9f31f27ebb9f31c67e81dc4e71a91832d"
+    },
+    {
+      "dosya": "server/stationos/market-accounting-ledger.ts",
+      "byte": 11099,
+      "sha256": "b4c44900e5c854372765eefb586eadd2e5a5aa9bffcfe342072c7d8aff479e2b"
+    },
+    {
+      "dosya": "server/stationos/market-accounting-statement.ts",
+      "byte": 4479,
+      "sha256": "b433d1b4eba13edddbc7543c30ba3920f3ed061a2b4ab36435c166d9f4b167a5"
+    },
+    {
+      "dosya": "server/stationos/market-accounting.ts",
+      "byte": 42960,
+      "sha256": "220be73d07d7511dfef47b597d49d298e2a9d2c1d326985649015778793ca68e"
     },
     {
       "dosya": "server/stationos/market-pos.ts",
-      "byte": 21294,
-      "sha256": "fe85bac8ef84678e511530c7c3b92368a09262293a2bfc0408e8e6893360f08c"
+      "byte": 23358,
+      "sha256": "447219c8323224092f29210e6c381fd5094545ca408e2b684e3022681ac0fd28"
     },
     {
       "dosya": "server/stationos/migrate.ts",
@@ -1293,19 +1353,24 @@
       "sha256": "ce5edaf7e6f2e7260b13d2fedc1b6a175f0c3add1ecd9a0f3446b5bc775740e9"
     },
     {
+      "dosya": "server/stationos/migrations/0011_market_accounting.sql",
+      "byte": 6612,
+      "sha256": "bc5ca6c8a73aa38f3c0b4f7e2c1b659b3d24dd2b5daf1e009500bbd599db5166"
+    },
+    {
       "dosya": "server/stationos/pos-carts.ts",
       "byte": 13728,
       "sha256": "377f8ce764f8428a68af9acc1ae153df1a0d342f48fca7f8bd82503e1bc5a1a6"
     },
     {
       "dosya": "server/stationos/pos-domain.test.ts",
-      "byte": 4477,
-      "sha256": "6697915b704740b8545ef1324a5436f0e836411c96a6e561f0e500866ae71d03"
+      "byte": 4798,
+      "sha256": "2f725d70d69f917910b68e551f9b361e237080a3134d6d56900835b69b36de4b"
     },
     {
       "dosya": "server/stationos/pos-domain.ts",
-      "byte": 3360,
-      "sha256": "e1793cfc972064caca0de7d1144a37e8d3bb947177655733a57efb2307667cca"
+      "byte": 3642,
+      "sha256": "f09cc5317ef0153ac302fd226f24fd724b098b304bfebdcdcf03cbc2f57c2907"
     },
     {
       "dosya": "server/stationos/safety.test.ts",
@@ -1338,9 +1403,14 @@
       "sha256": "551e9fdceccab8baeff81a29886871b7b870ed0d2095cfdf4d6718742b0e0479"
     },
     {
+      "dosya": "shared/market-accounting.ts",
+      "byte": 3693,
+      "sha256": "c3699b97e40a5034f963dd6f841aafdadf56b88535b2e41f578981dbbadfe28b"
+    },
+    {
       "dosya": "shared/pos.ts",
-      "byte": 1936,
-      "sha256": "596670f6fae09aa1191d34ebbbc81e0ac77fea96f1d2ef5eb5945cb582bea845"
+      "byte": 2208,
+      "sha256": "12106ce895d1e881debbc25e6bc2ea4e3e557001c19bcdea08ce99f396b50d2c"
     },
     {
       "dosya": "shared/station-contract.md",

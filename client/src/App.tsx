@@ -17,6 +17,7 @@ const routes = [
   "/satinalma",
   "/cari",
   "/finans",
+  "/market-muhasebe",
   "/kurulum",
   "/entegrasyon",
   "/denetim",

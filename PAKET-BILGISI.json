@@ -1,6 +1,6 @@
 {
   "proje": "İstasyonOS — Windows masaüstü geliştirme paketi",
-  "hazirlanma": "2026-10-17T09:33:28.406224+03:00",
+  "hazirlanma": "2026-10-17T11:27:45.969248+03:00",
   "baslangic": "WINDOWS-BASLANGIC.md / BASLAT.cmd",
   "orijinal_kaynak_tarihi": "2026-10-14",
   "manus_gerekli": false,
@@ -17,15 +17,17 @@
     "node": "24.19.0",
     "veritabani": "MariaDB 11.8.6, ayrı test DB",
     "typescript": "başarılı",
-    "birim_sozlesme_testleri": 37,
+    "birim_sozlesme_testleri": 46,
     "production_build": "başarılı",
-    "market_http_smoke": "Eski ortak kasa ve yeni kalıcı sepet / iptal / karma ödeme paketleri geliştirme ve üretimde başarılı",
-    "onceki_vardiya_http_smoke": "Üretimde yeniden başarılı",
+    "market_http_smoke": "Önceki POS/sepet paketleri yeni şemayla geliştirme ve üretimde başarılı",
+    "onceki_vardiya_http_smoke": "Yeni şemayla geliştirme ve üretimde iki ayrı mali imza/IBAN bekleyen kapanış dahil başarılı",
     "tarayici": "İki ayrı Chromium: barkod/adet, zorunlu açıklama, kalıcı sepet, cihaz devri, karma ödeme, kayıt sonrası yanıt kaybı/yenileme/aynı istekle tek satış; harici ağ isteği ve JS sayfa hatası yok; 390px yatay taşma yok.",
     "docker": "15 Ekim bağımsız sürümünde doğrulandı; bu kasa pilotunda yeniden Docker build yapılmadı",
     "fiziksel_windows_donanim": "henüz denenmedi",
     "ortak_kasa": "Geliştirme/üretim HTTP testleri ve iki ayrı Chromium oturumunda katılım, paralel satış, tek açılış parası, cihaz izi ve ortak kapanış başarılı.",
-    "eski_satis_gocu": "Geçici tabloda eski nakit/kart payları doğru dolduruldu ve tutarsız pay toplamı reddedildi."
+    "eski_satis_gocu": "Geçici tabloda eski nakit/kart payları doğru dolduruldu ve tutarsız pay toplamı reddedildi.",
+    "market_muhasebe_http": "Ayrı DEMO DB üzerinde geliştirme/üretim: açılış, rol/tenant, mal kabul, maliyet/KDV, nakit/karma/veresiye POS, kısmi ödeme, tahsilat yarışı, kart/komisyon, ters fiş/dağılım, cari ekstre ve gün sonu mutabakatı başarılı.",
+    "market_muhasebe_tarayici": "Geliştirme ve üretimde açılış, cari/ürün, KDV, tedarikçi vadesi, mal kabul, ödeme, barkod/veresiye, tahsilat/CSV, kayıp gider yanıtı/yenileme/tek fiş, kasa devri ve gün sonu; JS hatası/harici istek/390px taşma yok."
   },
-  "surum_notu": "Kasa V2: sunucuda sürümlü kalıcı sepet, bekletme/tek cihazda çağırma, açıklamalı ürün/adet/sepet iptali ve geçmişi, karma ödeme, favoriler ve hızlı dokunmatik ekran. Ortak kasa ve DEMO sınırı korunur. Merkez aktarımı, mali belge ve fiziksel cihaz entegrasyonları henüz bağlı değildir."
+  "surum_notu": "Market ön muhasebesi: POS bağlantılı dengeli fiş, net stok maliyeti, KDV, veresiye, cari belge/ekstre, kısmi tahsilat/ödeme, manuel kasa/banka/kart/komisyon, ters kayıt ve gün sonu. 0011 göçü ve teyitli açılış gerekir. POS DEMO sınırı ve eski vardiya mali onayları korunur; resmî mali belge/banka entegrasyonları bağlı değildir."
 }

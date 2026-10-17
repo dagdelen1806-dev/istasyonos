@@ -42,7 +42,10 @@ function headers(csrf?: string): Record<string, string> {
   };
   if (csrf) h["X-CSRF-Token"] = csrf;
   try {
-    const raw = window.__MANUS_CONFIG__?.authProvider === "manus" ? sessionStorage.getItem("manus-cookie") : null;
+    const raw =
+      window.__MANUS_CONFIG__?.authProvider === "manus"
+        ? sessionStorage.getItem("manus-cookie")
+        : null;
     const prefix = `${COOKIE_NAME}=`;
     const pair = raw?.split(";").find(s => s.trim().startsWith(prefix));
     const token = pair?.trim().slice(prefix.length);
@@ -100,6 +103,28 @@ export async function mutate(
   return request(path, { ...payload, requestId }, csrf);
 }
 
-export async function loadPosState(stationId: string): Promise<import("@shared/pos").PosState> {
+export async function loadPosState(
+  stationId: string
+): Promise<import("@shared/pos").PosState> {
   return request(`/pos?stationId=${encodeURIComponent(stationId)}`);
+}
+
+export async function loadMarketAccountingState(
+  stationId: string,
+  date: string
+): Promise<import("@shared/market-accounting").MarketAccountingState> {
+  return request(
+    `/market-accounting?stationId=${encodeURIComponent(stationId)}&date=${encodeURIComponent(date)}`
+  );
+}
+export async function loadMarketStatement(
+  stationId: string,
+  partyId: string,
+  from: string,
+  to: string,
+  cursor = 0
+): Promise<import("@shared/market-accounting").MarketStatementPage> {
+  return request(
+    `/market-accounting/statement?stationId=${encodeURIComponent(stationId)}&partyId=${encodeURIComponent(partyId)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&cursor=${cursor}`
+  );
 }

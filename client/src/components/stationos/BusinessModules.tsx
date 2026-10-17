@@ -1808,6 +1808,10 @@ export function BusinessModules({
   const Icon = meta.icon;
   return (
     <div className="business-module">
+      <div className="notice">
+        Bağlı stok maliyeti, market cari, ödeme ve gün sonu için{" "}
+        <a href="/market-muhasebe">Market muhasebesini açın</a>.
+      </div>
       <header className="business-header">
         <div>
           <span className="business-eyebrow">{meta.eyebrow}</span>

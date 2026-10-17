@@ -2,6 +2,9 @@ import { newRequestId } from "@/lib/id";
 import LocalLoginForm from "./LocalLoginForm";
 import { MessageSquare } from "lucide-react";
 import { lazy, Suspense } from "react";
+const MarketAccounting = lazy(
+  () => import("@/components/stationos/MarketAccounting")
+);
 const MarketPos = lazy(() => import("@/components/stationos/MarketPos"));
 const AssistantPanel = lazy(
   () => import("@/components/stationos/AssistantPanel")
@@ -95,6 +98,7 @@ const navItems = [
   { path: "/satinalma", label: "Satın alma", icon: ShoppingCart },
   { path: "/cari", label: "Cari ve alacak", icon: Users },
   { path: "/finans", label: "Finansal görünüm", icon: Wallet },
+  { path: "/market-muhasebe", label: "Market muhasebesi", icon: Wallet },
   {
     path: "/kurulum",
     label: "Firma ve istasyon",
@@ -106,7 +110,14 @@ const navItems = [
   { path: "/denetim", label: "İşlem geçmişi", icon: ShieldCheck },
 ];
 const pageInfo: Record<string, [string, string]> = {
-  "/kasa": ["Market satış kasası", "Barkod, sepet ve birbirinden ayrı kasa oturumları · DEMO pilot"],
+  "/market-muhasebe": [
+    "Market ön muhasebesi",
+    "Stok maliyeti, cari, ödeme ve gün sonu aynı hareket defterinde.",
+  ],
+  "/kasa": [
+    "Market satış kasası",
+    "Barkod, sepet ve birbirinden ayrı kasa oturumları · DEMO pilot",
+  ],
   "/": [
     "İşletmenizin operasyon görünümü",
     "Seçili kapsamdaki kayıtlar, vardiyadan merkeze tek ekranda.",
@@ -522,16 +533,20 @@ export default function StationApp() {
           {navItems
             .filter(
               n =>
-                (n.path !== "/kasa" || ["OWNER", "MANAGER", "MARKET_STAFF", "ACCOUNTANT"].includes(state?.member?.role ?? "")) && (!staff ||
-                [
-                  "/",
-                  "/vardiyalar",
-                  "/slipler",
-                  "/market",
-                  "/kasa",
-                  "/cari",
-                  "/entegrasyon",
-                ].includes(n.path))
+                (n.path !== "/kasa" ||
+                  ["OWNER", "MANAGER", "MARKET_STAFF", "ACCOUNTANT"].includes(
+                    state?.member?.role ?? ""
+                  )) &&
+                (!staff ||
+                  [
+                    "/",
+                    "/vardiyalar",
+                    "/slipler",
+                    "/market",
+                    "/kasa",
+                    "/cari",
+                    "/entegrasyon",
+                  ].includes(n.path))
             )
             .map(item => (
               <div key={item.path}>
@@ -1352,7 +1367,20 @@ export default function StationApp() {
                   </Panel>
                 </>
               )}
-              {path === "/kasa" && <Suspense fallback={<p>Kasa yükleniyor…</p>}><MarketPos key={`${state.user.id}:${stationId}`} state={state} stationId={stationId} /></Suspense>}
+              {path === "/market-muhasebe" && (
+                <Suspense fallback={<p>Market muhasebesi yükleniyor…</p>}>
+                  <MarketAccounting state={state} stationId={stationId} />
+                </Suspense>
+              )}
+              {path === "/kasa" && (
+                <Suspense fallback={<p>Kasa yükleniyor…</p>}>
+                  <MarketPos
+                    key={`${state.user.id}:${stationId}`}
+                    state={state}
+                    stationId={stationId}
+                  />
+                </Suspense>
+              )}
               {["/market", "/satinalma", "/cari", "/finans"].includes(path) && (
                 <BusinessModules
                   view={
@@ -2429,7 +2457,9 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
             <button className="btn primary login-button" onClick={onLogin}>
               Hesabımla giriş yap <ArrowRight size={18} />
             </button>
-          ) : <LocalLoginForm />}
+          ) : (
+            <LocalLoginForm />
+          )}
           <div className="login-note">
             <LockKeyhole size={16} />
             <span>

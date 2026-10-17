@@ -6,6 +6,15 @@ const a = "11111111-1111-4111-8111-111111111111",
   b = "22222222-2222-4222-8222-222222222222";
 afterEach(() => vi.unstubAllGlobals());
 describe("Kasa ödeme dağılımı", () => {
+  it("veresiyeyi nakit veya banka tahsilatı saymaz", () => {
+    expect(posPayment({ paymentKind: "ON_ACCOUNT" }, 800)).toMatchObject({
+      cashAmountMinor: 0,
+      cardAmountMinor: 0,
+      receivableAmountMinor: 800,
+      tenderedMinor: null,
+      changeMinor: null,
+    });
+  });
   it("karma ödemede para üstünü yalnız nakit payına göre hesaplar", () => {
     expect(
       posPayment(
@@ -21,6 +30,7 @@ describe("Kasa ödeme dağılımı", () => {
       paymentKind: "MIXED",
       cashAmountMinor: 300,
       cardAmountMinor: 500,
+      receivableAmountMinor: 0,
       tenderedMinor: 500,
       changeMinor: 200,
     });

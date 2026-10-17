@@ -1,3 +1,10 @@
+import {
+  lockMarketBook,
+  marketRegisterOpen,
+  marketRegisterClose,
+  marketSale,
+  marketCustomers,
+} from "./market-accounting-ledger";
 import { randomUUID } from "node:crypto";
 import type { Express, Request, Response } from "express";
 import type { PoolConnection, RowDataPacket } from "mysql2/promise";
@@ -198,7 +205,8 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
           c,
           `SELECT s.*,
         COALESCE((SELECT SUM(cash_amount_minor) FROM st_pos_sales WHERE session_id=s.id),0) AS cash_sales,
-        COALESCE((SELECT SUM(card_amount_minor) FROM st_pos_sales WHERE session_id=s.id),0) AS card_sales
+        COALESCE((SELECT SUM(card_amount_minor) FROM st_pos_sales WHERE session_id=s.id),0) AS card_sales,
+        COALESCE((SELECT SUM(receivable_amount_minor) FROM st_pos_sales WHERE session_id=s.id),0) AS receivable_sales
         FROM st_pos_sessions s WHERE tenant_id=? AND station_id=? ${ownOnly ? "AND user_id=?" : ""}
         ORDER BY closed_at IS NULL DESC,opened_at DESC LIMIT 100`,
           params
@@ -217,12 +225,18 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
           : [];
         const sales = await rows<Row[]>(
           c,
-          `SELECT id,session_id,register_id,device_id,total_minor,payment_kind,cash_amount_minor,card_amount_minor,created_at,fiscal_status FROM st_pos_sales WHERE tenant_id=? AND station_id=? ${ownOnly ? "AND user_id=?" : ""} ORDER BY created_at DESC,id LIMIT 50`,
+          `SELECT id,session_id,register_id,device_id,total_minor,payment_kind,cash_amount_minor,card_amount_minor,receivable_amount_minor,customer_party_id,created_at,fiscal_status FROM st_pos_sales WHERE tenant_id=? AND station_id=? ${ownOnly ? "AND user_id=?" : ""} ORDER BY created_at DESC,id LIMIT 50`,
           params
         );
         return {
           ...(await loadCartState(c, actor, scope, stationId, device(req))),
           isDemo: Boolean(number(tenant?.is_demo)),
+          marketAccountingEnabled: !!(await first<Row>(
+            c,
+            "SELECT station_id FROM st_market_books WHERE station_id=? AND tenant_id=?",
+            [stationId, scope.tenantId]
+          )),
+          marketCustomers: await marketCustomers(c, scope.tenantId, stationId),
           registers: registers.map(r => ({
             id: r.id,
             name: r.name,
@@ -242,6 +256,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
             openingFloatMinor: number(s.opening_float_minor),
             cashSalesMinor: number(s.cash_sales),
             cardDeclaredMinor: number(s.card_sales),
+            receivableSalesMinor: number(s.receivable_sales),
             expectedCashMinor: s.closed_at
               ? number(s.expected_cash_minor)
               : safeAdd(number(s.opening_float_minor), number(s.cash_sales)),
@@ -272,6 +287,8 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
             paymentKind: s.payment_kind,
             cashAmountMinor: number(s.cash_amount_minor),
             cardAmountMinor: number(s.card_amount_minor),
+            receivableAmountMinor: number(s.receivable_amount_minor),
+            customerPartyId: s.customer_party_id,
             createdAt: s.created_at,
             fiscalStatus: s.fiscal_status,
           })),
@@ -315,6 +332,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
   });
 
   post("open", SELL, async (c, actor, body, scope, req, stationId) => {
+    const marketBook = await lockMarketBook(c, scope.tenantId, stationId);
     const registerId = requireId(body.registerId, "registerId"),
       deviceId = device(req);
     const openingFloatMinor = requireMoney(
@@ -361,6 +379,14 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       c,
       "INSERT INTO st_pos_session_devices (session_id,device_id,user_id) VALUES (?,?,?)",
       [id, deviceId, actor.id]
+    );
+    await marketRegisterOpen(
+      c,
+      marketBook,
+      actor.id,
+      id,
+      registerId,
+      openingFloatMinor
     );
     return { id };
   });
@@ -410,6 +436,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
   });
 
   post("checkout", SELL, async (c, actor, body, scope, req, stationId) => {
+    const marketBook = await lockMarketBook(c, scope.tenantId, stationId);
     const session = await ownedSession(c, actor, body, scope, req, stationId);
     const tenant = await first<Row>(
       c,
@@ -467,10 +494,21 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       snapshots.push({ ...line, name: p.name, barcode: p.barcode, lineTotal });
     }
     const payment = posPayment(body, total);
+    if (payment.paymentKind === "ON_ACCOUNT" && !marketBook)
+      fail(
+        "MARKET_ACCOUNTING_REQUIRED",
+        "Veresiye için market muhasebesini başlatın.",
+        409
+      );
+    const customerPartyId =
+      payment.paymentKind === "ON_ACCOUNT"
+        ? requireId(body.customerPartyId, "customerPartyId")
+        : null;
     const {
       paymentKind,
       cashAmountMinor,
       cardAmountMinor,
+      receivableAmountMinor,
       tenderedMinor: tendered,
       changeMinor,
     } = payment;
@@ -489,7 +527,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
     const id = randomUUID();
     await execute(
       c,
-      "INSERT INTO st_pos_sales (id,tenant_id,station_id,register_id,session_id,user_id,request_id,total_minor,payment_kind,payment_status,tendered_minor,change_minor,device_id,cash_amount_minor,card_amount_minor) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO st_pos_sales (id,tenant_id,station_id,register_id,session_id,user_id,request_id,total_minor,payment_kind,payment_status,tendered_minor,change_minor,device_id,cash_amount_minor,card_amount_minor,receivable_amount_minor,customer_party_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
       [
         id,
         scope.tenantId,
@@ -500,12 +538,18 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
         body.requestId,
         total,
         paymentKind,
-        paymentKind === "CASH" ? "CASH_RECORDED" : "CASHIER_DECLARED",
+        paymentKind === "CASH"
+          ? "CASH_RECORDED"
+          : paymentKind === "ON_ACCOUNT"
+            ? "CUSTOMER_DEBT"
+            : "CASHIER_DECLARED",
         tendered,
         changeMinor,
         device(req),
         cashAmountMinor,
         cardAmountMinor,
+        receivableAmountMinor,
+        customerPartyId,
       ]
     );
     for (const line of snapshots) {
@@ -543,6 +587,16 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
         ]
       );
     }
+    await marketSale(
+      c,
+      marketBook,
+      actor,
+      id,
+      session,
+      payment,
+      customerPartyId,
+      snapshots
+    );
     await execute(
       c,
       "INSERT INTO st_pos_events(id,sale_id,event_type) VALUES (?,?,'DEMO_SALE_RECORDED')",
@@ -579,12 +633,15 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       paymentKind,
       cashAmountMinor,
       cardAmountMinor,
+      receivableAmountMinor,
+      customerPartyId,
       fiscalStatus: "NOT_ISSUED_DEMO",
       syncStatus: "NOT_CONFIGURED",
     };
   });
 
   post("close", SELL, async (c, actor, body, scope, req, stationId) => {
+    const marketBook = await lockMarketBook(c, scope.tenantId, stationId);
     const session = await ownedSession(c, actor, body, scope, req, stationId);
     const counted = requireMoney(body.countedCashMinor, "countedCashMinor", {
       allowZero: true,
@@ -607,6 +664,16 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
         "Nakit farkı için en az beş karakterlik açıklama girin.",
         409
       );
+    await marketRegisterClose(
+      c,
+      marketBook,
+      actor.id,
+      session,
+      expected,
+      counted,
+      note,
+      body.cashTransferred
+    );
     await execute(
       c,
       "UPDATE st_pos_sessions SET closed_at=UTC_TIMESTAMP(3),open_register_id=NULL,counted_cash_minor=?,expected_cash_minor=?,difference_minor=?,close_note=?,closed_by_device_id=? WHERE id=?",

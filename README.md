@@ -47,6 +47,10 @@ HTTP smoke testi kayıt/giriş, davet, tenant izolasyonu, CSRF, idempotency, var
 
 Finans işlemleri integer kuruş kullanır. Banka teyidi, gerçek Turpak/OCR verisi veya üretim güvenlik/hukuk kabulü bu testlerden çıkarılamaz. Mevcut frontend derlemesinde büyük chunk ve runtime config script uyarıları bulunur.
 
+## Market ön muhasebesi — 17 Ekim 2026
+
+**Market muhasebesi** (`/market-muhasebe`), POS satışlarını stok maliyeti, müşteri/tedarikçi carisi ve kasa/banka defterine bağlar. Mal kabul, veresiye, kısmi tahsilat/ödeme, KDV ayrımı, ağırlıklı maliyet, gider/komisyon, açıklamalı ters fiş, cari ekstre/CSV ve gün sonu vardır. `0011_market_accounting` göçü gerekir. Açılış koşulları, Windows/Laragon güncellemesi, resmî rakip kaynakları ve mali kapsam için [Market ön muhasebe rehberini](docs/market-on-muhasebe-2026-10-17.md) okuyun. POS’un DEMO sınırı, mevcut vardiya onayları ve banka/mali belge entegrasyonu sınırları sürer.
+
 ## Market satış kasası pilotu — 16 Ekim 2026
 
 **17 Ekim V2 güncellemesi:** Kalıcı sepet, bekletme/başka cihazdan çağırma, açıklamalı ürün/adet/sepet iptali, iptal geçmişi, nakit–kart karma ödeme ve yeni dokunmatik kasa ekranı eklendi. `0009_pos_carts` ve `0010_pos_mixed_payment` göçleri gereklidir. Native Windows/Laragon güncellemesi, resmî rakip kaynakları ve sınırlar için [Kasa V2 rehberini](docs/market-kasa-v2-2026-10-17.md) okuyun.

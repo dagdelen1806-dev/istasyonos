@@ -60,6 +60,7 @@ export function posPayment(body: Record<string, unknown>, total: number) {
     "CASH",
     "CARD_MANUAL",
     "MIXED",
+    "ON_ACCOUNT",
   ] as const);
   const cashAmountMinor =
     paymentKind === "CASH"
@@ -73,23 +74,29 @@ export function posPayment(body: Record<string, unknown>, total: number) {
       "Karma ödemede nakit ve kart tutarları sıfırdan büyük olmalıdır.",
       409
     );
-  const cardAmountMinor = total - cashAmountMinor;
-  if (paymentKind !== "CASH" && body.cardConfirmed !== true)
+  const receivableAmountMinor = paymentKind === "ON_ACCOUNT" ? total : 0;
+  if (paymentKind === "ON_ACCOUNT")
+    requireMoney(total, "Veresiye satış tutarı");
+  const cardAmountMinor = total - cashAmountMinor - receivableAmountMinor;
+  if (
+    ["CARD_MANUAL", "MIXED"].includes(paymentKind) &&
+    body.cardConfirmed !== true
+  )
     fail(
       "CARD_CONFIRMATION_REQUIRED",
       "Ayrı POS cihazındaki kart tahsilatını teyit edin. Bu kayıt banka doğrulaması değildir.",
       409
     );
-  const tenderedMinor =
-    paymentKind === "CARD_MANUAL"
-      ? null
-      : requireMoney(body.tenderedMinor, "tenderedMinor", { allowZero: true });
+  const tenderedMinor = ["CARD_MANUAL", "ON_ACCOUNT"].includes(paymentKind)
+    ? null
+    : requireMoney(body.tenderedMinor, "tenderedMinor", { allowZero: true });
   if (tenderedMinor !== null && tenderedMinor < cashAmountMinor)
     fail("INSUFFICIENT_CASH", "Alınan nakit, nakit ödeme payından az.", 409);
   return {
     paymentKind,
     cashAmountMinor,
     cardAmountMinor,
+    receivableAmountMinor,
     tenderedMinor,
     changeMinor:
       tenderedMinor === null ? null : tenderedMinor - cashAmountMinor,

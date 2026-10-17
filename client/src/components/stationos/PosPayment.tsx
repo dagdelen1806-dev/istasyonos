@@ -7,14 +7,21 @@ export function PosPayment({
   busy,
   cashInput,
   onPay,
+  customers = [],
+  creditEnabled = false,
 }: {
+  customers?: { id: string; name: string; availableCreditMinor: number }[];
+  creditEnabled?: boolean;
   total: number;
   disabled: boolean;
   busy: boolean;
   cashInput: RefObject<HTMLInputElement | null>;
   onPay: (payload: Record<string, unknown>) => Promise<boolean>;
 }) {
-  const [kind, setKind] = useState<"CASH" | "CARD_MANUAL" | "MIXED">("CASH");
+  const [kind, setKind] = useState<
+    "CASH" | "CARD_MANUAL" | "MIXED" | "ON_ACCOUNT"
+  >("CASH");
+  const [customer, setCustomer] = useState("");
   const [cash, setCash] = useState("");
   const [tendered, setTendered] = useState("");
   const [confirmed, setConfirmed] = useState(false);
@@ -43,10 +50,12 @@ export function PosPayment({
         setError("");
         try {
           const payload: Record<string, unknown> = { paymentKind: kind };
-          if (kind !== "CARD_MANUAL")
+          if (["CASH", "MIXED"].includes(kind))
             payload.tenderedMinor = parseMoney(tendered);
           if (kind === "MIXED") payload.cashAmountMinor = parseMoney(cash);
-          if (kind !== "CASH") payload.cardConfirmed = confirmed;
+          if (["CARD_MANUAL", "MIXED"].includes(kind))
+            payload.cardConfirmed = confirmed;
+          if (kind === "ON_ACCOUNT") payload.customerPartyId = customer;
           await onPay(payload);
         } catch (e) {
           setError((e as Error).message);
@@ -59,6 +68,7 @@ export function PosPayment({
             ["CASH", "Nakit"],
             ["CARD_MANUAL", "Kart"],
             ["MIXED", "Nakit + kart"],
+            ...(creditEnabled ? [["ON_ACCOUNT", "Veresiye"] as const] : []),
           ] as const
         ).map(([value, label]) => (
           <button
@@ -97,7 +107,7 @@ export function PosPayment({
           </small>
         </label>
       )}
-      {kind !== "CARD_MANUAL" && (
+      {["CASH", "MIXED"].includes(kind) && (
         <>
           <label>
             Alınan nakit (TL)
@@ -138,7 +148,7 @@ export function PosPayment({
           </div>
         </>
       )}
-      {kind !== "CASH" && (
+      {["CARD_MANUAL", "MIXED"].includes(kind) && (
         <label className="pos-check">
           <input
             type="checkbox"
@@ -150,6 +160,29 @@ export function PosPayment({
           kayıt kasiyer beyanıdır.
         </label>
       )}
+      {kind === "ON_ACCOUNT" && (
+        <label>
+          Market müşteri carisi
+          <select
+            aria-label="Market müşteri carisi"
+            value={customer}
+            onChange={e => setCustomer(e.target.value)}
+            disabled={disabled}
+            required
+          >
+            <option value="">Müşteri seçin</option>
+            {customers.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.name} · kullanılabilir {money(c.availableCreditMinor)}
+              </option>
+            ))}
+          </select>
+          <small>
+            Bu satış müşteri borcuna eklenir; nakit veya banka tahsilatı
+            oluşmaz.
+          </small>
+        </label>
+      )}
       {error && (
         <p role="alert" className="pos-field-error">
           {error}
@@ -157,7 +190,15 @@ export function PosPayment({
       )}
       <button
         className="btn primary pos-pay"
-        disabled={disabled || !validSplit || (kind !== "CASH" && !confirmed)}
+        disabled={
+          disabled ||
+          !validSplit ||
+          (["CARD_MANUAL", "MIXED"].includes(kind) && !confirmed) ||
+          (kind === "ON_ACCOUNT" &&
+            (!customer ||
+              (customers.find(c => c.id === customer)?.availableCreditMinor ??
+                0) < total))
+        }
       >
         {busy ? "Kaydediliyor…" : "DEMO satışı tamamla"}
       </button>
