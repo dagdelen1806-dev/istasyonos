@@ -10,7 +10,13 @@ import {
   requireEnum,
   optionalString,
 } from "./domain";
-import { normalizePosLines, posLineTotal } from "./pos-domain";
+import { normalizePosLines, posLineTotal, posPayment } from "./pos-domain";
+import {
+  loadCartState,
+  lockCart,
+  saveCart,
+  registerCartRoutes,
+} from "./pos-carts";
 import { safeAdd, rejectCardData } from "./safety";
 import {
   fail,
@@ -19,9 +25,13 @@ import {
   type StationRole,
 } from "./types";
 
-type Row = RowDataPacket & Record<string, any>;
-type Scope = { tenantId: string; member: StationMember; stationIds: string[] };
-type Services = {
+export type Row = RowDataPacket & Record<string, any>;
+export type Scope = {
+  tenantId: string;
+  member: StationMember;
+  stationIds: string[];
+};
+export type Services = {
   actor(req: Request): StationActor;
   assertMutation(req: Request, actor: StationActor): void;
   error(res: Response, error: unknown): void;
@@ -187,8 +197,8 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
         const sessions = await rows<Row[]>(
           c,
           `SELECT s.*,
-        COALESCE((SELECT SUM(total_minor) FROM st_pos_sales WHERE session_id=s.id AND payment_kind='CASH'),0) AS cash_sales,
-        COALESCE((SELECT SUM(total_minor) FROM st_pos_sales WHERE session_id=s.id AND payment_kind='CARD_MANUAL'),0) AS card_sales
+        COALESCE((SELECT SUM(cash_amount_minor) FROM st_pos_sales WHERE session_id=s.id),0) AS cash_sales,
+        COALESCE((SELECT SUM(card_amount_minor) FROM st_pos_sales WHERE session_id=s.id),0) AS card_sales
         FROM st_pos_sessions s WHERE tenant_id=? AND station_id=? ${ownOnly ? "AND user_id=?" : ""}
         ORDER BY closed_at IS NULL DESC,opened_at DESC LIMIT 100`,
           params
@@ -207,10 +217,11 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
           : [];
         const sales = await rows<Row[]>(
           c,
-          `SELECT id,session_id,register_id,device_id,total_minor,payment_kind,created_at,fiscal_status FROM st_pos_sales WHERE tenant_id=? AND station_id=? ${ownOnly ? "AND user_id=?" : ""} ORDER BY created_at DESC,id LIMIT 50`,
+          `SELECT id,session_id,register_id,device_id,total_minor,payment_kind,cash_amount_minor,card_amount_minor,created_at,fiscal_status FROM st_pos_sales WHERE tenant_id=? AND station_id=? ${ownOnly ? "AND user_id=?" : ""} ORDER BY created_at DESC,id LIMIT 50`,
           params
         );
         return {
+          ...(await loadCartState(c, actor, scope, stationId, device(req))),
           isDemo: Boolean(number(tenant?.is_demo)),
           registers: registers.map(r => ({
             id: r.id,
@@ -259,6 +270,8 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
             deviceId: s.device_id,
             totalMinor: number(s.total_minor),
             paymentKind: s.payment_kind,
+            cashAmountMinor: number(s.cash_amount_minor),
+            cardAmountMinor: number(s.card_amount_minor),
             createdAt: s.created_at,
             fiscalStatus: s.fiscal_status,
           })),
@@ -409,17 +422,28 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
         "Mali belge ve cihaz akışı doğrulanana kadar kasa satışı yalnız DEMO firmada kullanılabilir.",
         409
       );
-    const lines = normalizePosLines(body.lines);
-    const paymentKind = requireEnum(body.paymentKind, "paymentKind", [
-      "CASH",
-      "CARD_MANUAL",
-    ] as const);
-    if (paymentKind === "CARD_MANUAL" && body.cardConfirmed !== true)
+    const cart = body.cartId
+      ? await lockCart(c, actor, body, scope, req, stationId)
+      : null;
+    if (cart && cart.sessionId !== session.id)
+      fail("CART_SESSION_CHANGED", "Sepet başka kasa oturumunda.", 409);
+    if (cart && body.lines !== undefined)
+      fail("INVALID_CART", "Kayıtlı sepetin satırları sunucudan alınır.", 409);
+    // Keep older clients compatible, but never let a direct payload bypass an active V2 cart.
+    if (
+      !cart &&
+      (await first<Row>(
+        c,
+        "SELECT id FROM st_pos_carts WHERE station_id=? AND owner_user_id=? AND active_device_id=?",
+        [stationId, actor.id, device(req)]
+      ))
+    )
       fail(
-        "CARD_CONFIRMATION_REQUIRED",
-        "Kart tahsilatını ayrı POS cihazında teyit edin. Bu kayıt banka doğrulaması değildir.",
+        "CART_REQUIRED",
+        "Satışı kayıtlı sepet kimliği ve sürümüyle tamamlayın.",
         409
       );
+    const lines = normalizePosLines(cart ? cart.lines : body.lines);
     const snapshots = [];
     let total = 0;
     for (const line of lines) {
@@ -442,31 +466,30 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       total = safeAdd(total, lineTotal);
       snapshots.push({ ...line, name: p.name, barcode: p.barcode, lineTotal });
     }
-    const tendered =
-      paymentKind === "CASH"
-        ? requireMoney(body.tenderedMinor, "tenderedMinor", { allowZero: true })
-        : null;
-    if (tendered !== null && tendered < total)
-      fail("INSUFFICIENT_CASH", "Alınan nakit satış toplamından az.", 409);
+    const payment = posPayment(body, total);
+    const {
+      paymentKind,
+      cashAmountMinor,
+      cardAmountMinor,
+      tenderedMinor: tendered,
+      changeMinor,
+    } = payment;
     // Guard the future drawer total before any write as well as each sale total.
     const totals = await first<Row>(
       c,
-      "SELECT COALESCE(SUM(CASE WHEN payment_kind='CASH' THEN total_minor ELSE 0 END),0) AS cash_total,COALESCE(SUM(CASE WHEN payment_kind='CARD_MANUAL' THEN total_minor ELSE 0 END),0) AS card_total FROM st_pos_sales WHERE session_id=?",
+      "SELECT COALESCE(SUM(cash_amount_minor),0) AS cash_total,COALESCE(SUM(card_amount_minor),0) AS card_total FROM st_pos_sales WHERE session_id=?",
       [session.id]
     );
     safeAdd(
       number(session.opening_float_minor),
       number(totals?.cash_total),
-      paymentKind === "CASH" ? total : 0
+      cashAmountMinor
     );
-    safeAdd(
-      number(totals?.card_total),
-      paymentKind === "CARD_MANUAL" ? total : 0
-    );
+    safeAdd(number(totals?.card_total), cardAmountMinor);
     const id = randomUUID();
     await execute(
       c,
-      "INSERT INTO st_pos_sales (id,tenant_id,station_id,register_id,session_id,user_id,request_id,total_minor,payment_kind,payment_status,tendered_minor,change_minor,device_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO st_pos_sales (id,tenant_id,station_id,register_id,session_id,user_id,request_id,total_minor,payment_kind,payment_status,tendered_minor,change_minor,device_id,cash_amount_minor,card_amount_minor) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
       [
         id,
         scope.tenantId,
@@ -479,8 +502,10 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
         paymentKind,
         paymentKind === "CASH" ? "CASH_RECORDED" : "CASHIER_DECLARED",
         tendered,
-        tendered === null ? null : tendered - total,
+        changeMinor,
         device(req),
+        cashAmountMinor,
+        cardAmountMinor,
       ]
     );
     for (const line of snapshots) {
@@ -531,12 +556,29 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       "POS_DEMO_SALE",
       id
     );
+    if (cart)
+      await saveCart(
+        c,
+        services,
+        actor,
+        body,
+        scope,
+        req,
+        stationId,
+        cart,
+        { ...cart, status: "CHECKED_OUT" },
+        "CHECKOUT",
+        null,
+        id
+      );
     return {
       id,
       sessionId: session.id,
       totalMinor: total,
-      changeMinor: tendered === null ? null : tendered - total,
+      changeMinor,
       paymentKind,
+      cashAmountMinor,
+      cardAmountMinor,
       fiscalStatus: "NOT_ISSUED_DEMO",
       syncStatus: "NOT_CONFIGURED",
     };
@@ -549,7 +591,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
     });
     const cash = await first<Row>(
       c,
-      "SELECT COALESCE(SUM(total_minor),0) AS total FROM st_pos_sales WHERE session_id=? AND payment_kind='CASH'",
+      "SELECT COALESCE(SUM(cash_amount_minor),0) AS total FROM st_pos_sales WHERE session_id=?",
       [session.id]
     );
     const expected = safeAdd(
@@ -585,4 +627,9 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       differenceMinor: difference,
     };
   });
+  registerCartRoutes(
+    (path, fn) => post(path, SELL, fn),
+    ownedSession,
+    services
+  );
 }

@@ -1,10 +1,77 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { normalizePosLines, posLineTotal } from "./pos-domain";
+import { normalizePosLines, posLineTotal, posPayment } from "./pos-domain";
 import { newRequestId } from "../../client/src/lib/id";
 
 const a = "11111111-1111-4111-8111-111111111111",
   b = "22222222-2222-4222-8222-222222222222";
 afterEach(() => vi.unstubAllGlobals());
+describe("Kasa ödeme dağılımı", () => {
+  it("karma ödemede para üstünü yalnız nakit payına göre hesaplar", () => {
+    expect(
+      posPayment(
+        {
+          paymentKind: "MIXED",
+          cashAmountMinor: 300,
+          tenderedMinor: 500,
+          cardConfirmed: true,
+        },
+        800
+      )
+    ).toEqual({
+      paymentKind: "MIXED",
+      cashAmountMinor: 300,
+      cardAmountMinor: 500,
+      tenderedMinor: 500,
+      changeMinor: 200,
+    });
+  });
+  it("eksik nakit, boş kart payı ve teyitsiz kartı reddeder", () => {
+    for (const body of [
+      {
+        paymentKind: "MIXED",
+        cashAmountMinor: 0,
+        tenderedMinor: 500,
+        cardConfirmed: true,
+      },
+      {
+        paymentKind: "MIXED",
+        cashAmountMinor: 800,
+        tenderedMinor: 800,
+        cardConfirmed: true,
+      },
+      {
+        paymentKind: "MIXED",
+        cashAmountMinor: 300,
+        tenderedMinor: 299,
+        cardConfirmed: true,
+      },
+      {
+        paymentKind: "MIXED",
+        cashAmountMinor: 300,
+        tenderedMinor: 500,
+        cardConfirmed: false,
+      },
+      { paymentKind: "CARD_MANUAL", cardConfirmed: false },
+    ])
+      expect(() => posPayment(body, 800)).toThrow();
+  });
+  it("nakit ve kart ödemelerini ayrı izler", () => {
+    expect(
+      posPayment({ paymentKind: "CASH", tenderedMinor: 1000 }, 800)
+    ).toMatchObject({
+      cashAmountMinor: 800,
+      cardAmountMinor: 0,
+      changeMinor: 200,
+    });
+    expect(
+      posPayment({ paymentKind: "CARD_MANUAL", cardConfirmed: true }, 800)
+    ).toMatchObject({
+      cashAmountMinor: 0,
+      cardAmountMinor: 800,
+      changeMinor: null,
+    });
+  });
+});
 describe("Kasa sepeti", () => {
   it("tekrarlanan ürünleri birleştirir ve kilit sırasını sabitler", () => {
     expect(

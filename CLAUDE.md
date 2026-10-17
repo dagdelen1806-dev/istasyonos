@@ -1,3 +1,5 @@
+> **17 Ekim 2026 Kasa V2:** Güncel rehber `docs/market-kasa-v2-2026-10-17.md`. 0009/0010 göçleri kalıcı sürümlü sepet, bekletme/tek cihazda çağırma, açıklamalı iptal olayları ve karma ödeme ekler. Sepet değişiklikleri sunucuda; bekletme stok düşürmez. Eski checkout uyumluluğu aktif V2 sepeti atlayamaz. DEMO/mali sınırları koruyun.
+
 > **Ortak kasa:** 0008 migration ile aynı kullanıcının farklı bilgisayarları tek açık kasaya `/pos/join` ile katılır. Sepet ve istek kimlikleri ayrı, kasa toplamı/kapanışı ortaktır. Her satışın kaynak cihazı ve kapanış cihazı saklanır. Cihaz listesi yeni kasa oturumuna taşınmaz.
 
 > **16 Ekim 2026 kasa pilotu:** Güncel market POS rehberi `docs/market-kasa-pilotu-2026-10-16.md`. `/kasa` çok kasa oturumları, atomik DEMO sepet satışları ve kapanış içerir; 0007 migration gereklidir. Gerçek mali belge, yazıcı/çekmece/banka ve merkez sync henüz bağlı değildir. Finans ve tenant sınırlarını koruyun.

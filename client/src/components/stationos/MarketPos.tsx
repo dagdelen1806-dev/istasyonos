@@ -1,52 +1,90 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { AppState } from "@shared/station";
-import { money, parseMoney } from "@shared/station";
-import type { PosLineInput, PosState } from "@shared/pos";
+import { useEffect, useRef, useState } from "react";
 import {
-  ApiError,
-  getDeviceIdentity,
-  loadPosState,
-  mutate,
-} from "@/lib/station-api";
-import { newRequestId } from "@/lib/id";
+  Barcode,
+  Search,
+  Pause,
+  Play,
+  Trash2,
+  Star,
+  RefreshCw,
+  ShoppingBasket,
+  Minus,
+  Plus,
+  Monitor,
+  Wallet,
+  Clock3,
+  History,
+} from "lucide-react";
+import type { AppState } from "@shared/station";
+import type { PosCart, PosCartLine } from "@shared/pos";
+import { money, parseMoney } from "@shared/station";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { usePosWorkspace } from "./usePosWorkspace";
+import { PosPayment } from "./PosPayment";
 import "./pos.css";
 
-type Pending = { path: string; payload: Record<string, unknown>; id: string };
-const paths = [
-  "/pos/register",
-  "/pos/open",
-  "/pos/join",
-  "/pos/checkout",
-  "/pos/close",
-];
+const cartTotal = (c: PosCart) =>
+  c.lines.reduce((n, l) => n + l.quantity * l.expectedUnitPriceMinor, 0);
+const time = (date: string) =>
+  new Intl.DateTimeFormat("tr-TR", {
+    timeZone: "Europe/Istanbul",
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(date.endsWith("Z") ? date : date.replace(" ", "T") + "Z"));
+type ModalState =
+  | { kind: "hold" }
+  | { kind: "reduce"; line: PosCartLine; quantity?: number }
+  | { kind: "cancel" };
 
-export default function MarketPos({
+export default function MarketPos(props: {
+  state: AppState;
+  stationId: string;
+}) {
+  return (
+    <PosWorkspace
+      key={`${props.state.user.id}:${props.stationId}`}
+      {...props}
+    />
+  );
+}
+function PosWorkspace({
   state,
   stationId,
 }: {
   state: AppState;
   stationId: string;
 }) {
-  const [data, setData] = useState<PosState | null>(null);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const w = usePosWorkspace(state, stationId);
+  const { data, locked, deviceId } = w;
+  const cart = data?.activeCart ?? null;
+  const lines = cart?.lines ?? [];
   const [registerId, setRegisterId] = useState("");
-  const [cart, setCart] = useState<PosLineInput[]>([]);
   const [barcode, setBarcode] = useState("");
   const [search, setSearch] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState<Pending | null>(null);
-  const [pendingLoaded, setPendingLoaded] = useState(false);
-  const [paymentKind, setPaymentKind] = useState<"CASH" | "CARD_MANUAL">(
-    "CASH"
-  );
-  const [tendered, setTendered] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
-  const scanInput = useRef<HTMLInputElement>(null);
-  const inFlight = useRef(false);
-  const sequence = useRef(0);
-  const deviceId = getDeviceIdentity().deviceId;
-  const storageKey = `stationos-pos-pending:${state.user.id}:${stationId}:${deviceId}`;
+  const [quantity, setQuantity] = useState("1");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const favoriteKey = `stationos-pos-favorites:${state.user.id}:${stationId}`;
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      const x = JSON.parse(localStorage.getItem(favoriteKey) ?? "[]");
+      return Array.isArray(x)
+        ? x.filter(v => typeof v === "string").slice(0, 100)
+        : [];
+    } catch {
+      return [];
+    }
+  });
+  const [modal, setModal] = useState<ModalState | null>(null);
+  const [heldOpen, setHeldOpen] = useState(false);
+  const scanInput = useRef<HTMLInputElement>(null),
+    cashInput = useRef<HTMLInputElement>(null);
   const management = ["OWNER", "MANAGER"].includes(state.member?.role ?? "");
   const canSell = ["OWNER", "MANAGER", "MARKET_STAFF"].includes(
     state.member?.role ?? ""
@@ -65,234 +103,163 @@ export default function MarketPos({
   const occupied = data?.sessions.some(
     s => s.registerId === registerId && !s.closedAt
   );
-  const total = cart.reduce(
-    (sum, line) => sum + line.quantity * line.expectedUnitPriceMinor,
-    0
+  const cartSession = data?.sessions.find(s => s.id === cart?.sessionId);
+  const editable =
+    !!session && (!cart || cart.sessionId === session.id) && canSell;
+  const total = cart ? cartTotal(cart) : 0;
+  const priceChanged = lines.some(
+    l =>
+      data?.products.find(p => p.id === l.productId)?.salePriceMinor !==
+      l.expectedUnitPriceMinor
   );
-  const locked = busy || !!pending || !pendingLoaded;
-
-  async function refresh() {
-    const current = ++sequence.current;
-    const next = await loadPosState(stationId);
-    if (current === sequence.current) setData(next);
-  }
   useEffect(() => {
-    if (!stationId) {
-      setPendingLoaded(true);
-      return;
-    }
-    let active = true;
-    const update = () => {
-      void refresh().catch(e => {
-        if (active) setError(e.message);
-      });
-    };
-    update();
-    const timer = window.setInterval(update, 15000);
-    try {
-      const raw = sessionStorage.getItem(storageKey);
-      if (raw) {
-        const saved = JSON.parse(raw) as Pending;
-        if (
-          !paths.includes(saved.path) ||
-          saved.payload.stationId !== stationId ||
-          !/^[a-f0-9-]{36}$/i.test(saved.id)
-        )
-          throw new Error(
-            "Bekleyen kayıt okunamadı. Yeni satış başlatmadan destek alın."
-          );
-        setPending(saved);
-        setNotice(
-          "Önceki isteğin sonucu kontrol edilmeli. Aynı isteği yeniden sorgulayın."
-        );
-      }
-      setPendingLoaded(true);
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Tarayıcı depolaması kullanılamıyor."
-      );
-    }
-    return () => {
-      active = false;
-      sequence.current++;
-      window.clearInterval(timer);
-    };
-  }, [storageKey]);
-  useEffect(() => {
-    if (!registerId && data?.registers.length === 1)
+    if (cartSession) setRegisterId(cartSession.registerId);
+    else if (!registerId && data?.registers.length === 1)
       setRegisterId(data.registers[0].id);
-  }, [data, registerId]);
-
-  async function action(
-    path: string,
-    payload: Record<string, unknown>,
-    retry?: Pending
-  ) {
-    if (inFlight.current || (!retry && locked)) return;
-    const operation = retry ?? {
-      path,
-      payload: { ...payload, stationId },
-      id: newRequestId(),
-    };
-    inFlight.current = true;
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      // Persist BEFORE sending. A reload after a lost response retains the same ID.
-      sessionStorage.setItem(storageKey, JSON.stringify(operation));
-      setPending(operation);
-      let result;
-      try {
-        result = await mutate(
-          operation.path,
-          operation.payload,
-          operation.id,
-          state.csrfToken
-        );
-      } catch (e) {
-        const uncertain =
-          !(e instanceof ApiError) ||
-          !e.status ||
-          e.status >= 500 ||
-          e.status === 401 ||
-          e.status === 403;
-        if (!uncertain) {
-          sessionStorage.removeItem(storageKey);
-          setPending(null);
-        }
-        throw e;
+  }, [cartSession?.id, data?.registers.length, registerId]);
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || modal || heldOpen) return;
+      if (e.key === "F2") {
+        e.preventDefault();
+        scanInput.current?.focus();
       }
-      sessionStorage.removeItem(storageKey);
-      setPending(null);
-      if (operation.path === "/pos/checkout") {
-        setCart([]);
-        setTendered("");
-        setConfirmed(false);
-        setNotice(
-          `DEMO satış kaydedildi: ${money(result.result.totalMinor)}. Para üstü: ${money(result.result.changeMinor)}. Mali fiş üretilmedi.`
-        );
-      } else if (operation.path === "/pos/register") {
-        setRegisterId(result.result.id);
-        setNotice("Kasa tanımlandı.");
-      } else if (operation.path === "/pos/close") {
-        setCart([]);
-        setNotice(
-          `Kasa kapandı. Nakit farkı: ${money(result.result.differenceMinor)}.`
-        );
-      } else if (operation.path === "/pos/join")
-        setNotice(
-          "Ortak kasaya katıldınız. Açılış para üstü yeniden eklenmedi."
-        );
-      else setNotice("Kasa oturumu açıldı.");
-      await refresh();
-      scanInput.current?.focus();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "İşlem tamamlanamadı.");
-    } finally {
-      inFlight.current = false;
-      setBusy(false);
-    }
+      if (e.key === "F4") {
+        e.preventDefault();
+        setHeldOpen(true);
+      }
+      if (e.key === "F8" && cart?.lines.length && !locked) {
+        e.preventDefault();
+        setModal({ kind: "hold" });
+      }
+      if (e.key === "F9") {
+        e.preventDefault();
+        cashInput.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [modal, heldOpen, cart, locked]);
+  function cartPayload() {
+    return cart ? { cartId: cart.id, cartVersion: cart.version } : {};
   }
-  function add(productId: string) {
-    if (locked || !session) return;
-    const product = data?.products.find(p => p.id === productId);
-    if (!product) {
-      setError("Barkod bu istasyonda bulunamadı.");
+  async function add(productId: string) {
+    if (locked || !editable || !session) return;
+    const count = Number(quantity);
+    if (!Number.isSafeInteger(count) || count < 1 || count > 10000) {
+      w.setError("Adet 1–10.000 arasında tam sayı olmalıdır.");
       return;
     }
-    const previous = cart.find(l => l.productId === productId);
-    if ((previous?.quantity ?? 0) >= product.stockQty) {
-      setError("Bu ürün için yeterli stok yok.");
-      return;
-    }
-    if (!previous && cart.length >= 100) {
-      setError("Sepet en fazla 100 farklı ürün içerebilir.");
-      return;
-    }
-    setCart(lines => {
-      const current = lines.find(l => l.productId === productId);
-      if ((current?.quantity ?? 0) >= Math.min(product.stockQty, 10000))
-        return lines;
-      return current
-        ? lines.map(l =>
-            l.productId === productId ? { ...l, quantity: l.quantity + 1 } : l
-          )
-        : [
-            ...lines,
-            {
-              productId,
-              quantity: 1,
-              expectedUnitPriceMinor: product.salePriceMinor,
-            },
-          ];
+    const success = await w.action("/pos/cart/add", {
+      sessionId: session.id,
+      ...cartPayload(),
+      productId,
+      quantity: count,
     });
-    setError("");
-    setBarcode("");
-    setConfirmed(false);
-    scanInput.current?.focus();
+    if (success) {
+      setBarcode("");
+      setQuantity("1");
+      requestAnimationFrame(() => scanInput.current?.focus());
+    }
   }
-  function submitSale(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!session || !cart.length || !data?.isDemo) return;
+  function toggleFavorite(id: string) {
+    const next = favorites.includes(id)
+      ? favorites.filter(x => x !== id)
+      : [...favorites, id].slice(-100);
+    setFavorites(next);
     try {
-      const payload = {
-        sessionId: session.id,
-        lines: cart,
-        paymentKind,
-        ...(paymentKind === "CASH"
-          ? { tenderedMinor: parseMoney(tendered) }
-          : { cardConfirmed: confirmed }),
-      };
-      void action("/pos/checkout", payload);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Tutar geçersiz.");
+      localStorage.setItem(favoriteKey, JSON.stringify(next));
+    } catch {
+      /* Favorites are optional browser preferences. */
     }
   }
   const matching =
     data?.products
-      .filter(p =>
-        `${p.name} ${p.barcode}`
-          .toLocaleLowerCase("tr-TR")
-          .includes(search.toLocaleLowerCase("tr-TR"))
+      .filter(
+        p =>
+          (!favoritesOnly || favorites.includes(p.id)) &&
+          `${p.name} ${p.barcode}`
+            .toLocaleLowerCase("tr-TR")
+            .includes(search.toLocaleLowerCase("tr-TR"))
       )
       .slice(0, 60) ?? [];
   if (!stationId)
     return (
-      <div className="notice">
-        Satış kasası için üst menüden bir istasyon seçin.
-      </div>
+      <div className="notice">Satış için üst menüden bir istasyon seçin.</div>
     );
   return (
     <div className="pos-root">
-      <div className="notice warning">
-        <strong>DEMO kasa pilotu.</strong> Mali fiş, banka doğrulaması, otomatik
-        yazıcı/çekmece bağlantısı ve merkez senkronizasyonu henüz yok. İnternet
-        kesildiğinde yerel sunucuya erişim gerekir.
+      <div className="pos-heading">
+        <div>
+          <span className="pos-eyebrow">İSTASYONOS MARKET</span>
+          <h1>Satış kasası</h1>
+          <p>Hızlı satış, kayıtlı sepetler ve ortak kasa.</p>
+        </div>
+        <div className="pos-connection">
+          <span className={w.reachable ? "pos-online" : "pos-offline"} />
+          {w.reachable ? "Sunucu bağlı" : "Sunucu bağlantısı bekleniyor"}
+          <span className="pos-demo">DEMO</span>
+        </div>
       </div>
-      {!data?.isDemo && data && (
-        <div className="notice warning">
-          Bu firma DEMO değil. Cihaz ve mali belge akışı doğrulanana kadar satış
-          kaydı kapalı; ürün ve kasa tanımları hazırlanabilir.
+      <div className="pos-toolbar">
+        <label>
+          Satış kasası
+          <select
+            aria-label="Satış kasası"
+            value={registerId}
+            disabled={locked || !!cart}
+            onChange={e => setRegisterId(e.target.value)}
+          >
+            <option value="">Kasa seçin</option>
+            {data?.registers.map(r => (
+              <option value={r.id} key={r.id}>
+                {r.code} · {r.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="pos-session-status">
+          <Monitor size={18} />
+          <span>
+            {session
+              ? `${state.user.name} · ${session.deviceIds.length} bilgisayar`
+              : "Bu bilgisayarda açık kasa yok"}
+            {session && (
+              <small>Ortak çekmece: {money(session.expectedCashMinor)}</small>
+            )}
+          </span>
         </div>
-      )}
-      {error && (
+        <button
+          className="btn"
+          onClick={() => void w.refresh().catch(e => w.setError(e.message))}
+        >
+          <RefreshCw size={16} />
+          Yenile
+        </button>
+        <button className="btn" onClick={() => setHeldOpen(true)}>
+          <Clock3 size={17} />
+          Bekleyen sepetler{" "}
+          <b className="pos-count">{data?.heldCarts.length ?? 0}</b>
+          <kbd>F4</kbd>
+        </button>
+      </div>
+      {w.error && (
         <div role="alert" className="notice warning">
-          {error}
+          {w.error}
         </div>
       )}
-      {notice && (
+      {w.notice && (
         <div role="status" className="notice">
-          {notice}
+          {w.notice}
         </div>
       )}
-      {pending && (
+      {w.pending && (
         <div className="notice warning pos-retry">
-          Sonuç kontrolü bekleyen istek var. Yeni işlem başlatmayın.
+          <span>Sonucu beklenen işlem var. Aynı istek kimliği korunuyor.</span>
           <button
             className="btn"
-            disabled={busy}
-            onClick={() => void action(pending.path, pending.payload, pending)}
+            disabled={w.busy}
+            onClick={() => void w.retry()}
           >
             Aynı isteği kontrol et
           </button>
@@ -301,39 +268,12 @@ export default function MarketPos({
       {!data && <p>Kasa bilgileri yükleniyor…</p>}
       {data && (
         <>
-          <div className="pos-toolbar">
-            <label>
-              Satış kasası
-              <select
-                aria-label="Satış kasası"
-                value={registerId}
-                disabled={locked || cart.length > 0}
-                onChange={e => {
-                  setRegisterId(e.target.value);
-                  setTendered("");
-                  setConfirmed(false);
-                }}
-              >
-                <option value="">Kasa seçin</option>
-                {data.registers.map(r => (
-                  <option value={r.id} key={r.id}>
-                    {r.code} · {r.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <span>
-              {session
-                ? `Kasa açık · ${session.deviceIds.length} bilgisayar · ortak bakiye`
-                : "Bu tarayıcıda açık kasa yok"}
-            </span>
-            <button
-              className="btn"
-              onClick={() => void refresh().catch(e => setError(e.message))}
-            >
-              Yenile
-            </button>
-          </div>
+          {!data.isDemo && (
+            <div className="notice warning">
+              Bu firma DEMO değil. Mali belge ve cihaz akışı doğrulanana kadar
+              satış kaydı kapalıdır.
+            </div>
+          )}
           {management && (
             <details className="pos-setup">
               <summary>Yeni kasa tanımla</summary>
@@ -341,7 +281,7 @@ export default function MarketPos({
                 onSubmit={e => {
                   e.preventDefault();
                   const f = new FormData(e.currentTarget);
-                  void action("/pos/register", {
+                  void w.action("/pos/register", {
                     name: f.get("name"),
                     code: f.get("code"),
                   });
@@ -381,27 +321,27 @@ export default function MarketPos({
                 e.preventDefault();
                 try {
                   const f = new FormData(e.currentTarget);
-                  void action("/pos/open", {
+                  void w.action("/pos/open", {
                     registerId,
                     openingFloatMinor: parseMoney(String(f.get("float"))),
                   });
                 } catch (e) {
-                  setError((e as Error).message);
+                  w.setError((e as Error).message);
                 }
               }}
             >
               {ownOpenSession ? (
                 <>
                   <p>
-                    Bu kullanıcıyla açık kasa var. Aynı kasa bakiyesine
-                    katılabilirsiniz; sepetler bilgisayarlarda ayrı tutulur.
+                    Bu kullanıcıyla açık kasaya katılın. Sepetler ayrı, bakiye
+                    ortak tutulur.
                   </p>
                   <button
                     type="button"
                     className="btn primary"
                     disabled={locked}
                     onClick={() =>
-                      void action("/pos/join", {
+                      void w.action("/pos/join", {
                         registerId,
                         sessionId: ownOpenSession.id,
                       })
@@ -431,6 +371,12 @@ export default function MarketPos({
               )}
             </form>
           )}
+          {cart && !editable && (
+            <div className="notice warning">
+              Kayıtlı sepetin kasa oturumu kapalı veya bu bilgisayar katılmamış.
+              Sepeti beklemeye alıp açık kasada çağırabilirsiniz.
+            </div>
+          )}
           <div className="pos-workspace">
             <section className="pos-catalog" aria-label="Ürün kataloğu">
               <form
@@ -440,281 +386,647 @@ export default function MarketPos({
                   const p = data.products.find(
                     p => p.barcode === barcode.trim()
                   );
-                  if (p) add(p.id);
-                  else setError("Barkod bu istasyonda bulunamadı.");
+                  if (p) void add(p.id);
+                  else w.setError("Barkod bu istasyonda bulunamadı.");
                 }}
               >
-                <label>
-                  Barkod okut
+                <label className="pos-barcode-label">
+                  <span>
+                    <Barcode size={17} />
+                    Barkod okut <kbd>F2</kbd>
+                  </span>
                   <input
                     ref={scanInput}
                     name="barcode"
                     autoComplete="off"
                     value={barcode}
                     onChange={e => setBarcode(e.target.value)}
-                    disabled={!session || locked}
+                    disabled={!editable || locked}
                     placeholder="Barkodu okutun ve Enter"
                   />
                 </label>
-                <button className="btn" disabled={!session || locked}>
+                <label className="pos-quantity">
+                  Adet
+                  <input
+                    aria-label="Eklenecek adet"
+                    inputMode="numeric"
+                    value={quantity}
+                    onChange={e => setQuantity(e.target.value)}
+                    disabled={locked || !editable}
+                  />
+                </label>
+                <button className="btn primary" disabled={!editable || locked}>
                   Ekle
                 </button>
               </form>
-              <label>
-                Ürün ara
+              <div className="pos-search">
+                <Search size={18} />
                 <input
+                  aria-label="Ürün ara"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Ad veya barkod"
+                  placeholder="Ürün adı veya barkod ile ara"
                 />
-              </label>
+              </div>
+              <div className="pos-catalog-tabs">
+                <button
+                  aria-pressed={!favoritesOnly}
+                  className={!favoritesOnly ? "selected" : ""}
+                  onClick={() => setFavoritesOnly(false)}
+                >
+                  Tüm ürünler
+                </button>
+                <button
+                  aria-pressed={favoritesOnly}
+                  className={favoritesOnly ? "selected" : ""}
+                  onClick={() => setFavoritesOnly(true)}
+                >
+                  <Star size={15} />
+                  Favoriler
+                </button>
+                <small>{matching.length} ürün gösteriliyor</small>
+              </div>
               <div className="pos-products">
                 {matching.map(p => (
-                  <button
-                    className="pos-product"
-                    key={p.id}
-                    onClick={() => add(p.id)}
-                    disabled={!session || locked || p.stockQty < 1}
-                  >
-                    <b>{p.name}</b>
-                    <strong>{money(p.salePriceMinor)}</strong>
-                    <small>Stok: {p.stockQty} adet</small>
-                  </button>
+                  <div className="pos-product-tile" key={p.id}>
+                    <button
+                      className="pos-product"
+                      onClick={() => void add(p.id)}
+                      disabled={!editable || locked || p.stockQty < 1}
+                    >
+                      <span className="pos-product-symbol">
+                        {p.name.slice(0, 1).toLocaleUpperCase("tr-TR")}
+                      </span>
+                      <b>{p.name}</b>
+                      <strong>{money(p.salePriceMinor)}</strong>
+                      <small>
+                        {p.stockQty > 0
+                          ? `${p.stockQty} adet stok`
+                          : "Stok tükendi"}
+                      </small>
+                    </button>
+                    <button
+                      className={`pos-favorite ${favorites.includes(p.id) ? "selected" : ""}`}
+                      aria-label={`${p.name} favori`}
+                      aria-pressed={favorites.includes(p.id)}
+                      onClick={() => toggleFavorite(p.id)}
+                    >
+                      <Star
+                        size={16}
+                        fill={
+                          favorites.includes(p.id) ? "currentColor" : "none"
+                        }
+                      />
+                    </button>
+                  </div>
                 ))}
               </div>
               {!matching.length && (
-                <p>
-                  Ürün bulunamadı. Market ve stok ekranından ürün/mal kabul
-                  ekleyin.
-                </p>
+                <div className="pos-empty">
+                  <Search size={30} />
+                  <h3>
+                    {favoritesOnly
+                      ? "Henüz favori ürün yok"
+                      : "Ürün bulunamadı"}
+                  </h3>
+                  <p>
+                    {favoritesOnly
+                      ? "Ürün kartındaki yıldızla sık satılanları buraya ekleyin."
+                      : "Aramayı değiştirin veya Market ve stok ekranından ürün ekleyin."}
+                  </p>
+                </div>
               )}
-              <small>
-                İlk 60 eşleşme gösterilir. Tartılı ürün, kampanya ve KDV/mali
-                hesaplama bu pilotta yoktur.
-              </small>
+              <div className="pos-shortcuts">
+                <span>
+                  <kbd>F2</kbd>Barkod
+                </span>
+                <span>
+                  <kbd>F4</kbd>Bekleyenler
+                </span>
+                <span>
+                  <kbd>F8</kbd>Beklet
+                </span>
+                <span>
+                  <kbd>F9</kbd>Nakit alanı
+                </span>
+              </div>
             </section>
             <section className="pos-cart" aria-label="Satış sepeti">
-              <h2>
-                Sepet{" "}
-                <small>{cart.reduce((n, l) => n + l.quantity, 0)} adet</small>
-              </h2>
-              {cart.map(l => (
-                <div className="pos-line" key={l.productId}>
-                  <div>
-                    <b>
-                      {data.products.find(p => p.id === l.productId)?.name ??
-                        "Ürün"}
-                    </b>
-                    <small>
-                      {l.quantity} × {money(l.expectedUnitPriceMinor)}
-                    </small>
-                  </div>
-                  <strong>
-                    {money(l.quantity * l.expectedUnitPriceMinor)}
-                  </strong>
-                  <button
-                    className="btn"
-                    aria-label={`${data.products.find(p => p.id === l.productId)?.name} bir adet azalt`}
-                    disabled={locked}
-                    onClick={() => {
-                      setCart(lines =>
-                        lines.flatMap(x =>
-                          x.productId !== l.productId
-                            ? [x]
-                            : x.quantity > 1
-                              ? [{ ...x, quantity: x.quantity - 1 }]
-                              : []
-                        )
-                      );
-                      setConfirmed(false);
-                    }}
-                  >
-                    −
-                  </button>
+              <div className="pos-cart-head">
+                <div>
+                  <h2>
+                    <ShoppingBasket size={21} />
+                    Müşteri sepeti
+                  </h2>
+                  <small>
+                    {cart
+                      ? `#${cart.id.slice(0, 8)} · sunucuda kayıtlı`
+                      : "Yeni satış"}
+                  </small>
                 </div>
-              ))}
-              {!cart.length && (
-                <p>Barkod okutarak veya ürün düğmesine basarak başlayın.</p>
-              )}
-              <div className="pos-total">
-                <span>Toplam</span>
-                <strong>{money(total)}</strong>
+                <span className="pos-count">
+                  {lines.reduce((n, l) => n + l.quantity, 0)} adet
+                </span>
               </div>
-              <form onSubmit={submitSale} className="pos-payment">
-                <label>
-                  Ödeme türü
-                  <select
-                    value={paymentKind}
-                    disabled={locked}
-                    onChange={e => {
-                      setPaymentKind(e.target.value as typeof paymentKind);
-                      setConfirmed(false);
-                    }}
-                  >
-                    <option value="CASH">Nakit</option>
-                    <option value="CARD_MANUAL">Kart · kasiyer beyanı</option>
-                  </select>
-                </label>
-                {paymentKind === "CASH" ? (
-                  <label>
-                    Alınan nakit (TL)
-                    <input
-                      inputMode="decimal"
-                      required
-                      value={tendered}
-                      onChange={e => setTendered(e.target.value)}
-                      disabled={locked}
-                    />
-                  </label>
-                ) : (
-                  <label className="pos-check">
-                    <input
-                      type="checkbox"
-                      checked={confirmed}
-                      disabled={locked}
-                      onChange={e => setConfirmed(e.target.checked)}
-                    />
-                    Ayrı POS cihazındaki tahsilat sonucunu teyit ettim. Bu
-                    uygulama bankadan doğrulama almadı.
-                  </label>
-                )}
-                <button
-                  className="btn primary pos-pay"
-                  disabled={
-                    locked ||
-                    !session ||
-                    !cart.length ||
-                    !data.isDemo ||
-                    !canSell ||
-                    (paymentKind === "CARD_MANUAL" && !confirmed)
-                  }
-                >
-                  {busy ? "Kaydediliyor…" : "DEMO satışı kaydet"}
-                </button>
-              </form>
+              <div className="pos-cart-lines">
+                {lines.map(l => (
+                  <div className="pos-line" key={l.productId}>
+                    <div>
+                      <b>{l.productName}</b>
+                      <small>
+                        {l.quantity} × {money(l.expectedUnitPriceMinor)}
+                      </small>
+                      <div className="pos-stepper">
+                        <button
+                          aria-label={`${l.productName} adet azalt`}
+                          disabled={locked || !editable}
+                          onClick={() =>
+                            setModal({ kind: "reduce", line: l, quantity: 1 })
+                          }
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <span>{l.quantity}</span>
+                        <button
+                          aria-label={`${l.productName} adet artır`}
+                          disabled={locked || !editable}
+                          onClick={() => void add(l.productId)}
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    <strong>
+                      {money(l.quantity * l.expectedUnitPriceMinor)}
+                    </strong>
+                    <button
+                      className="pos-remove"
+                      aria-label={`${l.productName} iptal et`}
+                      disabled={locked || !editable}
+                      onClick={() => setModal({ kind: "reduce", line: l })}
+                    >
+                      <Trash2 size={17} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {!lines.length && (
+                <div className="pos-empty">
+                  <ShoppingBasket size={38} />
+                  <h3>Sepetiniz hazır</h3>
+                  <p>Barkod okutun veya soldaki ürünlerden seçin.</p>
+                </div>
+              )}
+              {priceChanged && (
+                <div className="notice warning">
+                  Fiyatı değişen ürün var. Güncel fiyatları alıp toplamı kontrol
+                  edin.
+                </div>
+              )}
               <div className="pos-cart-actions">
                 <button
                   className="btn"
-                  disabled={locked || !cart.length}
-                  onClick={() => {
-                    setCart([]);
-                    setTendered("");
-                    setConfirmed(false);
-                  }}
+                  disabled={locked || !lines.length || !canSell}
+                  onClick={() => setModal({ kind: "hold" })}
                 >
-                  Sepeti temizle
+                  <Pause size={16} />
+                  Beklemeye al
                 </button>
                 <button
                   className="btn"
-                  disabled={locked || !cart.length}
-                  onClick={() => {
-                    setCart(lines =>
-                      lines.map(l => ({
-                        ...l,
-                        expectedUnitPriceMinor:
-                          data.products.find(p => p.id === l.productId)
-                            ?.salePriceMinor ?? l.expectedUnitPriceMinor,
-                      }))
-                    );
-                    setConfirmed(false);
-                    setNotice(
-                      "Sepet fiyatları güncellendi. Yeni toplamı kontrol edin."
-                    );
-                  }}
+                  disabled={locked || !cart || !canSell}
+                  onClick={() => setModal({ kind: "cancel" })}
                 >
-                  Güncel fiyatları al
+                  <Trash2 size={15} />
+                  Sepeti iptal et
+                </button>
+                <button
+                  className="btn"
+                  disabled={locked || !cart || !editable}
+                  onClick={() =>
+                    void w.action("/pos/cart/reprice", {
+                      sessionId: session!.id,
+                      ...cartPayload(),
+                    })
+                  }
+                >
+                  <RefreshCw size={15} />
+                  Güncel fiyatlar
                 </button>
               </div>
+              <div className="pos-total">
+                <span>Ödenecek toplam</span>
+                <strong>{money(total)}</strong>
+              </div>
+              <PosPayment
+                key={`${cart?.id}:${cart?.version}`}
+                total={total}
+                busy={w.busy}
+                cashInput={cashInput}
+                disabled={
+                  locked ||
+                  !editable ||
+                  !lines.length ||
+                  !data.isDemo ||
+                  priceChanged
+                }
+                onPay={payload =>
+                  w.action("/pos/checkout", {
+                    sessionId: session!.id,
+                    ...cartPayload(),
+                    ...payload,
+                  })
+                }
+              />
+              <p className="pos-fiscal-note">
+                DEMO satışıdır. Mali belge düzenlenmez.
+              </p>
             </section>
           </div>
-          {session && session.deviceIds.length > 1 && (
-            <p>
-              Bu kasa {session.deviceIds.length} bilgisayarda ortak
-              kullanılıyor. Bakiye en geç 15 saniyede veya Yenile ile
-              güncellenir. Bir bilgisayardan kapanış tüm kasa oturumunu kapatır.
-            </p>
-          )}
-          {session && (
-            <details className="pos-close">
-              <summary>Kasa özeti ve kapanış</summary>
-              <div className="pos-summary">
-                <span>
-                  Açılış: <b>{money(session.openingFloatMinor)}</b>
-                </span>
-                <span>
-                  Nakit satış: <b>{money(session.cashSalesMinor)}</b>
-                </span>
-                <span>
-                  Kart beyanı: <b>{money(session.cardDeclaredMinor)}</b>
-                </span>
-                <span>
-                  Beklenen çekmece: <b>{money(session.expectedCashMinor)}</b>
-                </span>
-              </div>
-              <form
-                onSubmit={e => {
-                  e.preventDefault();
-                  try {
-                    if (cart.length)
-                      throw new Error(
-                        "Kapanıştan önce sepeti tamamlayın veya temizleyin."
-                      );
-                    const f = new FormData(e.currentTarget);
-                    if (
-                      session.deviceIds.length > 1 &&
-                      !window.confirm(
-                        "Bu kasayı kapatmak bağlı bütün bilgisayarlarda yeni satışı durdurur. Diğer bilgisayarlardaki sepetleri kontrol ettiniz mi?"
+          <div className="pos-bottom-panels">
+            {session && (
+              <details className="pos-close">
+                <summary>
+                  <Wallet size={18} />
+                  Kasa özeti ve kapanış
+                </summary>
+                <div className="pos-summary">
+                  <span>
+                    Açılış<b>{money(session.openingFloatMinor)}</b>
+                  </span>
+                  <span>
+                    Nakit satış<b>{money(session.cashSalesMinor)}</b>
+                  </span>
+                  <span>
+                    Kart beyanı<b>{money(session.cardDeclaredMinor)}</b>
+                  </span>
+                  <span>
+                    Beklenen çekmece<b>{money(session.expectedCashMinor)}</b>
+                  </span>
+                </div>
+                <p>
+                  {session.deviceIds.length} bilgisayar bu kasaya bağlı. Kapanış
+                  tüm bilgisayarlarda yeni satışı durdurur. Bekleyen sepetler
+                  korunur.
+                </p>
+                <form
+                  onSubmit={e => {
+                    e.preventDefault();
+                    try {
+                      const f = new FormData(e.currentTarget);
+                      if (
+                        session.deviceIds.length > 1 &&
+                        !window.confirm(
+                          "Kasayı kapatmak bağlı tüm bilgisayarlarda yeni satışı durdurur. Kapatılsın mı?"
+                        )
                       )
-                    )
-                      return;
-                    void action("/pos/close", {
-                      sessionId: session.id,
-                      countedCashMinor: parseMoney(String(f.get("counted"))),
-                      note: f.get("note"),
-                    });
-                  } catch (e) {
-                    setError((e as Error).message);
-                  }
-                }}
-              >
-                <label>
-                  Sayılan nakit (TL)
-                  <input
-                    name="counted"
-                    required
-                    inputMode="decimal"
-                    disabled={locked}
-                  />
-                </label>
-                <label>
-                  Fark açıklaması
-                  <input name="note" maxLength={500} disabled={locked} />
-                </label>
-                <button className="btn" disabled={locked || cart.length > 0}>
-                  Kasayı kapat
-                </button>
-              </form>
+                        return;
+                      void w.action("/pos/close", {
+                        sessionId: session.id,
+                        countedCashMinor: parseMoney(String(f.get("counted"))),
+                        note: f.get("note"),
+                      });
+                    } catch (e) {
+                      w.setError((e as Error).message);
+                    }
+                  }}
+                >
+                  <label>
+                    Sayılan nakit (TL)
+                    <input
+                      name="counted"
+                      required
+                      inputMode="decimal"
+                      disabled={locked}
+                    />
+                  </label>
+                  <label>
+                    Fark açıklaması
+                    <input name="note" maxLength={500} disabled={locked} />
+                  </label>
+                  <button className="btn" disabled={locked || !!cart}>
+                    Kasayı kapat
+                  </button>
+                </form>
+              </details>
+            )}
+            <details className="pos-history">
+              <summary>
+                <History size={18} />
+                Son satışlar
+              </summary>
+              {data.sales.map(s => (
+                <div className="pos-line" key={s.id}>
+                  <div>
+                    <b>#{s.id.slice(0, 8)}</b>
+                    <small>
+                      {time(s.createdAt)} ·{" "}
+                      {data.registers.find(r => r.id === s.registerId)?.code}
+                    </small>
+                    <small>
+                      {s.paymentKind === "CASH"
+                        ? "Nakit"
+                        : s.paymentKind === "MIXED"
+                          ? "Nakit + kart beyanı"
+                          : "Kart beyanı"}{" "}
+                      · Bilgisayar {s.deviceId.slice(0, 8)}
+                    </small>
+                    {s.paymentKind === "MIXED" && (
+                      <small>
+                        Nakit {money(s.cashAmountMinor)} · Kart{" "}
+                        {money(s.cardAmountMinor)}
+                      </small>
+                    )}
+                  </div>
+                  <strong>{money(s.totalMinor)}</strong>
+                </div>
+              ))}
             </details>
-          )}
-          <details className="pos-history">
-            <summary>Son demo satışları</summary>
-            {data.sales.map(s => (
-              <div className="pos-line" key={s.id}>
-                <span>
-                  {s.id.slice(0, 8)} ·{" "}
-                  {data.registers.find(r => r.id === s.registerId)?.code} ·{" "}
-                  {s.paymentKind === "CASH" ? "Nakit" : "Kart beyanı"}
-                </span>
-                <strong>{money(s.totalMinor)}</strong>
-                <small>Mali belge yok</small>
-                <small title={s.deviceId}>
-                  Bilgisayar: {s.deviceId.slice(0, 8)}
-                </small>
-              </div>
-            ))}
+            <details className="pos-history">
+              <summary>
+                <Trash2 size={18} />
+                İptal geçmişi
+              </summary>
+              {!data.cancellations.length && <p>Henüz iptal kaydı yok.</p>}
+              {data.cancellations.map(e => (
+                <div className="pos-audit" key={e.id}>
+                  <div>
+                    <b>
+                      {e.action === "CANCEL"
+                        ? "Sepet iptali"
+                        : "Ürün / adet iptali"}
+                    </b>
+                    <small>
+                      {time(e.createdAt)} · {e.actorName} · Bilgisayar{" "}
+                      {e.deviceId.slice(0, 8)}
+                    </small>
+                  </div>
+                  <p>{e.reason}</p>
+                  {e.beforeLines
+                    .filter(
+                      l =>
+                        l.quantity !==
+                        (e.afterLines.find(a => a.productId === l.productId)
+                          ?.quantity ?? 0)
+                    )
+                    .map(l => (
+                      <small key={l.productId}>
+                        {l.productName}: {l.quantity} →{" "}
+                        {e.afterLines.find(a => a.productId === l.productId)
+                          ?.quantity ?? 0}{" "}
+                        adet
+                      </small>
+                    ))}
+                  <small>Sepet #{e.cartId.slice(0, 8)}</small>
+                </div>
+              ))}
+            </details>
+          </div>
+          <details className="pos-capabilities">
+            <summary>Bağlantı ve cihaz bilgileri</summary>
+            <p>
+              Barkod okuyucu: klavye girişi ve Enter. Yazıcı, çekmece, mali
+              belge ve merkez aktarımı henüz bağlı değil. İnternet kesintisinde
+              market içindeki sunucuya yerel ağdan erişim gerekir. Sunucu
+              bağlantısı kesildiğinde satış sonucu doğrulanmadan yeni işlem
+              yapılmaz.
+            </p>
           </details>
         </>
       )}
+      <Dialog open={heldOpen} onOpenChange={setHeldOpen}>
+        <DialogContent className="pos-dialog pos-held-dialog">
+          <DialogTitle>Bekleyen sepetler</DialogTitle>
+          <DialogDescription>
+            Aynı markette kayıtlı sepeti bu bilgisayara alın. Bir sepet aynı
+            anda tek bilgisayarda kullanılabilir.
+          </DialogDescription>
+          {w.error && (
+            <p role="alert" className="pos-field-error">
+              {w.error}
+            </p>
+          )}
+          {cart && (
+            <p className="notice warning">
+              Önce aktif sepetinizi bekletin veya iptal edin.
+            </p>
+          )}
+          <div className="pos-held-list">
+            {!data?.heldCarts.length && <p>Bekleyen sepet yok.</p>}
+            {data?.heldCarts.map(c => (
+              <div className="pos-held" key={c.id}>
+                <div>
+                  <b>{c.label || `Sepet #${c.id.slice(0, 8)}`}</b>
+                  <small>
+                    {time(c.updatedAt)} ·{" "}
+                    {c.lines.reduce((n, l) => n + l.quantity, 0)} adet
+                  </small>
+                  <small>
+                    {c.lines
+                      .slice(0, 3)
+                      .map(l => l.productName)
+                      .join(", ")}
+                    {c.lines.length > 3 ? "…" : ""}
+                  </small>
+                  <strong>{money(cartTotal(c))}</strong>
+                </div>
+                <button
+                  className="btn primary"
+                  disabled={locked || !!cart || !session || !canSell}
+                  onClick={async () => {
+                    if (
+                      await w.action("/pos/cart/resume", {
+                        sessionId: session!.id,
+                        cartId: c.id,
+                        cartVersion: c.version,
+                      })
+                    ) {
+                      setHeldOpen(false);
+                      scanInput.current?.focus();
+                    }
+                  }}
+                >
+                  <Play size={16} />
+                  Sepeti çağır
+                </button>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+      {modal && cart && (
+        <CartOperationDialog
+          key={`${modal.kind}:${cart.id}:${cart.version}`}
+          modal={modal}
+          cart={cart}
+          busy={locked}
+          error={w.error}
+          close={() => setModal(null)}
+          submit={async payload => {
+            const path =
+              modal.kind === "hold"
+                ? "hold"
+                : modal.kind === "reduce"
+                  ? "reduce"
+                  : "cancel";
+            const success = await w.action(`/pos/cart/${path}`, {
+              ...cartPayload(),
+              ...(modal.kind === "reduce"
+                ? { sessionId: session?.id, productId: modal.line.productId }
+                : {}),
+              ...payload,
+            });
+            if (success) {
+              setModal(null);
+              scanInput.current?.focus();
+            }
+          }}
+        />
+      )}
     </div>
+  );
+}
+function CartOperationDialog({
+  modal,
+  cart,
+  busy,
+  error,
+  close,
+  submit,
+}: {
+  modal: ModalState;
+  cart: PosCart;
+  busy: boolean;
+  error: string;
+  close: () => void;
+  submit: (payload: Record<string, unknown>) => Promise<void>;
+}) {
+  const [reason, setReason] = useState("");
+  const [quantity, setQuantity] = useState(
+    modal.kind === "reduce" ? (modal.quantity ?? modal.line.quantity) : 1
+  );
+  const hold = modal.kind === "hold";
+  return (
+    <Dialog
+      open
+      onOpenChange={open => {
+        if (!open) close();
+      }}
+    >
+      <DialogContent className="pos-dialog">
+        <DialogTitle>
+          {hold
+            ? "Sepeti beklemeye al"
+            : modal.kind === "reduce"
+              ? "Ürün iptali / adet azaltma"
+              : "Sepeti açıklamayla iptal et"}
+        </DialogTitle>
+        <DialogDescription>
+          {hold
+            ? "Sepet sunucuda saklanır. Stoktan düşülmez; başka müşteriye başlayabilirsiniz."
+            : "Açıklama, kasiyer, bilgisayar ve saat iptal geçmişine kaydedilir."}
+        </DialogDescription>
+        {error && (
+          <p role="alert" className="pos-field-error">
+            {error}
+          </p>
+        )}
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            void submit(
+              hold
+                ? { label: f.get("label") }
+                : { reason, ...(modal.kind === "reduce" ? { quantity } : {}) }
+            );
+          }}
+        >
+          {hold ? (
+            <label>
+              Sepet etiketi (isteğe bağlı)
+              <input
+                name="label"
+                maxLength={100}
+                defaultValue={cart.label ?? ""}
+                placeholder="Örn. Mavi sepet"
+                disabled={busy}
+              />
+            </label>
+          ) : (
+            <>
+              {modal.kind === "reduce" && (
+                <>
+                  <b>{modal.line.productName}</b>
+                  <label>
+                    İptal edilecek adet
+                    <input
+                      type="number"
+                      min={1}
+                      max={modal.line.quantity}
+                      step={1}
+                      value={quantity}
+                      onChange={e => setQuantity(Number(e.target.value))}
+                      required
+                      disabled={busy}
+                    />
+                  </label>
+                  <small>
+                    Sepette {modal.line.quantity} adet var. İptal sonrası{" "}
+                    {Math.max(0, modal.line.quantity - quantity)} adet kalacak.
+                  </small>
+                </>
+              )}
+              <div className="pos-reasons">
+                {["Yanlış okutma", "Müşteri vazgeçti", "Miktar düzeltme"].map(
+                  r => (
+                    <button
+                      type="button"
+                      key={r}
+                      disabled={busy}
+                      onClick={() => setReason(r)}
+                    >
+                      {r}
+                    </button>
+                  )
+                )}
+              </div>
+              <label>
+                İptal açıklaması
+                <textarea
+                  required
+                  minLength={5}
+                  maxLength={500}
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                  disabled={busy}
+                  placeholder="İptal nedenini yazın"
+                />
+              </label>
+            </>
+          )}
+          <div className="pos-dialog-actions">
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={close}
+            >
+              Vazgeç
+            </button>
+            <button
+              className={`btn ${hold ? "primary" : "pos-danger"}`}
+              disabled={busy}
+            >
+              {busy
+                ? "Kaydediliyor…"
+                : hold
+                  ? "Beklemeye al"
+                  : "Açıklamayla iptal et"}
+            </button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,3 +1,5 @@
+> 17 Ekim 2026: Bu belge ilk pilotun tarihsel kapsamını anlatır. Kalıcı/bekleyen sepet, açıklamalı iptal ve karma ödeme artık [Kasa V2](market-kasa-v2-2026-10-17.md) ile uygulanmıştır; güncel sınırlar ve kurulum için yeni rehberi okuyun.
+
 # Market satış kasası — ilk pilot
 
 **Ortak kasa güncellemesi:** `0008_shared_register_devices.sql` migration’ı ile aynı kullanıcı iki bilgisayarda aynı açık kasa oturumuna katılabilir. Ayrıntılar aşağıdadır.

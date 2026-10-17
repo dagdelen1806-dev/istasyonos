@@ -49,6 +49,8 @@ Finans işlemleri integer kuruş kullanır. Banka teyidi, gerçek Turpak/OCR ver
 
 ## Market satış kasası pilotu — 16 Ekim 2026
 
+**17 Ekim V2 güncellemesi:** Kalıcı sepet, bekletme/başka cihazdan çağırma, açıklamalı ürün/adet/sepet iptali, iptal geçmişi, nakit–kart karma ödeme ve yeni dokunmatik kasa ekranı eklendi. `0009_pos_carts` ve `0010_pos_mixed_payment` göçleri gereklidir. Native Windows/Laragon güncellemesi, resmî rakip kaynakları ve sınırlar için [Kasa V2 rehberini](docs/market-kasa-v2-2026-10-17.md) okuyun.
+
 Yeni **Satış kasası** menüsü (`/kasa`), barkod/ürün seçimi, sepet, ayrı kasa oturumları ve kasa kapanışı sunar. Aynı kullanıcı farklı tarayıcılarda farklı kasaları açabilir; farklı kasaların çekmeceleri ayrıdır. Aynı kasada çalışmak için ikinci bilgisayar **Mevcut kasaya katıl** düğmesiyle tek oturuma katılır; sepetler ayrı, bakiye ve kapanış ortaktır. Yeni kayıtlar `0007_market_pos.sql`, ortak cihaz katılımı ise `0008_shared_register_devices.sql` migration’ıyla eklenir. Güncelleme ve sınırlar için [market kasa pilotu rehberi](docs/market-kasa-pilotu-2026-10-16.md) dosyasını okuyun.
 
 Satış kaydı ilk aşamada yalnız DEMO firmada açıktır. Banka cihazı, mali belge, yazıcı/çekmece protokolü ve merkez senkronizasyonu henüz bağlı değildir. Satışın stok hareketi aynı DB transaction’ında kaydedilir; bu kayıtlar eski personel vardiya hesabına otomatik ödeme/slip olarak eklenmez.

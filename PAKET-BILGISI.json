@@ -1,6 +1,6 @@
 {
   "proje": "İstasyonOS — Windows masaüstü geliştirme paketi",
-  "hazirlanma": "2026-10-16T11:24:46.078811+03:00",
+  "hazirlanma": "2026-10-17T09:33:28.406224+03:00",
   "baslangic": "WINDOWS-BASLANGIC.md / BASLAT.cmd",
   "orijinal_kaynak_tarihi": "2026-10-14",
   "manus_gerekli": false,
@@ -17,14 +17,15 @@
     "node": "24.19.0",
     "veritabani": "MariaDB 11.8.6, ayrı test DB",
     "typescript": "başarılı",
-    "birim_sozlesme_testleri": 34,
+    "birim_sozlesme_testleri": 37,
     "production_build": "başarılı",
-    "market_http_smoke": "geliştirme ve üretim sunucusunda başarılı",
-    "onceki_vardiya_http_smoke": "başarılı",
-    "tarayici": "barkod, dokunmatik boyut, haricî ağ engeli, randomUUID fallback ve kayıp yanıt/sayfa yenileme sonrası tek satış başarılı",
+    "market_http_smoke": "Eski ortak kasa ve yeni kalıcı sepet / iptal / karma ödeme paketleri geliştirme ve üretimde başarılı",
+    "onceki_vardiya_http_smoke": "Üretimde yeniden başarılı",
+    "tarayici": "İki ayrı Chromium: barkod/adet, zorunlu açıklama, kalıcı sepet, cihaz devri, karma ödeme, kayıt sonrası yanıt kaybı/yenileme/aynı istekle tek satış; harici ağ isteği ve JS sayfa hatası yok; 390px yatay taşma yok.",
     "docker": "15 Ekim bağımsız sürümünde doğrulandı; bu kasa pilotunda yeniden Docker build yapılmadı",
     "fiziksel_windows_donanim": "henüz denenmedi",
-    "ortak_kasa": "Geliştirme/üretim HTTP testleri ve iki ayrı Chromium oturumunda katılım, paralel satış, tek açılış parası, cihaz izi ve ortak kapanış başarılı."
+    "ortak_kasa": "Geliştirme/üretim HTTP testleri ve iki ayrı Chromium oturumunda katılım, paralel satış, tek açılış parası, cihaz izi ve ortak kapanış başarılı.",
+    "eski_satis_gocu": "Geçici tabloda eski nakit/kart payları doğru dolduruldu ve tutarsız pay toplamı reddedildi."
   },
-  "surum_notu": "Ortak kasa: aynı kullanıcı farklı bilgisayarlarda tek oturuma katılır; sepetler ayrı, bakiye/kapanış ortak. DEMO sınırı sürüyor."
+  "surum_notu": "Kasa V2: sunucuda sürümlü kalıcı sepet, bekletme/tek cihazda çağırma, açıklamalı ürün/adet/sepet iptali ve geçmişi, karma ödeme, favoriler ve hızlı dokunmatik ekran. Ortak kasa ve DEMO sınırı korunur. Merkez aktarımı, mali belge ve fiziksel cihaz entegrasyonları henüz bağlı değildir."
 }
