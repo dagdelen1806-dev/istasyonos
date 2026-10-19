@@ -1,3 +1,9 @@
+import {
+  LotReceiptFields,
+  receiptLots,
+  receiptLotPayload,
+  type ReceiptLotInput,
+} from "./LotReceiptFields";
 import { useState, type ReactNode } from "react";
 import type {
   MarketAccountingState,
@@ -713,6 +719,7 @@ export function MarketAccountingDialog({
 }
 
 type PurchaseLine = {
+  lots?: ReceiptLotInput[];
   id: string;
   productId: string;
   quantity: string;
@@ -752,6 +759,7 @@ export function MarketPurchase({
       quantity: number;
       unitNetMinor: number;
       vatBps: number;
+      lots?: { code: string; expiryDate: string; quantity: number }[];
     }[];
   } | null = null;
   try {
@@ -779,6 +787,11 @@ export function MarketPurchase({
         quantity: q,
         unitNetMinor: cost,
         vatBps: v,
+        ...(data.stock.find(p => p.id === l.productId)?.lotTracking
+          ? {
+              lots: receiptLotPayload(l.lots ?? receiptLots(l.quantity), q),
+            }
+          : {}),
       };
     });
     preview = { net, vat: tax, total: net + tax, lines };
@@ -875,6 +888,7 @@ export function MarketPurchase({
                       const p = data.stock.find(p => p.id === e.target.value);
                       change(l.id, {
                         productId: e.target.value,
+                        lots: undefined,
                         net: amountInput(p?.averageCostMinor ?? 0),
                         vat: p?.vatBps == null ? "" : String(p.vatBps / 100),
                       });
@@ -918,6 +932,18 @@ export function MarketPurchase({
                     required
                   />
                 </label>
+                {data.stock.find(p => p.id === l.productId)?.lotTracking && (
+                  <LotReceiptFields
+                    prefix={
+                      "Alış " +
+                      (data.stock.find(p => p.id === l.productId)?.name ?? l.id)
+                    }
+                    today={data.today}
+                    quantity={Number(l.quantity) || 0}
+                    value={l.lots ?? receiptLots(l.quantity)}
+                    onChange={lots => change(l.id, { lots })}
+                  />
+                )}
                 <button
                   type="button"
                   className="btn"

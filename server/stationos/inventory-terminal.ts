@@ -200,6 +200,7 @@ export function registerInventoryTerminal(
                 barcode: p.barcode,
                 unit: p.base_unit,
                 shelf: p.shelf,
+                lotTracking: !!p.lot_tracking,
                 unitNetMinor: canPost
                   ? p.last_purchase_net_minor === null
                     ? integer(p.stock_qty)
@@ -261,7 +262,7 @@ export function registerInventoryTerminal(
             );
             const lines = await rows<Row[]>(
               c,
-              "SELECT l.*,p.name,p.barcode,p.base_unit,p.stock_qty,p.stock_version,p.purchase_price_minor,i.value_minor,u.name AS counted_by FROM st_inventory_draft_lines l JOIN st_products p ON p.id=l.product_id LEFT JOIN st_market_inventory i ON i.product_id=p.id LEFT JOIN users u ON u.id=l.counted_by_user_id WHERE l.draft_id=? ORDER BY l.counted_qty IS NOT NULL DESC,p.name",
+              "SELECT l.*,p.name,p.barcode,p.base_unit,p.stock_qty,p.stock_version,p.purchase_price_minor,p.lot_tracking,i.value_minor,u.name AS counted_by FROM st_inventory_draft_lines l JOIN st_products p ON p.id=l.product_id LEFT JOIN st_market_inventory i ON i.product_id=p.id LEFT JOIN users u ON u.id=l.counted_by_user_id WHERE l.draft_id=? ORDER BY l.counted_qty IS NOT NULL DESC,p.name",
               [id]
             );
             const events = await rows<Row[]>(
@@ -285,6 +286,7 @@ export function registerInventoryTerminal(
                 countedQty:
                   l.counted_qty === null ? null : integer(l.counted_qty),
                 currentQty: financial ? integer(l.stock_qty) : null,
+                lotTracking: !!l.lot_tracking,
                 stockChanged:
                   integer(l.stock_version) !== integer(l.baseline_version),
                 unitNetMinor: financial
@@ -722,6 +724,12 @@ export function registerInventoryTerminal(
         const inv = await inventoryRow(c, book!, p),
           qty = integer(l.counted_qty),
           delta = qty - integer(p.stock_qty);
+        if (p.lot_tracking && delta)
+          fail(
+            "LOT_COUNT_REQUIRED",
+            `${p.name}: sayım farkını Lot / SKT ekranında parti bazında işleyin.`,
+            409
+          );
         const unit = costs.get(p.id);
         if (delta > 0 && unit === undefined)
           fail(

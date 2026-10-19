@@ -1,4 +1,6 @@
 import { InventoryManagement } from "./InventoryManagement";
+import { CatalogImport } from "./CatalogImport";
+import { InventoryLots } from "./InventoryLots";
 import { MonthlyMarketReport } from "./MonthlyMarketReport";
 import { useState } from "react";
 import {
@@ -44,6 +46,8 @@ import "./inventory.css";
 const tabs = [
   ["overview", "Özet", BookOpen],
   ["stock", "Stok ve fiyat", Package],
+  ["catalog", "Ürün aktarımı", Package],
+  ["lots", "Lot ve SKT", Package],
   ["monthly", "Aylık kâr–zarar", BookOpen],
   ["purchase", "Alış ve mal kabul", Receipt],
   ["returns", "İadeler", Undo2],
@@ -197,6 +201,17 @@ function MarketAccountingWorkspace({
             Market defteri henüz başlamadı. Açılışı firma sahibi yapabilir.
           </div>
         ))}
+      {d && !d.enabled && (
+        <CatalogImport
+          stationId={stationId}
+          csrfToken={state.csrfToken}
+          isDemo={state.tenant?.isDemo ?? false}
+          closedToday={d.closedToday}
+          locked={w.locked}
+          canWrite={canProduct}
+          action={w.action}
+        />
+      )}
       {d?.enabled && (
         <>
           <nav className="ma-tabs" aria-label="Market muhasebe bölümleri">
@@ -401,8 +416,27 @@ function MarketAccountingWorkspace({
               action={w.action}
             />
           )}
+          {tab === "catalog" && (
+            <CatalogImport
+              stationId={stationId}
+              csrfToken={state.csrfToken}
+              isDemo={state.tenant?.isDemo ?? false}
+              closedToday={d.closedToday}
+              locked={w.locked}
+              canWrite={canProduct}
+              action={w.action}
+            />
+          )}
           {tab === "monthly" && (
             <MonthlyMarketReport stationId={stationId} today={d.today} />
+          )}
+          {tab === "lots" && (
+            <InventoryLots
+              stationId={stationId}
+              revision={d.revision}
+              locked={w.locked}
+              action={w.action}
+            />
           )}
           {tab === "purchase" && (
             <MarketPurchase

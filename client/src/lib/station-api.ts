@@ -194,3 +194,31 @@ export async function loadMonthlyReport(
     `/market-accounting/monthly?${new URLSearchParams({ stationId, month })}`
   );
 }
+export async function loadLotState(
+  stationId: string,
+  productId = "",
+  offset = 0
+): Promise<import("@shared/lots").LotState> {
+  return request(
+    `/market-accounting/inventory/lots?${new URLSearchParams({ stationId, ...(productId ? { productId } : {}), offset: String(offset) })}`
+  );
+}
+export function previewCatalog(
+  stationId: string,
+  text: string,
+  csrfToken: string | undefined,
+  settings?: import("@shared/catalog-import").CatalogSettings
+): Promise<import("@shared/catalog-import").CatalogPreview> {
+  return request(
+    "/market-accounting/inventory/catalog-preview",
+    { stationId, text, settings },
+    csrfToken
+  );
+}
+export function loadCatalogHistory(
+  stationId: string
+): Promise<import("@shared/catalog-import").CatalogHistory[]> {
+  return request(
+    `/market-accounting/inventory/catalog-history?${new URLSearchParams({ stationId })}`
+  );
+}

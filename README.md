@@ -2,7 +2,7 @@
 
 **Windows kullanıyorsanız önce [WINDOWS-BASLANGIC.md](WINDOWS-BASLANGIC.md) dosyasını okuyun.** Docker Desktop açıkken `BASLAT.cmd` kurulumu ve başlatmayı yapar.
 
-React/TypeScript arayüzü ve MySQL uyumlu operasyon backend’i. Varsayılan kimlik doğrulama artık Manus gerektirmeyen e-posta/parola girişidir. Kaynak arşivinin aktarım bilgisi `README-PAKET.md` içinde tarihsel kayıt olarak korunur; bu README güncel kurulum davranışını anlatır.
+React/TypeScript arayüzü ve MySQL uyumlu operasyon backend’i. Varsayılan kimlik doğrulama artık Manus gerektirmeyen e-posta/parola girişidir. Güncel kaynak aktarım ve kurulum bilgisi `README-PAKET.md` içindedir.
 
 ## Bu bulut çalışma alanında
 
@@ -54,6 +54,10 @@ HTTP smoke testi kayıt/giriş, davet, tenant izolasyonu, CSRF, idempotency, var
 Finans işlemleri integer kuruş kullanır. Banka teyidi, gerçek Turpak/OCR verisi veya üretim güvenlik/hukuk kabulü bu testlerden çıkarılamaz. Mevcut frontend derlemesinde büyük chunk ve runtime config script uyarıları bulunur.
 
 ## Market ön muhasebesi — 17 Ekim 2026
+
+**19 Ekim ürün listesi güncellemesi:** Dosya/yapıştırma önizlemesi, kaynak stok kodu, mevcut kart koruması, grup %1/%10/%20 KDV seçimi ve yalnız DEMO için artı başlangıç stoğu/net maliyet aktarımı eklendi. `0015_catalog_imports` ve `0016_catalog_opening` gerekir. [Ürün aktarım rehberi](docs/market-urun-aktarimi-2026-10-19.md), muhasebe etkisini ve Windows güncellemesini açıklar.
+
+**Lot ve SKT güncellemesi:** Ürün bazında takip açılışı, çok partili kabul, FEFO satış, karantinalı müşteri iadesi, gerçek partiyle tedarikçi iadesi, parti sayımı ve maliyetli fire eklendi. `0014_inventory_lots` gerekir. [Lot/SKT rehberi](docs/market-lot-skt-2026-10-17.md), kullanım ve fizikî stok sınırlarını açıklar.
 
 **Stok ve el terminali güncellemesi:** Ürün/raf kartı, minimum–maksimum ve paket katıyla alım önerisi, çoklu barkod, fiyat listeleri, kayıtlı cihazdan ortak mal kabul/sayım, stok değiştiğinde yeniden sayım koruması, tarihli hareket/CSV ve aylık kâr–zarar eklendi. `0013_inventory_operations` göçü gerekir. TC73/DataWedge, diğer klavye okuyucular, Windows güncellemesi ve kapsam için [stok ve terminal rehberini](docs/market-stok-terminal-2026-10-17.md) okuyun.
 

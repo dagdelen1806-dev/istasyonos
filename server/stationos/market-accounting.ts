@@ -1,4 +1,6 @@
 import { registerInventoryReports } from "./inventory-reports";
+import { registerCatalogImport } from "./catalog-import";
+import { registerInventoryLots } from "./inventory-lots";
 import { buildMarketDaily } from "./market-report-domain";
 import { recordMarketPurchase } from "./market-purchase";
 import { registerInventory } from "./market-inventory";
@@ -265,6 +267,8 @@ export function registerMarketAccountingRoutes(
   registerInventory(app, services, post);
   registerInventoryTerminal(app, services, post);
   registerInventoryReports(app, services);
+  registerCatalogImport(app, services, post);
+  registerInventoryLots(app, services, post);
   app.get(
     "/api/stationos/market-accounting",
     handle(async (req, res) => {
@@ -314,6 +318,7 @@ export function registerMarketAccountingRoutes(
             name: p.name,
             barcode: p.barcode,
             quantity,
+            lotTracking: !!p.lot_tracking,
             valueMinor: v,
             averageCostMinor: quantity
               ? ratioRound(v, 1, quantity)
@@ -967,6 +972,12 @@ export function registerMarketAccountingRoutes(
       [id, scope.tenantId, station]
     );
     if (!p) fail("NOT_FOUND", "Ürün bulunamadı.", 404);
+    if (p.lot_tracking)
+      fail(
+        "LOT_COUNT_REQUIRED",
+        "Bu ürünün sayım farkını Lot / SKT ekranında parti bazında işleyin.",
+        409
+      );
     if (integer(p.stock_qty) !== expected)
       fail("STOCK_CHANGED", "Stok değişmiş; sayımı yenileyin.", 409);
     const inv = await inventoryRow(c, book!, p),
@@ -1139,6 +1150,17 @@ export function registerMarketAccountingRoutes(
       fail(
         "MARKET_STOCK_MISMATCH",
         "Fiziksel stok ve maliyet adetleri uyuşmuyor.",
+        409
+      );
+    const lotMismatch = await first<Row>(
+      c,
+      "SELECT p.id FROM st_products p LEFT JOIN (SELECT product_id,SUM(quantity) AS qty FROM st_inventory_lots GROUP BY product_id) l ON l.product_id=p.id WHERE p.station_id=? AND p.lot_tracking=TRUE AND p.stock_qty<>COALESCE(l.qty,0) LIMIT 1",
+      [station]
+    );
+    if (lotMismatch)
+      fail(
+        "LOT_STOCK_MISMATCH",
+        "Parti toplamı ile ürün stoğu uyuşmuyor; gün sonu kaydedilmedi.",
         409
       );
     const b = await balances(c, station);

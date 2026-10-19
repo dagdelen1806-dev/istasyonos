@@ -1,0 +1,50 @@
+export type InventoryLot = {
+  id: string;
+  productId: string;
+  productName: string;
+  code: string;
+  expiryDate: string | null;
+  status: "AVAILABLE" | "QUARANTINE";
+  quantity: number;
+  receivedAt: string;
+  originKind: string;
+  originId: string;
+  saleable: boolean;
+  daysLeft: number | null;
+};
+export type LotState = {
+  today: string;
+  revision: number;
+  closedToday: boolean;
+  enabled: boolean;
+  total: number;
+  offset: number;
+  limit: number;
+  expiredQty: number;
+  nearQty: number;
+  quarantineQty: number;
+  products: {
+    id: string;
+    name: string;
+    barcode: string;
+    quantity: number;
+    valueMinor: number;
+    stockVersion: number;
+    tracking: boolean;
+    saleableQty: number;
+  }[];
+  lots: InventoryLot[];
+  events: {
+    id: number;
+    lotId: string | null;
+    sourceId: string;
+    productName: string;
+    kind: string;
+    delta: number;
+    actorName: string;
+    createdAt: string;
+    note: string | null;
+    beforeLabel: string | null;
+    afterLabel: string | null;
+  }[];
+};

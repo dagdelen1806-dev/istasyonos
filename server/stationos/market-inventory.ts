@@ -42,8 +42,8 @@ export function registerInventory(
           );
           const products = await rows<Row[]>(
             c,
-            "SELECT p.*,i.value_minor,s.name AS supplier_name,s.payable_limit_minor,COALESCE(b.balance_minor,0) AS supplier_balance FROM st_products p LEFT JOIN st_market_inventory i ON i.product_id=p.id LEFT JOIN st_market_parties s ON s.id=p.market_supplier_id LEFT JOIN st_market_balances b ON b.station_id=p.station_id AND b.account_code='PAYABLE' AND b.party_key=s.id AND b.register_key='' WHERE p.tenant_id=? AND p.station_id=? ORDER BY p.name LIMIT 5000",
-            [scope.tenantId, station]
+            "SELECT p.*,mb.station_id AS book_id,i.value_minor,(SELECT COALESCE(SUM(l.quantity),0) FROM st_inventory_lots l WHERE l.product_id=p.id AND l.status='AVAILABLE' AND l.expiry_date>=?) AS saleable_qty,s.name AS supplier_name,s.payable_limit_minor,COALESCE(b.balance_minor,0) AS supplier_balance FROM st_products p LEFT JOIN st_market_books mb ON mb.station_id=p.station_id LEFT JOIN st_market_inventory i ON i.product_id=p.id LEFT JOIN st_market_parties s ON s.id=p.market_supplier_id LEFT JOIN st_market_balances b ON b.station_id=p.station_id AND b.account_code='PAYABLE' AND b.party_key=s.id AND b.register_key='' WHERE p.tenant_id=? AND p.station_id=? ORDER BY p.name LIMIT 5000",
+            [businessToday(), scope.tenantId, station]
           );
           const sold = await rows<Row[]>(
             c,
@@ -57,10 +57,12 @@ export function registerInventory(
           const items = products
             .map(p => {
               const quantity = integer(p.stock_qty),
-                value = integer(p.value_minor),
+                value = p.book_id
+                  ? integer(p.value_minor)
+                  : ratioRound(integer(p.purchase_price_minor), quantity, 1),
                 sales = Math.max(0, saleMap.get(p.id) ?? 0);
               const s = stockSuggestion(
-                quantity,
+                p.lot_tracking ? integer(p.saleable_qty) : quantity,
                 integer(p.minimum_qty),
                 integer(p.maximum_qty),
                 sales,
@@ -95,6 +97,7 @@ export function registerInventory(
                 );
               return {
                 id: p.id,
+                catalogCode: p.catalog_code ?? null,
                 name: p.name,
                 barcode: p.barcode,
                 category: p.category,
@@ -102,6 +105,13 @@ export function registerInventory(
                 unit: p.base_unit,
                 shelf: p.shelf,
                 quantity,
+                lotTracking: !!p.lot_tracking,
+                saleableQty: p.lot_tracking
+                  ? integer(p.saleable_qty)
+                  : quantity,
+                blockedQty: p.lot_tracking
+                  ? quantity - integer(p.saleable_qty)
+                  : 0,
                 valueMinor: value,
                 averageCostMinor: quantity
                   ? ratioRound(value, 1, quantity)

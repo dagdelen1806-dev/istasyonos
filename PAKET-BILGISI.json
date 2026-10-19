@@ -1,6 +1,6 @@
 {
   "proje": "İstasyonOS — Windows masaüstü geliştirme paketi",
-  "hazirlanma": "2026-10-17T14:01:24.966900+03:00",
+  "hazirlanma": "2026-10-19T11:22:09.729670+03:00",
   "baslangic": "WINDOWS-BASLANGIC.md / BASLAT.cmd",
   "orijinal_kaynak_tarihi": "2026-10-14",
   "manus_gerekli": false,
@@ -17,7 +17,7 @@
     "node": "24.19.0",
     "veritabani": "MariaDB 11.8.6, ayrı test DB",
     "typescript": "başarılı",
-    "birim_sozlesme_testleri": 57,
+    "birim_sozlesme_testleri": 69,
     "production_build": "başarılı",
     "market_http_smoke": "Yeni 0012 şemayla üretimde ortak POS ve kalıcı sepet paketleri başarılı.",
     "onceki_vardiya_http_smoke": "0012 şemayla üretimde eski vardiya, iki ayrı mali imza/IBAN bekleyen kapanış ve çıkışta iptal başarılı.",
@@ -33,7 +33,11 @@
     "market_iadeleri_tarayici": "Geliştirme/üretim Chromium: kısmi satış/alış, fazla adet ve teyitsiz para reddi, yanıt kaybı/yenileme/aynı ID tek iade, CSV, POS devri, gün sonu ve kapalı gün belge okuma. 390px taşma, JS hatası ve harici istek yok. Tam ödenmiş iadede cari bakiye değişmeden ekstre satırı ve CSV para alanları ayrıca doğrulandı.",
     "market_stok_terminal": "0013 mevcut verili test/ana geliştirme DB üzerinde ve tekrar çalıştırmada başarılı. Geliştirme/üretim HTTP: cihaz onayı/devre dışı, rol/tenant/maliyet gizleme, ana/koli barkodu, paralel okutma/sürüm/aynı-ID, mal kabul rollback, fiyat listesi yetkisi/anlık görüntüsü, satış+iade esnası sayım koruması, sıfır/sayılmayan/fazla stok, ortak kredi bütçesi, aylık/günlük mutabakat, UTC ve dengeli defter başarılı.",
     "market_stok_tarayici": "Geliştirme ve son üretim derlemesinde iki Chromium: ürün rafı/barkod/hareket, aylık grafik/CSV, 390px cihaz kaydı/diğer cihazdan onay, mal kabulde kayıp yanıt/yenileme/aynı ID tek kayıt, yetkili kabul/sayım, sayılmayanı koruma ve kasada koli/fiyat listesi geçti; JS hatası, harici istek ve yatay taşma yok.",
-    "stok_geriye_donuk_kontrol": "Son şemayla muhasebe, iadeler, ortak POS, kalıcı sepet ve iki mali imzalı vardiya HTTP paketleri başarılı. Yoğun test kayıtları giriş deneme sınırına takıldığında sadece kendi test sunucusu yeniden başlatıldı; koruma kapatılmadı. Güncel ana geliştirme tanısı 13 göç/DB/HTML/JS/401 korumasıyla başarılı."
+    "stok_geriye_donuk_kontrol": "Son şemayla muhasebe, iadeler, ortak POS, kalıcı sepet ve iki mali imzalı vardiya HTTP paketleri başarılı. Yoğun test kayıtları giriş deneme sınırına takıldığında sadece kendi test sunucusu yeniden başlatıldı; koruma kapatılmadı. Güncel ana geliştirme tanısı 13 göç/DB/HTML/JS/401 korumasıyla başarılı.",
+    "market_lot_skt": "Lot/SKT/FEFO/karantina/fire: geliştirme ve üretim HTTP/Chromium kontrolleri geçti; çoklu parti ve net maliyet/gün sonu mutabakatı doğrulandı. Fizikî donanım doğrulanmadı.",
+    "urun_aktarimi": "0015/0016 mevcut verili ayrı test/ana bulut DB üzerinde uygulandı; tekrar göç no-op. Geliştirme/üretim HTTP ve Chromium: yalnız kart ve artı DEMO stok/net maliyet/grup KDV; iki teyit, önizleme değişimi, paralel/same-ID tek etki, kapalı gün/gerçek firma reddi, dengeli açılış, günlük kâr korunması, CSV ve 390px taşma kontrolü başarılı. Gerçek 114 ürün yalnız önizleme; eksik oranlar tahmin edilmedi. Kaynak dosya pakette yok.",
+    "guncel_stok_regresyon": "Son üretim derlemesi/0016 ile stok, cihaz/terminal, barkod/fiyat listesi, sayım, maliyet ve aylık rapor HTTP paketi başarılı.",
+    "guncel_bulut_tanisi": "19 Ekim: HTTP/HTML/JS/401 oturum koruması, SELECT 1 ve 16 operasyon göçü başarılı."
   },
-  "surum_notu": "Stok/el terminali: çoklu barkod ve koli, kategori/raf/marka, minimum-maksimum/paket/tedarik günleri, isimli fiyat listeleri ve fiyat geçmişi, tarayıcı cihaz onayı, ortak sürümlü sayım/mal kabul, stok değiştiğinde tekrar sayım, tarihli hareket ve aylık/ürün kâr raporu. 0013_inventory_operations göçü gerekir. Önceki 0012 kaynak belgeli iadeler korunur. POS DEMO; fizikî TC73/Windows, offline tarayıcı kuyruğu, lot/SKT, çok depo, terazi, banka/e-belge/merkez sync bu teslimde yok."
+  "surum_notu": "0014 lot/SKT/FEFO/karantina/parti sayımı ve fire, 0015 kaynak kodlu liste kart aktarımı, 0016 artı DEMO başlangıç stoğu/net maliyet/grup KDV. Mevcut kartlar korunur, kaynak eksi miktar saklanır, başlangıç stokları satış/kâr veya cari borç değildir. Kullanıcı fiyat listesi ve özel test verileri içermez. POS DEMO; fizikî Windows/TC73, bağlantısız tarayıcı kuyruğu, çok depo/terazi, banka/e-belge/ÖKC/merkez sync bu teslimde yok."
 }

@@ -74,7 +74,7 @@ export function InventoryManagement({
   const filtered =
     data?.items.filter(
       p =>
-        `${p.name} ${p.barcode} ${p.brand} ${p.shelf}`
+        `${p.name} ${p.barcode} ${p.brand} ${p.shelf} ${p.catalogCode ?? ""}`
           .toLocaleLowerCase("tr")
           .includes(query.toLocaleLowerCase("tr")) &&
         (!category || p.category === category) &&
@@ -206,6 +206,9 @@ export function InventoryManagement({
                     <tr key={p.id}>
                       <td>
                         <b>{p.name}</b>
+                        {p.catalogCode && (
+                          <small>Stok kodu: {p.catalogCode}</small>
+                        )}
                         <small>
                           {p.barcode} · {p.category || "Kategorisiz"}
                         </small>
@@ -218,6 +221,11 @@ export function InventoryManagement({
                       </td>
                       <td>
                         {p.quantity} {p.unit}
+                        {p.lotTracking && (
+                          <small>
+                            Satılabilir {p.saleableQty} · Kapalı {p.blockedQty}
+                          </small>
+                        )}
                       </td>
                       <td>
                         {p.minimumQty} / {p.maximumQty || "Otomatik"}

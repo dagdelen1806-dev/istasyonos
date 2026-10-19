@@ -46,6 +46,7 @@ export interface MarketDocument {
   creditedMinor: number;
 }
 export interface MarketStock {
+  lotTracking: boolean;
   id: string;
   name: string;
   barcode: string;
@@ -156,6 +157,14 @@ export interface MarketReturnSource extends MarketReturnSummary {
     returnedCostMinor: number;
     stockQuantity: number;
     stockValueMinor: number;
+    lotTracking: boolean;
+    lots: {
+      id: string;
+      code: string;
+      expiryDate: string | null;
+      quantity: number;
+      status: string;
+    }[];
   }[];
 }
 export interface MarketReturnRecord {

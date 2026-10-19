@@ -77,6 +77,10 @@ export interface Debtor {
   balanceMinor: number | null;
 }
 export interface Product {
+  lotTracking?: boolean;
+  nextLotCode?: string | null;
+  nextExpiryDate?: string | null;
+  physicalStockQty?: number;
   id: string;
   stationId: string;
   name: string;

@@ -1,3 +1,9 @@
+import {
+  LotReceiptFields,
+  receiptLots,
+  receiptLotPayload,
+  type ReceiptLotInput,
+} from "./LotReceiptFields";
 import { useRef, useState } from "react";
 import {
   Barcode,
@@ -643,6 +649,9 @@ function TerminalPosting({
   locked: boolean;
   action: (path: string, payload: Record<string, unknown>) => Promise<boolean>;
 }) {
+  const [lotInputs, setLotInputs] = useState<Record<string, ReceiptLotInput[]>>(
+    {}
+  );
   const [costs, setCosts] = useState<Record<string, string>>({}),
     [vats, setVats] = useState<Record<string, string>>({}),
     [error, setError] = useState("");
@@ -732,6 +741,15 @@ function TerminalPosting({
                   quantity: l.countedQty,
                   unitNetMinor: parseMoney(cost(l)),
                   vatBps: parseVat(vat(l.productId)),
+                  ...(data.products.find(p => p.id === l.productId)?.lotTracking
+                    ? {
+                        lots: receiptLotPayload(
+                          lotInputs[l.productId] ??
+                            receiptLots(String(l.countedQty)),
+                          l.countedQty!
+                        ),
+                      }
+                    : {}),
                 })),
               });
             } else {
@@ -796,10 +814,26 @@ function TerminalPosting({
                     <b>{l.name}</b>
                     <small>
                       {draft.kind === "COUNT"
-                        ? `Stok ${l.currentQty} → ${l.countedQty} · Fark ${delta}`
+                        ? `Stok ${l.currentQty} → ${l.countedQty} · Fark ${delta}${l.lotTracking ? " · Lot farkı Lot / SKT ekranında işlenir" : ""}`
                         : `Alınan ${l.countedQty} ${l.unit}`}
                     </small>
                   </span>
+                  {draft.kind === "RECEIPT" &&
+                    data.products.find(p => p.id === l.productId)
+                      ?.lotTracking && (
+                      <LotReceiptFields
+                        prefix={l.name}
+                        today={data.today}
+                        quantity={l.countedQty!}
+                        value={
+                          lotInputs[l.productId] ??
+                          receiptLots(String(l.countedQty))
+                        }
+                        onChange={lots =>
+                          setLotInputs({ ...lotInputs, [l.productId]: lots })
+                        }
+                      />
+                    )}
                   {(draft.kind === "RECEIPT" || delta > 0) && (
                     <label>
                       KDV hariç birim maliyet (TL)
@@ -862,7 +896,12 @@ function TerminalPosting({
             disabled={
               !lines.length ||
               !!previewError ||
-              (draft.kind === "COUNT" && lines.some(l => l.stockChanged))
+              (draft.kind === "COUNT" &&
+                lines.some(
+                  l =>
+                    l.stockChanged ||
+                    (l.lotTracking && l.countedQty !== l.currentQty)
+                ))
             }
           >
             <CheckCircle2 size={17} />

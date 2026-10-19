@@ -509,9 +509,14 @@ function PosWorkspace({
                           ? "Fiyat tanımsız"
                           : money(currentPrice(p.id)!)}
                       </strong>
+                      {p.lotTracking && p.nextLotCode && (
+                        <small>
+                          Önce çıkar: {p.nextLotCode} · SKT {p.nextExpiryDate}
+                        </small>
+                      )}
                       <small>
                         {p.stockQty > 0
-                          ? `${p.stockQty} adet stok`
+                          ? `${p.stockQty} adet ${p.lotTracking ? "satılabilir" : "stok"}`
                           : "Stok tükendi"}
                       </small>
                     </button>

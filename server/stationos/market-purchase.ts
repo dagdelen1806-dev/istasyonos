@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { receiveLots } from "./lot-stock";
 import type { MarketHandler } from "./market-route-types";
 import { execute, first, rows } from "./db";
 import type { Row } from "./market-pos";
@@ -115,6 +116,7 @@ export const recordMarketPurchase: MarketHandler = async (
         vatBps: vat,
         netMinor: n,
         vatMinor: t,
+        lots: x.lots,
       };
     })
     .sort((a, b) => a.productId.localeCompare(b.productId));
@@ -140,6 +142,7 @@ export const recordMarketPurchase: MarketHandler = async (
       [l.productId, scope.tenantId, station]
     );
     if (!product) fail("NOT_FOUND", "Ürün bu istasyonda bulunamadı.", 404);
+    await receiveLots(c, product, l.lots, l.quantity, id, actor.id);
     const inv = await inventoryRow(c, book!, product),
       qty = safeAdd(integer(inv.quantity), l.quantity),
       value = safeAdd(integer(inv.value_minor), l.netMinor);

@@ -1,3 +1,4 @@
+import { businessToday } from "./market-accounting-domain";
 import {
   lockMarketBook,
   marketRegisterOpen,
@@ -6,6 +7,7 @@ import {
   marketCustomers,
 } from "./market-accounting-ledger";
 import { productPrice } from "./market-pricing";
+import { sellLots } from "./lot-stock";
 import { randomUUID } from "node:crypto";
 import type { Express, Request, Response } from "express";
 import type { PoolConnection, RowDataPacket } from "mysql2/promise";
@@ -214,9 +216,17 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
         );
         const products = await rows<Row[]>(
           c,
-          "SELECT id,station_id,name,barcode,stock_qty,minimum_qty,sale_price_minor,supplier_id FROM st_products WHERE tenant_id=? AND station_id=? ORDER BY name LIMIT 5000",
-          [scope.tenantId, stationId]
+          "SELECT p.id,p.station_id,p.name,p.barcode,p.stock_qty,p.minimum_qty,p.sale_price_minor,p.supplier_id,p.lot_tracking,(SELECT COALESCE(SUM(l.quantity),0) FROM st_inventory_lots l WHERE l.product_id=p.id AND l.status='AVAILABLE' AND l.expiry_date>=?) AS saleable_qty FROM st_products p WHERE p.tenant_id=? AND p.station_id=? ORDER BY p.name LIMIT 5000",
+          [businessToday(), scope.tenantId, stationId]
         );
+        const lotHints = await rows<Row[]>(
+          c,
+          "SELECT product_id,code,expiry_date FROM st_inventory_lots WHERE station_id=? AND status='AVAILABLE' AND expiry_date>=? AND quantity>0 ORDER BY expiry_date,received_at,id",
+          [stationId, businessToday()]
+        );
+        const nextLot = new Map<string, Row>();
+        for (const lot of lotHints)
+          if (!nextLot.has(lot.product_id)) nextLot.set(lot.product_id, lot);
         const barcodes = await rows<Row[]>(
           c,
           "SELECT b.* FROM st_product_barcodes b JOIN st_products p ON p.id=b.product_id WHERE b.station_id=? AND p.tenant_id=?",
@@ -294,7 +304,13 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
             stationId: p.station_id,
             name: p.name,
             barcode: p.barcode,
-            stockQty: number(p.stock_qty),
+            stockQty: p.lot_tracking
+              ? number(p.saleable_qty)
+              : number(p.stock_qty),
+            physicalStockQty: number(p.stock_qty),
+            lotTracking: !!p.lot_tracking,
+            nextLotCode: nextLot.get(p.id)?.code ?? null,
+            nextExpiryDate: nextLot.get(p.id)?.expiry_date ?? null,
             minimumQty: number(p.minimum_qty),
             purchasePriceMinor: null,
             salePriceMinor: number(p.sale_price_minor),
@@ -606,6 +622,12 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       ]
     );
     for (const line of snapshots) {
+      const lotProduct = (await first<Row>(
+        c,
+        "SELECT * FROM st_products WHERE id=? AND station_id=? FOR UPDATE",
+        [line.productId, stationId]
+      ))!;
+      await sellLots(c, lotProduct, line.quantity, id, actor.id);
       await execute(
         c,
         "INSERT INTO st_pos_sale_lines (id,sale_id,product_id,product_name,barcode,quantity,unit_price_minor,total_minor,price_list_id,price_list_name) VALUES (?,?,?,?,?,?,?,?,?,?)",

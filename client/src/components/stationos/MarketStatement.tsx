@@ -34,6 +34,7 @@ export function marketCsv(
 }
 export const marketKindLabels: Record<string, string> = {
   OPENING: "Açılış",
+  DEMO_CATALOG_OPENING: "DEMO liste başlangıç stoğu",
   PARTY_OPENING: "Cari açılışı",
   POS_SALE: "Kasa satışı",
   PURCHASE: "Mal kabul",
@@ -47,6 +48,8 @@ export const marketKindLabels: Record<string, string> = {
   BANK_SETTLEMENT: "Kart → banka",
   STOCK_ADJUST: "Stok sayımı",
   STOCK_COUNT: "Terminal stok sayımı",
+  LOT_COUNT: "Parti sayımı",
+  LOT_WRITE_OFF: "Parti fire kaydı",
   REGISTER_OPEN: "Kasa açılışı",
   REGISTER_CLOSE: "Kasa devri",
   DAY_VARIANCE: "Gün sonu farkı",

@@ -1,3 +1,4 @@
+import { businessToday, integer } from "./market-accounting-domain";
 import { randomUUID } from "node:crypto";
 import { productPrice } from "./market-pricing";
 import type { Request } from "express";
@@ -260,7 +261,7 @@ export function registerCartRoutes(
       quantity = requireInteger(body.quantity, "quantity");
     const p = await first<Row>(
       c,
-      "SELECT id,name,barcode,stock_qty,sale_price_minor FROM st_products WHERE id=? AND tenant_id=? AND station_id=?",
+      "SELECT id,name,barcode,stock_qty,sale_price_minor,lot_tracking FROM st_products WHERE id=? AND tenant_id=? AND station_id=?",
       [productId, scope.tenantId, stationId]
     );
     if (!p) fail("NOT_FOUND", "Ürün bu istasyonda bulunamadı.", 404);
@@ -304,6 +305,22 @@ export function registerCartRoutes(
       Number(p.stock_qty)
     )
       fail("NEGATIVE_INVENTORY", `${p.name}: yeterli stok yok.`, 409);
+    if (p.lot_tracking) {
+      const usable = await first<Row>(
+        c,
+        "SELECT COALESCE(SUM(quantity),0) AS qty FROM st_inventory_lots WHERE product_id=? AND station_id=? AND status='AVAILABLE' AND expiry_date>=?",
+        [p.id, stationId, businessToday()]
+      );
+      if (
+        merged.find(l => l.productId === productId)!.quantity >
+        integer(usable?.qty)
+      )
+        fail(
+          "LOT_STOCK_UNAVAILABLE",
+          "Satışa uygun parti stoğu yetersiz.",
+          409
+        );
+    }
     const lines = merged.map(l => ({
       ...l,
       productName:

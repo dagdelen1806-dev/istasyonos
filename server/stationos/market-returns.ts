@@ -1,3 +1,4 @@
+import { returnLots } from "./lot-stock";
 import { randomUUID } from "node:crypto";
 import type { Express } from "express";
 import type { PoolConnection } from "mysql2/promise";
@@ -147,6 +148,22 @@ async function sourceDetails(
       returnedCostMinor: sum("cost_minor"),
       stockQuantity: integer(p.stock_qty),
       stockValueMinor: integer(p.value_minor),
+      lotTracking: !!p.lot_tracking,
+      lots: p.lot_tracking
+        ? (
+            await rows<Row[]>(
+              c,
+              "SELECT id,code,expiry_date,quantity,status FROM st_inventory_lots WHERE product_id=? AND station_id=? AND quantity>0 ORDER BY expiry_date,id",
+              [p.id, station]
+            )
+          ).map(l => ({
+            id: l.id,
+            code: l.code,
+            expiryDate: l.expiry_date,
+            quantity: integer(l.quantity),
+            status: l.status,
+          }))
+        : [],
     });
   }
   const summary: MarketReturnSummary = {
@@ -374,7 +391,7 @@ export function registerMarketReturns(
               )
             : stockCost(item.stockValueMinor, item.stockQuantity, quantity);
           requireMoney(costMinor, "İade stok maliyeti", { allowZero: true });
-          return { productId, quantity, ...amount, costMinor };
+          return { productId, quantity, ...amount, costMinor, lots: raw.lots };
         })
         .sort((a, b) => a.productId.localeCompare(b.productId));
       const sum = (key: "grossMinor" | "netMinor" | "vatMinor" | "costMinor") =>
@@ -448,6 +465,7 @@ export function registerMarketReturns(
         ))!;
         const inv = await inventoryRow(c, book!, product),
           sign = sale ? 1 : -1;
+        await returnLots(c, product, l.quantity, id, actor.id, sale, l.lots);
         const quantity = safeAdd(integer(inv.quantity), sign * l.quantity),
           value = safeAdd(integer(inv.value_minor), sign * l.costMinor);
         if (quantity < 0 || value < 0)

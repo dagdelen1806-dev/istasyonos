@@ -44,6 +44,7 @@ export function MarketReturns({
     [wallet, setWallet] = useState("CASH_SAFE"),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(false);
+  const [returnLot, setReturnLot] = useState<Record<string, string>>({});
   const sequence = useRef(0);
   useEffect(() => {
     void search(0);
@@ -84,6 +85,7 @@ export function MarketReturns({
       if (seq === sequence.current) {
         setSource(result);
         setQuantities({});
+        setReturnLot({});
       }
     } catch (e) {
       if (seq === sequence.current) setError((e as Error).message);
@@ -98,7 +100,11 @@ export function MarketReturns({
     cost: number;
     credit: number;
     refund: number;
-    lines: { productId: string; quantity: number }[];
+    lines: {
+      productId: string;
+      quantity: number;
+      lots?: { lotId: string; quantity: number }[];
+    }[];
   } | null = null;
   let previewError = "";
   if (source) {
@@ -135,7 +141,23 @@ export function MarketReturns({
         cost += lineCost;
         if (![gross, net, vat, cost].every(Number.isSafeInteger))
           throw Error("İade toplamı güvenli tutarı aşıyor.");
-        lines.push({ productId: l.productId, quantity: qty });
+        const lot =
+          source.kind === "PURCHASE" && l.lotTracking
+            ? l.lots.find(x => x.id === returnLot[l.productId])
+            : null;
+        if (
+          source.kind === "PURCHASE" &&
+          l.lotTracking &&
+          (!lot || lot.quantity < qty)
+        )
+          throw Error(
+            `${l.name}: iade miktarını karşılayan gerçek partiyi seçin.`
+          );
+        lines.push({
+          productId: l.productId,
+          quantity: qty,
+          ...(lot ? { lots: [{ lotId: lot.id, quantity: qty }] } : {}),
+        });
       }
       if (lines.length) {
         const credit = Math.min(gross, source.openDocumentMinor);
@@ -403,6 +425,33 @@ export function MarketReturns({
                               })
                             }
                           />
+                          {source.kind === "PURCHASE" && l.lotTracking && (
+                            <label>
+                              İade partisi
+                              <select
+                                aria-label={`${l.name} iade partisi`}
+                                value={returnLot[l.productId] ?? ""}
+                                onChange={e =>
+                                  setReturnLot({
+                                    ...returnLot,
+                                    [l.productId]: e.target.value,
+                                  })
+                                }
+                              >
+                                <option value="">Gerçek partiyi seçin</option>
+                                {l.lots.map(x => (
+                                  <option key={x.id} value={x.id}>
+                                    {x.code} ·{" "}
+                                    {x.expiryDate ?? "SKT bilinmiyor"} ·{" "}
+                                    {x.quantity} adet ·{" "}
+                                    {x.status === "QUARANTINE"
+                                      ? "Karantina"
+                                      : "Stok"}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -410,8 +459,10 @@ export function MarketReturns({
                 </table>
               </div>
               <p className="ma-hint">
-                Yalnız tekrar satılabilir durumda stoğa alınacak ürünleri seçin.
-                Hasarlı ürün için ayrıca açıklamalı stok sayım hareketi gerekir.
+                Lot takibi açık müşteri iadeleri kontrol için SKT'siz
+                karantinaya alınır; doğrudan satılamaz. Takibi kapalı üründe
+                yalnız tekrar satılabilir ürün seçin. Tedarikçi iadesinde gerçek
+                partiyi seçin; bir satırda tek parti seçilebilir.
               </p>
               {previewError && (
                 <p role="alert" className="ma-error">

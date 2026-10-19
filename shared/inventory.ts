@@ -16,6 +16,10 @@ export type ProductPrice = {
   unitPriceMinor: number;
 };
 export interface InventoryItem {
+  catalogCode: string | null;
+  lotTracking: boolean;
+  saleableQty: number;
+  blockedQty: number;
   id: string;
   name: string;
   barcode: string;
@@ -98,6 +102,7 @@ export interface TerminalState {
     barcode: string;
     unit: string;
     shelf: string;
+    lotTracking: boolean;
     unitNetMinor: number | null;
     vatBps: number | null;
   }[];
@@ -119,6 +124,7 @@ export interface InventoryDraft {
     baselineQty: number | null;
     countedQty: number | null;
     currentQty: number | null;
+    lotTracking: boolean;
     stockChanged: boolean;
     unitNetMinor: number | null;
     currentValueMinor: number | null;
