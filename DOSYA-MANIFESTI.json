@@ -1,6 +1,6 @@
 {
   "not": "Güncel kaynak sürümü; manifest kendisi hariç tüm Git kaynakları.",
-  "dosya_sayisi": 335,
+  "dosya_sayisi": 341,
   "dosyalar": [
     {
       "dosya": ".dockerignore",
@@ -34,8 +34,8 @@
     },
     {
       "dosya": "CLAUDE.md",
-      "byte": 20032,
-      "sha256": "77278ce85a01f3ded59f5829318c1a5c852da581185309848262253cb28e1fbc"
+      "byte": 21008,
+      "sha256": "193942bb55a2c72215fc5c3a006afda43d8a3c00908bd099063f3fd017d0ad14"
     },
     {
       "dosya": "Dockerfile",
@@ -49,18 +49,18 @@
     },
     {
       "dosya": "PAKET-BILGISI.json",
-      "byte": 5858,
-      "sha256": "4e68c63e50874617139936835824f195d2e332d417f90c701aba7720a3d6cbea"
+      "byte": 6546,
+      "sha256": "b12921f2faea18c80a24034b2a0074c887fc26453ae76a6ed34c5320c8799e15"
     },
     {
       "dosya": "README-PAKET.md",
-      "byte": 1936,
-      "sha256": "db06d0c459a968fb808792ce79a0e51eef65cf896710047b6e77c521049dca8f"
+      "byte": 2073,
+      "sha256": "ef2262fc1454960e27d70f43ed5c9db0a19761ec17f831e03f3c7503cd65a063"
     },
     {
       "dosya": "README.md",
-      "byte": 9086,
-      "sha256": "7e7ea7b9e5892b3f094c683ae6b24b23ec7617e88fee2cd3d6bc518e20cc1dcb"
+      "byte": 9439,
+      "sha256": "a6be264633f3e8b4075a3cd618a5de4cf4421987f9d04001f0fe2b4c1f0c950a"
     },
     {
       "dosya": "TODO.md",
@@ -199,8 +199,8 @@
     },
     {
       "dosya": "client/src/components/stationos/InventoryTerminal.tsx",
-      "byte": 33564,
-      "sha256": "7681a3192fd03eede87df890c3f8e664fe1a3b0fb3cb559bc94d5e5dd84b1909"
+      "byte": 41422,
+      "sha256": "c93775c99c6c72abfc9b23bce790931de3b48ac304cae65b302755d5ff820715"
     },
     {
       "dosya": "client/src/components/stationos/LotReceiptFields.tsx",
@@ -749,8 +749,8 @@
     },
     {
       "dosya": "docs/market-lot-skt-2026-10-17.md",
-      "byte": 10521,
-      "sha256": "02a282520bfb8df00ff053d8fdcd9e6ed87e5a63017a95d88b7b22d543f5cc73"
+      "byte": 10676,
+      "sha256": "a5e5815f95435ab8a2ff4310c2ef2cb806ac647d0ff17b11720c61b5a01cfb68"
     },
     {
       "dosya": "docs/market-on-muhasebe-2026-10-17.md",
@@ -761,6 +761,11 @@
       "dosya": "docs/market-stok-terminal-2026-10-17.md",
       "byte": 12252,
       "sha256": "bd19b66fb2a85d00614be83f5b35ee34b0638623b70d820db86df7ba9626f3db"
+    },
+    {
+      "dosya": "docs/market-terminal-parti-sayimi-2026-10-19.md",
+      "byte": 6926,
+      "sha256": "ff14034900f7e7f06140dbc7782984952c3a2b54ea90f81a118d3e95e44c799e"
     },
     {
       "dosya": "docs/market-urun-aktarimi-2026-10-19.md",
@@ -1159,8 +1164,8 @@
     },
     {
       "dosya": "scripts/smoke-lots.ts",
-      "byte": 18560,
-      "sha256": "9c366f16dfb3c3c493cac467e54fc3de0b1d05cd9ba5de51509079ff9256d600"
+      "byte": 18776,
+      "sha256": "03d2a881ce608e5ccf152fcba6c99899cde81971e8dd9ac611d9114c0a49097f"
     },
     {
       "dosya": "scripts/smoke-market-accounting.ts",
@@ -1181,6 +1186,11 @@
       "dosya": "scripts/smoke-pos.ts",
       "byte": 12748,
       "sha256": "3df3129b2e8ba16c3768e40b00831ba2a4ee16c239c51de398fec2f0a9fc6a64"
+    },
+    {
+      "dosya": "scripts/smoke-terminal-lots.ts",
+      "byte": 15424,
+      "sha256": "6652710b32acfa365c91bd5c9a5b3ac4e068b258cf5e455b6cf2804c621c1b8d"
     },
     {
       "dosya": "server/_core/context.ts",
@@ -1388,6 +1398,11 @@
       "sha256": "a69dbd945e957866844a415ad378743c157420eb0f65b8cdb90198c6dccec72d"
     },
     {
+      "dosya": "server/stationos/inventory-lot-count.ts",
+      "byte": 4040,
+      "sha256": "78410bb334a6b410fcb8e85bdcae2f36630371445ff832771f9a8e0d42be806e"
+    },
+    {
       "dosya": "server/stationos/inventory-lots.ts",
       "byte": 14754,
       "sha256": "6fc143626b24e22afbe1fbdc2aa9f66e0173d9815b156040909fc18648435b0d"
@@ -1399,8 +1414,13 @@
     },
     {
       "dosya": "server/stationos/inventory-terminal.ts",
-      "byte": 28501,
-      "sha256": "864a600d617599e39925f838147e0e36cf91d5be91340dbd39c91ce8f8e13b61"
+      "byte": 34246,
+      "sha256": "904842f0bbcb4f30a9133b9f4ff65b1225094bcbb0ea248a09f24f8d470ca9b5"
+    },
+    {
+      "dosya": "server/stationos/lot-count.test.ts",
+      "byte": 2488,
+      "sha256": "96d08d1ef0f92594ee6fe4a6533266545851188b017f711afc3331f7ca4039e2"
     },
     {
       "dosya": "server/stationos/lot-domain.test.ts",
@@ -1568,6 +1588,11 @@
       "sha256": "eff7d42e8220a77fb2935517bbd23f788a5afec87ceea517493e8465b44284d0"
     },
     {
+      "dosya": "server/stationos/migrations/0017_terminal_lot_counts.sql",
+      "byte": 939,
+      "sha256": "61470ac8537079ec4feb87dc6bb0a897e6399f2e1a4d06a98a1e3907783753c0"
+    },
+    {
       "dosya": "server/stationos/pos-carts.ts",
       "byte": 15330,
       "sha256": "21c4c0f21da399667d2e26b04e6fdceb8b01701f1cd28c4551b89cc47e9b6f55"
@@ -1619,8 +1644,13 @@
     },
     {
       "dosya": "shared/inventory.ts",
-      "byte": 4493,
-      "sha256": "83c53cb2cae6c5ff1191c9ee1073ebd04620a710b747ad7144b896912e199fc8"
+      "byte": 4823,
+      "sha256": "d6e3aeb06b185f68f1c48a2fac48d2670d1fb5e52bb622e9ea1f2924aaac147e"
+    },
+    {
+      "dosya": "shared/lot-count.ts",
+      "byte": 1931,
+      "sha256": "05c90acff17dbb919089ffcbd0e19e06ef0499de270d4acfaf1f0e7fa319a1b8"
     },
     {
       "dosya": "shared/lots.ts",

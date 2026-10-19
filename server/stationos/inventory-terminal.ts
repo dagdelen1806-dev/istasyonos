@@ -1,3 +1,4 @@
+import { snapshotCountLots, postCountLots } from "./inventory-lot-count";
 import { randomUUID } from "node:crypto";
 import type { Express } from "express";
 import type { PoolConnection } from "mysql2/promise";
@@ -93,12 +94,13 @@ async function event(
   product: string | null = null,
   before: number | null = null,
   after: number | null = null,
-  note: string | null = null
+  note: string | null = null,
+  lot: string | null = null
 ) {
   await execute(
     c,
-    "INSERT INTO st_inventory_draft_events(draft_id,actor_user_id,device_id,action,product_id,before_qty,after_qty,note) VALUES (?,?,?,?,?,?,?,?)",
-    [draft, actor, device, action, product, before, after, note]
+    "INSERT INTO st_inventory_draft_events(draft_id,actor_user_id,device_id,action,product_id,before_qty,after_qty,note,lot_id) VALUES (?,?,?,?,?,?,?,?,?)",
+    [draft, actor, device, action, product, before, after, note, lot]
   );
 }
 async function touch(c: PoolConnection, id: string) {
@@ -265,6 +267,17 @@ export function registerInventoryTerminal(
               "SELECT l.*,p.name,p.barcode,p.base_unit,p.stock_qty,p.stock_version,p.purchase_price_minor,p.lot_tracking,i.value_minor,u.name AS counted_by FROM st_inventory_draft_lines l JOIN st_products p ON p.id=l.product_id LEFT JOIN st_market_inventory i ON i.product_id=p.id LEFT JOIN users u ON u.id=l.counted_by_user_id WHERE l.draft_id=? ORDER BY l.counted_qty IS NOT NULL DESC,p.name",
               [id]
             );
+            const lotLines = await rows<Row[]>(
+              c,
+              "SELECT s.*,l.quantity AS current_qty,u.name AS counted_by FROM st_inventory_draft_lots s JOIN st_inventory_lots l ON l.id=s.lot_id LEFT JOIN users u ON u.id=s.counted_by_user_id WHERE s.draft_id=? ORDER BY s.product_id,s.expiry_date,s.lot_id",
+              [id]
+            );
+            const lotsByProduct = new Map<string, Row[]>();
+            for (const row of lotLines) {
+              const list = lotsByProduct.get(row.product_id) ?? [];
+              list.push(row);
+              lotsByProduct.set(row.product_id, list);
+            }
             const events = await rows<Row[]>(
               c,
               "SELECT e.*,u.name AS actor_name FROM st_inventory_draft_events e JOIN users u ON u.id=e.actor_user_id WHERE draft_id=? ORDER BY e.id DESC LIMIT 50",
@@ -284,9 +297,31 @@ export function registerInventoryTerminal(
                 unit: l.base_unit,
                 baselineQty: financial ? integer(l.baseline_qty) : null,
                 countedQty:
-                  l.counted_qty === null ? null : integer(l.counted_qty),
+                  l.counted_qty === null
+                    ? null
+                    : l.lot_counting && !financial
+                      ? (lotsByProduct.get(l.product_id) ?? [])
+                          .filter(s => s.counted_qty !== null)
+                          .reduce(
+                            (n, s) => safeAdd(n, integer(s.counted_qty)),
+                            0
+                          )
+                      : integer(l.counted_qty),
                 currentQty: financial ? integer(l.stock_qty) : null,
                 lotTracking: !!l.lot_tracking,
+                lotCounting: !!l.lot_counting,
+                lots: (lotsByProduct.get(l.product_id) ?? []).map(s => ({
+                  id: s.lot_id,
+                  code: s.code,
+                  expiryDate: s.expiry_date,
+                  status: s.status,
+                  baselineQty: financial ? integer(s.baseline_qty) : null,
+                  currentQty: financial ? integer(s.current_qty) : null,
+                  countedQty:
+                    s.counted_qty === null ? null : integer(s.counted_qty),
+                  countedBy: s.counted_by ?? null,
+                  updatedAt: s.updated_at,
+                })),
                 stockChanged:
                   integer(l.stock_version) !== integer(l.baseline_version),
                 unitNetMinor: financial
@@ -305,6 +340,7 @@ export function registerInventoryTerminal(
               events: events.map(e => ({
                 id: integer(e.id),
                 action: e.action,
+                lotId: e.lot_id ?? null,
                 productId: e.product_id,
                 beforeQty: e.before_qty === null ? null : integer(e.before_qty),
                 afterQty: e.after_qty === null ? null : integer(e.after_qty),
@@ -403,12 +439,14 @@ export function registerInventoryTerminal(
         "INSERT INTO st_inventory_drafts(id,tenant_id,station_id,kind,label,created_by_user_id) VALUES (?,?,?,?,?,?)",
         [id, scope.tenantId, station, kind, label, actor.id]
       );
-      if (kind === "COUNT")
+      if (kind === "COUNT") {
         await execute(
           c,
-          "INSERT INTO st_inventory_draft_lines(draft_id,product_id,baseline_qty,baseline_version) SELECT ?,id,stock_qty,stock_version FROM st_products WHERE station_id=?",
+          "INSERT INTO st_inventory_draft_lines(draft_id,product_id,baseline_qty,baseline_version,lot_counting) SELECT ?,id,stock_qty,stock_version,lot_tracking FROM st_products WHERE station_id=?",
           [id, station]
         );
+        await snapshotCountLots(c, id, station);
+      }
       await event(c, id, actor.id, device, "CREATE");
       return { id };
     },
@@ -473,14 +511,83 @@ export function registerInventoryTerminal(
           409
         );
       const units =
-          qty === 0
-            ? 0
-            : packQuantity(
-                qty,
-                integer(p.pack_qty),
-                d.kind === "COUNT" ? 1000000000 : 10000
-              ),
-        before = line.counted_qty === null ? null : integer(line.counted_qty),
+        qty === 0
+          ? 0
+          : packQuantity(
+              qty,
+              integer(p.pack_qty),
+              d.kind === "COUNT" ? 1000000000 : 10000
+            );
+      if (d.kind === "COUNT" && line.lot_counting) {
+        if (!body.lotId)
+          fail(
+            "COUNT_LOT_REQUIRED",
+            "Bu ürün için sayılan gerçek partiyi seçin.",
+            409
+          );
+        const lot = requireId(body.lotId, "lotId"),
+          s = await first<Row>(
+            c,
+            "SELECT * FROM st_inventory_draft_lots WHERE draft_id=? AND product_id=? AND lot_id=? FOR UPDATE",
+            [d.id, p.id, lot]
+          );
+        if (!s)
+          fail(
+            "NOT_IN_COUNT",
+            "Parti bu ürünün sayım başlangıcında yoktu; ürünü yeniden sayın.",
+            409
+          );
+        const before = s.counted_qty === null ? null : integer(s.counted_qty),
+          after = mode === "SET" ? units : safeAdd(before ?? 0, units);
+        if (after > 1000000000)
+          fail("QUANTITY_LIMIT", "Parti adedi sınırı aşıyor.");
+        await execute(
+          c,
+          "UPDATE st_inventory_draft_lots SET counted_qty=?,counted_by_user_id=?,device_id=?,updated_at=UTC_TIMESTAMP(3) WHERE draft_id=? AND lot_id=?",
+          [after, actor.id, device, d.id, lot]
+        );
+        const sum = await first<Row>(
+          c,
+          "SELECT COALESCE(SUM(CASE WHEN counted_qty IS NOT NULL THEN counted_qty-baseline_qty ELSE 0 END),0) AS delta FROM st_inventory_draft_lots WHERE draft_id=? AND product_id=?",
+          [d.id, p.id]
+        );
+        const projected = safeAdd(
+          integer(line.baseline_qty),
+          integer(sum!.delta)
+        );
+        if (projected < 0 || projected > 1000000000)
+          fail(
+            "QUANTITY_LIMIT",
+            "Ürünün öngörülen toplam adedi sayım sınırını aşıyor."
+          );
+        await execute(
+          c,
+          "UPDATE st_inventory_draft_lines SET counted_qty=?,counted_by_user_id=?,device_id=?,updated_at=UTC_TIMESTAMP(3) WHERE draft_id=? AND product_id=?",
+          [projected, actor.id, device, d.id, p.id]
+        );
+        await touch(c, d.id);
+        await event(
+          c,
+          d.id,
+          actor.id,
+          device,
+          mode === "ADD" ? "SCAN" : "SET",
+          p.id,
+          before,
+          after,
+          barcode,
+          lot
+        );
+        return { id: d.id, productId: p.id, lotId: lot, quantity: after };
+      }
+      if (body.lotId)
+        fail(
+          "INVALID_LOT_COUNT",
+          "Bu satır parti sayımı için açık değil.",
+          409
+        );
+      const before =
+          line.counted_qty === null ? null : integer(line.counted_qty),
         after = mode === "SET" ? units : safeAdd(before ?? 0, units);
       if (after > (d.kind === "COUNT" ? 1000000000 : 10000))
         fail("QUANTITY_LIMIT", "Taslak ürün adedi sınırı aşıyor.");
@@ -522,20 +629,26 @@ export function registerInventoryTerminal(
         fail("INVALID_DRAFT", "Bu işlem sayım taslağı içindir.");
       const p = await first<Row>(
           c,
-          "SELECT stock_qty,stock_version FROM st_products WHERE id=? AND station_id=? FOR UPDATE",
+          "SELECT stock_qty,stock_version,lot_tracking FROM st_products WHERE id=? AND station_id=? FOR UPDATE",
           [id, station]
         ),
         line = await first<Row>(
           c,
-          "SELECT counted_qty FROM st_inventory_draft_lines WHERE draft_id=? AND product_id=? FOR UPDATE",
+          "SELECT counted_qty,lot_counting FROM st_inventory_draft_lines WHERE draft_id=? AND product_id=? FOR UPDATE",
           [d.id, id]
         );
       if (!p || !line) fail("NOT_FOUND", "Sayım satırı bulunamadı.", 404);
       await execute(
         c,
-        "UPDATE st_inventory_draft_lines SET baseline_qty=?,baseline_version=?,counted_qty=NULL,counted_by_user_id=NULL,device_id=NULL,updated_at=NULL WHERE draft_id=? AND product_id=?",
-        [p.stock_qty, p.stock_version, d.id, id]
+        "UPDATE st_inventory_draft_lines SET baseline_qty=?,baseline_version=?,lot_counting=?,counted_qty=NULL,counted_by_user_id=NULL,device_id=NULL,updated_at=NULL WHERE draft_id=? AND product_id=?",
+        [p.stock_qty, p.stock_version, !!p.lot_tracking, d.id, id]
       );
+      await execute(
+        c,
+        "DELETE FROM st_inventory_draft_lots WHERE draft_id=? AND product_id=?",
+        [d.id, id]
+      );
+      await snapshotCountLots(c, d.id, station, id);
       await touch(c, d.id);
       await event(
         c,
@@ -544,7 +657,9 @@ export function registerInventoryTerminal(
         device,
         "REBASE",
         id,
-        line.counted_qty === null ? null : integer(line.counted_qty),
+        line.lot_counting || line.counted_qty === null
+          ? null
+          : integer(line.counted_qty),
         null,
         reason
       );
@@ -724,6 +839,42 @@ export function registerInventoryTerminal(
         const inv = await inventoryRow(c, book!, p),
           qty = integer(l.counted_qty),
           delta = qty - integer(p.stock_qty);
+        if (l.lot_counting) {
+          if (!p.lot_tracking)
+            fail(
+              "COUNT_STOCK_CHANGED",
+              "Parti takibi değişti; ürünü yeniden sayın.",
+              409
+            );
+          const plan = await postCountLots(
+            c,
+            p,
+            d.id,
+            actor.id,
+            reason,
+            costs.get(p.id),
+            body.zeroCostAccepted,
+            integer(inv.value_minor)
+          );
+          if (plan.quantity !== qty)
+            fail(
+              "COUNT_STOCK_CHANGED",
+              "Parti ve ürün sayım toplamı uyuşmuyor.",
+              409
+            );
+          gain = safeAdd(gain, plan.gainMinor);
+          loss = safeAdd(loss, plan.lossMinor);
+          snapshots.push({
+            productId: p.id,
+            before: integer(p.stock_qty),
+            after: plan.quantity,
+            delta: plan.quantity - integer(p.stock_qty),
+            gainMinor: plan.gainMinor,
+            lossMinor: plan.lossMinor,
+            lots: plan.lots,
+          });
+          continue;
+        }
         if (p.lot_tracking && delta)
           fail(
             "LOT_COUNT_REQUIRED",

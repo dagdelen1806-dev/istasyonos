@@ -1,6 +1,6 @@
 {
   "proje": "İstasyonOS — Windows masaüstü geliştirme paketi",
-  "hazirlanma": "2026-10-19T11:22:09.729670+03:00",
+  "hazirlanma": "2026-10-19T13:34:12.904687+03:00",
   "baslangic": "WINDOWS-BASLANGIC.md / BASLAT.cmd",
   "orijinal_kaynak_tarihi": "2026-10-14",
   "manus_gerekli": false,
@@ -17,7 +17,7 @@
     "node": "24.19.0",
     "veritabani": "MariaDB 11.8.6, ayrı test DB",
     "typescript": "başarılı",
-    "birim_sozlesme_testleri": 69,
+    "birim_sozlesme_testleri": 75,
     "production_build": "başarılı",
     "market_http_smoke": "Yeni 0012 şemayla üretimde ortak POS ve kalıcı sepet paketleri başarılı.",
     "onceki_vardiya_http_smoke": "0012 şemayla üretimde eski vardiya, iki ayrı mali imza/IBAN bekleyen kapanış ve çıkışta iptal başarılı.",
@@ -36,8 +36,9 @@
     "stok_geriye_donuk_kontrol": "Son şemayla muhasebe, iadeler, ortak POS, kalıcı sepet ve iki mali imzalı vardiya HTTP paketleri başarılı. Yoğun test kayıtları giriş deneme sınırına takıldığında sadece kendi test sunucusu yeniden başlatıldı; koruma kapatılmadı. Güncel ana geliştirme tanısı 13 göç/DB/HTML/JS/401 korumasıyla başarılı.",
     "market_lot_skt": "Lot/SKT/FEFO/karantina/fire: geliştirme ve üretim HTTP/Chromium kontrolleri geçti; çoklu parti ve net maliyet/gün sonu mutabakatı doğrulandı. Fizikî donanım doğrulanmadı.",
     "urun_aktarimi": "0015/0016 mevcut verili ayrı test/ana bulut DB üzerinde uygulandı; tekrar göç no-op. Geliştirme/üretim HTTP ve Chromium: yalnız kart ve artı DEMO stok/net maliyet/grup KDV; iki teyit, önizleme değişimi, paralel/same-ID tek etki, kapalı gün/gerçek firma reddi, dengeli açılış, günlük kâr korunması, CSV ve 390px taşma kontrolü başarılı. Gerçek 114 ürün yalnız önizleme; eksik oranlar tahmin edilmedi. Kaynak dosya pakette yok.",
-    "guncel_stok_regresyon": "Son üretim derlemesi/0016 ile stok, cihaz/terminal, barkod/fiyat listesi, sayım, maliyet ve aylık rapor HTTP paketi başarılı.",
-    "guncel_bulut_tanisi": "19 Ekim: HTTP/HTML/JS/401 oturum koruması, SELECT 1 ve 16 operasyon göçü başarılı."
+    "guncel_stok_regresyon": "Son üretim derlemesi/0017 ile mevcut stok/terminal/barkod/fiyat listesi/sayım/maliyet/aylık rapor ve lot/SKT/FEFO/iade/fire/gün sonu HTTP paketleri başarılı.",
+    "guncel_bulut_tanisi": "19 Ekim: HTTP/HTML/JS/401 oturum koruması, SELECT 1 ve 17 operasyon göçü başarılı.",
+    "terminal_parti_sayimi": "0017 mevcut verili test/ana bulut DB üzerinde uygulandı, tekrar göç no-op. 15 dosyada 75 test, TypeScript ve build başarılı. Geliştirme/üretim HTTP: rol/tenant/onaylı cihaz, personelde stok/maliyet gizleme, gerçek parti seçimi, sürüm yarışı, sıfır net SKU farkında ayrı gain/loss, stok_version, sayılmayan parti, rollback, eski taslak/rebase, SET 0, sıfır maliyet teyidi, aynı-ID, mali mutabakat ve kapalı gün başarılı. Geliştirme/üretimde iki Chromium: mobil personel/masaüstü yetkili, CSV, okutma ve mali onayda kayıt sonrası yanıt kaybı/yenileme/tek etki; JS/harici ağ/390px taşma yok."
   },
-  "surum_notu": "0014 lot/SKT/FEFO/karantina/parti sayımı ve fire, 0015 kaynak kodlu liste kart aktarımı, 0016 artı DEMO başlangıç stoğu/net maliyet/grup KDV. Mevcut kartlar korunur, kaynak eksi miktar saklanır, başlangıç stokları satış/kâr veya cari borç değildir. Kullanıcı fiyat listesi ve özel test verileri içermez. POS DEMO; fizikî Windows/TC73, bağlantısız tarayıcı kuyruğu, çok depo/terazi, banka/e-belge/ÖKC/merkez sync bu teslimde yok."
+  "surum_notu": "0014 lot/SKT, 0015/16 grup KDV seçimiyle DEMO liste başlangıcı, 0017 el terminalinde gerçek parti seçimiyle ortak sayım ve yetkili net maliyet onayı. Sayılmayan partiler ve karantina/SKT korunur; fazla ve eksik aynı SKU net delta 0 olsa da ayrı maliyetlenir. Kaynak kullanıcı listesi/erişimleri içermez. POS DEMO; fizikî Windows/TC73, bağlantısız tarayıcı kuyruğu, çok depo/terazi ve banka/e-belge/ÖKC/merkez sync bu teslimde yok."
 }

@@ -125,6 +125,18 @@ export interface InventoryDraft {
     countedQty: number | null;
     currentQty: number | null;
     lotTracking: boolean;
+    lotCounting: boolean;
+    lots: {
+      id: string;
+      code: string;
+      expiryDate: string | null;
+      status: string;
+      baselineQty: number | null;
+      currentQty: number | null;
+      countedQty: number | null;
+      countedBy: string | null;
+      updatedAt: string | null;
+    }[];
     stockChanged: boolean;
     unitNetMinor: number | null;
     currentValueMinor: number | null;
@@ -134,6 +146,7 @@ export interface InventoryDraft {
   events: {
     id: number;
     action: string;
+    lotId: string | null;
     productId: string | null;
     beforeQty: number | null;
     afterQty: number | null;

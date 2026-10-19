@@ -565,28 +565,35 @@ const count = (
 let d = await raw(
   `/market-accounting/inventory/draft?stationId=${station}&draftId=${count}`
 );
-await lp("draft-scan", {
-  draftId: count,
-  draftVersion: d.version,
-  barcode: (await pos()).products.find((x: any) => x.id === p).barcode,
-  quantity: 5,
-  mode: "SET",
-});
+await lp(
+  "draft-scan",
+  {
+    draftId: count,
+    draftVersion: d.version,
+    barcode: (await pos()).products.find((x: any) => x.id === p).barcode,
+    quantity: 5,
+    mode: "SET",
+  },
+  409
+);
 d = await raw(
   `/market-accounting/inventory/draft?stationId=${station}&draftId=${count}`
 );
+assert.equal(d.lines.find((l: any) => l.productId === p).countedQty, null);
+// Since 0017, a tracked product requires its real lot at collection time.
+// An uncollected draft still cannot change stock through financial posting.
 await lp(
   "count-post",
   {
     draftId: count,
     draftVersion: d.version,
     expectedRevision: d.revision,
-    reason: "DEMO toplam farkından parti atlanamaz",
-    unitCosts: [{ productId: p, unitNetMinor: 400 }],
-    expectedGainMinor: 400,
+    reason: "DEMO parti seçmeden toplam yazılamaz",
+    unitCosts: [],
+    expectedGainMinor: 0,
     expectedLossMinor: 0,
   },
-  409
+  400
 );
 s = await lotState();
 assert.equal(product(s).quantity, 4);

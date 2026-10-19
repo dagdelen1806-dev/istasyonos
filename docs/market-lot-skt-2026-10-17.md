@@ -36,7 +36,7 @@ Takipli ürünün **müşteri iadesi**, özgün satış maliyetiyle stoğa döne
 
 **Fire işle** ile SKT geçmiş/hasarlı/kayıp ayrılan adet ve açıklama girilir. Miktar partinin stoğunu aşamaz. Net maliyet stoktan düşer, `STOCK_LOSS` gider hesabına yazılır; aylık/günlük faaliyet sonucu ve stok değeri güncellenir. Karantinaya alma tek başına gider değildir; fizikî stok hâlâ vardır. Fire işlemi banka veya cari borcu değiştirmez, resmî imha belgesi düzenlemez. Ürün/vergisel fire-imha işlemleri için gerekli resmî süreç ayrıca yürütülmelidir.
 
-Lot takibi açık üründe eski toplam stok düzeltmesi veya terminaldeki toplam sayım, farkı partilere rastgele dağıtamaz. Fark varsa **Lot ve SKT → Partiyi say** kullanılır; terminalde toplam adet toplanabilir, ancak bu fark toplamdan doğrudan onaylanamaz. Farksız toplam sayım stok değiştirmez. Personelin lot bazında sayım taslağı toplaması ayrı geliştirme alanıdır; bu teslimde mali yetkili doğrudan parti sayımı yapar.
+Lot takibi açık üründe eski toplam stok düzeltmesi veya terminaldeki toplam sayım, farkı partilere rastgele dağıtamaz. Masaüstünde **Lot ve SKT → Partiyi say** kullanılabilir. 0017 ile terminalde gerçek parti seçerek ortak sayım toplama ve yetkili mali onay desteği eklendi; [terminal parti sayımı rehberini](market-terminal-parti-sayimi-2026-10-19.md) okuyun. Eski toplam taslaklarda fark lotlara tahminle dağıtılmaz; yeniden sayım ile gerçek partiler alınır.
 
 Gün sonu lot toplamı = ürün fizikî adedi = maliyet defteri adedi ve defter stok değeri mutabakatını arar. Karantinalı stok maliyetle stokta kalır; gün sonu bunu kendiliğinden fireye çevirmez. Kapalı güne takip açma/durum/sayım/fire yazımı engellenir. Genel ters fişle bu stok kayıtları geri alınamaz; açıklamalı yeni sayım/düzeltme kullanılır.
 
@@ -68,3 +68,5 @@ pnpm dev
 İki Chromium, geliştirme ve son üretim derlemesinde çok partili masaüstü/390px terminal kabulü, kayıt sonrası yanıt kaybı/yenileme/aynı-ID tek kabul, fizikî uygunluk teyidi, parti sayımı/fire, FEFO kasa, karantinalı müşteri iadesi, gerçek partiyle tedarikçi iadesi ve CSV'yi doğruladı. JS sayfa hatası/haricî istek/yatay taşma görülmedi. Bu testler fizikî TC73 kabulünün yerine geçmez. Özel test dosyaları/erişimler `/workspace/lot-test` altındadır; Git'e veya herkese açık pakete eklenmez.
 
 19 Ekim liste aktarımı için [ürün aktarım rehberini](market-urun-aktarimi-2026-10-19.md) okuyun. Güncel kaynakta 0015/0016 göçleri de gerekir; yukarıdaki 61 test lot tesliminin tarihli sonucudur. Yeni toplam 69 testtir.
+
+0017 terminal parti sayımıyla güncel toplam 75 testtir; önceki 61/69 sayıları tarihli teslim sonuçlarıdır.

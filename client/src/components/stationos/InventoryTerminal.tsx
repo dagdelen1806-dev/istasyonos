@@ -1,3 +1,4 @@
+import { lotCountPlan } from "@shared/lot-count";
 import {
   LotReceiptFields,
   receiptLots,
@@ -43,6 +44,7 @@ function TerminalWorkspace({
     d = w.data,
     t = w.draft;
   const [barcode, setBarcode] = useState(""),
+    [selectedLot, setSelectedLot] = useState(""),
     [quantity, setQuantity] = useState("1"),
     [mode, setMode] = useState("ADD"),
     [search, setSearch] = useState(""),
@@ -52,6 +54,10 @@ function TerminalWorkspace({
   const scanRef = useRef<HTMLInputElement>(null);
   const open = t?.status === "DRAFT",
     scanLocked = w.locked || !d?.device?.enabled || !open;
+  const scanProduct = d?.barcodes.find(
+    b => b.barcode === barcode.trim()
+  )?.productId;
+  const scanLine = t?.lines.find(l => l.productId === scanProduct);
   async function scan(code = barcode) {
     if (!t) return;
     setError("");
@@ -65,6 +71,18 @@ function TerminalWorkspace({
       setError("Adet tam sayı olmalı. Sıfır için Miktarı değiştir seçin.");
       return;
     }
+    const product = d?.barcodes.find(b => b.barcode === code.trim())?.productId,
+      line = t.lines.find(l => l.productId === product);
+    if (
+      t.kind === "COUNT" &&
+      line?.lotCounting &&
+      !line.lots.some(l => l.id === selectedLot)
+    ) {
+      setError(
+        "Ürünün gerçek parti etiketini kontrol edip sayılacak partiyi seçin."
+      );
+      return;
+    }
     if (
       await w.action("draft-scan", {
         draftId: t.id,
@@ -72,6 +90,9 @@ function TerminalWorkspace({
         barcode: code.trim(),
         quantity: n,
         mode,
+        ...(t.kind === "COUNT" && line?.lotCounting
+          ? { lotId: selectedLot }
+          : {}),
       })
     ) {
       setBarcode("");
@@ -346,15 +367,37 @@ function TerminalWorkspace({
                           "Başlangıç",
                           "Sayılan / alınan",
                           "Sayım yapan",
+                          "Parti",
+                          "SKT",
+                          "Durum",
                         ],
-                        ...t.lines.map(l => [
-                          l.name,
-                          l.barcode,
-                          l.unit,
-                          l.baselineQty ?? "",
-                          l.countedQty ?? "",
-                          l.countedBy ?? "",
-                        ]),
+                        ...t.lines.flatMap(l =>
+                          l.lotCounting
+                            ? l.lots.map(lot => [
+                                l.name,
+                                l.barcode,
+                                l.unit,
+                                lot.baselineQty ?? "",
+                                lot.countedQty ?? "",
+                                lot.countedBy ?? "",
+                                lot.code,
+                                lot.expiryDate ?? "",
+                                lot.status,
+                              ])
+                            : [
+                                [
+                                  l.name,
+                                  l.barcode,
+                                  l.unit,
+                                  l.baselineQty ?? "",
+                                  l.countedQty ?? "",
+                                  l.countedBy ?? "",
+                                  "",
+                                  "",
+                                  "",
+                                ],
+                              ]
+                        ),
                       ])
                     }
                   >
@@ -386,6 +429,34 @@ function TerminalWorkspace({
                             required
                           />
                         </label>
+                        {t.kind === "COUNT" && scanLine?.lotCounting && (
+                          <label>
+                            Sayılacak parti
+                            <select
+                              aria-label="Sayılacak parti"
+                              value={
+                                scanLine.lots.some(l => l.id === selectedLot)
+                                  ? selectedLot
+                                  : ""
+                              }
+                              onChange={e => setSelectedLot(e.target.value)}
+                              required
+                            >
+                              <option value="">
+                                Gerçek parti etiketini seçin
+                              </option>
+                              {scanLine.lots.map(l => (
+                                <option key={l.id} value={l.id}>
+                                  {l.code} · SKT {l.expiryDate ?? "bilinmiyor"}{" "}
+                                  ·{" "}
+                                  {l.status === "QUARANTINE"
+                                    ? "Karantina"
+                                    : "Satışa açık"}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
                         <div className="ma-form-grid">
                           <label>
                             Okutulan paket / adet
@@ -415,7 +486,8 @@ function TerminalWorkspace({
                       Koli barkodu tanımlıysa iç adedi otomatik uygulanır. Tam
                       adedi yazmak için ürünün ana barkodunu kullanın.
                       Sayılmayan ürün sıfır kabul edilmez; sıfır sayım için
-                      Miktarı değiştir → 0 girin.
+                      Miktarı değiştir → 0 girin. Takipli sayımda gerçek partiyi
+                      seçin; sayılmayan partiler değişmez.
                     </p>
                   </>
                 )}
@@ -430,7 +502,7 @@ function TerminalWorkspace({
                 <div className="mi-count-lines">
                   {t.lines
                     .filter(l =>
-                      `${l.name} ${l.barcode} ${d.products.find(p => p.id === l.productId)?.shelf ?? ""}`
+                      `${l.name} ${l.barcode} ${l.lots.map(x => x.code).join(" ")} ${d.products.find(p => p.id === l.productId)?.shelf ?? ""}`
                         .toLocaleLowerCase("tr")
                         .includes(search.toLocaleLowerCase("tr"))
                     )
@@ -451,12 +523,59 @@ function TerminalWorkspace({
                           <span>
                             {l.countedQty === null
                               ? "Henüz sayılmadı"
-                              : `${t.kind === "COUNT" ? "Sayılan" : "Alınan"}: ${l.countedQty}`}
+                              : `${l.lotCounting ? (d.canPost ? "Sayım sonrası toplam" : "Partilerde sayılan") : t.kind === "COUNT" ? "Sayılan" : "Alınan"}: ${l.countedQty}`}
                             {d.canPost && t.kind === "COUNT"
                               ? ` · Kayıtlı stok: ${l.currentQty}`
                               : ""}
                           </span>
                         </div>
+                        {l.lotCounting && (
+                          <details>
+                            <summary>
+                              Partiler · sayılan{" "}
+                              {l.lots.filter(x => x.countedQty !== null).length}
+                              /{l.lots.length}
+                            </summary>
+                            <div className="mi-count-lots">
+                              {l.lots.map(lot => (
+                                <div key={lot.id} className="notice">
+                                  <b>{lot.code}</b>
+                                  <small>
+                                    SKT {lot.expiryDate ?? "bilinmiyor"} ·{" "}
+                                    {lot.status === "QUARANTINE"
+                                      ? "Karantina"
+                                      : "Satışa açık"}
+                                  </small>
+                                  <p>
+                                    {lot.countedQty === null
+                                      ? "Henüz sayılmadı"
+                                      : `Sayılan: ${lot.countedQty}`}
+                                    {d.canPost
+                                      ? ` · Kayıtlı: ${lot.currentQty}`
+                                      : ""}
+                                  </p>
+                                  {open && (
+                                    <button
+                                      className="btn"
+                                      disabled={scanLocked || l.stockChanged}
+                                      onClick={() => {
+                                        setBarcode(l.barcode);
+                                        setSelectedLot(lot.id);
+                                        setMode("SET");
+                                        setQuantity(
+                                          String(lot.countedQty ?? 0)
+                                        );
+                                        scanRef.current?.focus();
+                                      }}
+                                    >
+                                      Partiyi say · {lot.code}
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
                         {open && (
                           <div className="ma-row-actions">
                             <button
@@ -472,7 +591,9 @@ function TerminalWorkspace({
                                 scanRef.current?.focus();
                               }}
                             >
-                              Miktar gir
+                              {l.lotCounting
+                                ? "Parti seçerek say"
+                                : "Miktar gir"}
                             </button>
                             {t.kind === "COUNT" && (
                               <button
@@ -611,6 +732,9 @@ function TerminalWorkspace({
                         {x.productId
                           ? t.lines.find(l => l.productId === x.productId)?.name
                           : ""}{" "}
+                        {x.lotId
+                          ? `· Parti ${t.lines.flatMap(l => l.lots).find(l => l.id === x.lotId)?.code ?? x.lotId}`
+                          : ""}{" "}
                         {x.beforeQty ?? "—"} → {x.afterQty ?? "—"} {x.note}
                       </small>
                     </p>
@@ -682,6 +806,15 @@ function TerminalPosting({
           throw Error("KDV %0–100 arası, en fazla 2 ondalık olmalı.");
         const net = unit * qty;
         total += net + rounded(BigInt(net) * BigInt(rate), 10000n);
+      } else if (l.lotCounting) {
+        const plan = lotCountPlan(
+          l.currentQty!,
+          l.currentValueMinor!,
+          l.lots.map(x => ({ before: x.currentQty!, after: x.countedQty })),
+          unit
+        );
+        gain += plan.gainMinor;
+        loss += plan.lossMinor;
       } else {
         const delta = qty - l.currentQty!;
         if (delta > 0) gain += delta * unit;
@@ -760,7 +893,15 @@ function TerminalPosting({
                 expectedGainMinor: gain,
                 expectedLossMinor: loss,
                 unitCosts: lines
-                  .filter(l => l.countedQty! > l.currentQty!)
+                  .filter(l =>
+                    l.lotCounting
+                      ? l.lots.some(
+                          x =>
+                            x.countedQty !== null &&
+                            x.countedQty > x.currentQty!
+                        )
+                      : l.countedQty! > l.currentQty!
+                  )
                   .map(l => ({
                     productId: l.productId,
                     unitNetMinor: parseMoney(cost(l)),
@@ -814,10 +955,29 @@ function TerminalPosting({
                     <b>{l.name}</b>
                     <small>
                       {draft.kind === "COUNT"
-                        ? `Stok ${l.currentQty} → ${l.countedQty} · Fark ${delta}${l.lotTracking ? " · Lot farkı Lot / SKT ekranında işlenir" : ""}`
+                        ? `Stok ${l.currentQty} → ${l.countedQty} · Fark ${delta}${l.lotCounting ? " · Parti farkları aşağıda" : l.lotTracking ? " · Eski taslak: parti sayımı için yeniden sayın" : ""}`
                         : `Alınan ${l.countedQty} ${l.unit}`}
                     </small>
                   </span>
+                  {l.lotCounting && (
+                    <div className="ma-hint">
+                      {l.lots
+                        .filter(x => x.countedQty !== null)
+                        .map(x => (
+                          <p key={x.id}>
+                            {x.code} · SKT {x.expiryDate ?? "bilinmiyor"}:{" "}
+                            {x.currentQty} → {x.countedQty} (
+                            {x.countedQty! - x.currentQty! > 0 ? "+" : ""}
+                            {x.countedQty! - x.currentQty!})
+                          </p>
+                        ))}
+                      <p>
+                        Sayılmayan{" "}
+                        {l.lots.filter(x => x.countedQty === null).length} parti
+                        korunur; karantina ve SKT değişmez.
+                      </p>
+                    </div>
+                  )}
                   {draft.kind === "RECEIPT" &&
                     data.products.find(p => p.id === l.productId)
                       ?.lotTracking && (
@@ -834,7 +994,14 @@ function TerminalPosting({
                         }
                       />
                     )}
-                  {(draft.kind === "RECEIPT" || delta > 0) && (
+                  {(draft.kind === "RECEIPT" ||
+                    (l.lotCounting
+                      ? l.lots.some(
+                          x =>
+                            x.countedQty !== null &&
+                            x.countedQty > x.currentQty!
+                        )
+                      : delta > 0)) && (
                     <label>
                       KDV hariç birim maliyet (TL)
                       <input
@@ -900,7 +1067,9 @@ function TerminalPosting({
                 lines.some(
                   l =>
                     l.stockChanged ||
-                    (l.lotTracking && l.countedQty !== l.currentQty)
+                    (l.lotTracking &&
+                      !l.lotCounting &&
+                      l.countedQty !== l.currentQty)
                 ))
             }
           >
