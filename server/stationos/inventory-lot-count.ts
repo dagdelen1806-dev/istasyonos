@@ -131,6 +131,8 @@ export async function postCountLots(
         status: s.status,
         before: integer(s.baseline_qty),
         after: integer(s.counted_qty),
+        countedByUserId: s.counted_by_user_id,
+        deviceId: s.device_id,
       })),
   };
 }

@@ -1,3 +1,4 @@
+import { registerInventoryCountReports } from "./inventory-count-reports";
 import { registerInventoryReports } from "./inventory-reports";
 import { registerCatalogImport } from "./catalog-import";
 import { registerInventoryLots } from "./inventory-lots";
@@ -267,6 +268,7 @@ export function registerMarketAccountingRoutes(
   registerInventory(app, services, post);
   registerInventoryTerminal(app, services, post);
   registerInventoryReports(app, services);
+  registerInventoryCountReports(app, services);
   registerCatalogImport(app, services, post);
   registerInventoryLots(app, services, post);
   app.get(

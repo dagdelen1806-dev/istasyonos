@@ -866,6 +866,11 @@ export function registerInventoryTerminal(
           loss = safeAdd(loss, plan.lossMinor);
           snapshots.push({
             productId: p.id,
+            productName: p.name,
+            barcode: p.barcode,
+            unit: p.base_unit,
+            countedByUserId: l.counted_by_user_id,
+            deviceId: l.device_id,
             before: integer(p.stock_qty),
             after: plan.quantity,
             delta: plan.quantity - integer(p.stock_qty),
@@ -937,6 +942,11 @@ export function registerInventoryTerminal(
         }
         snapshots.push({
           productId: p.id,
+          productName: p.name,
+          barcode: p.barcode,
+          unit: p.base_unit,
+          countedByUserId: l.counted_by_user_id,
+          deviceId: l.device_id,
           before: integer(p.stock_qty),
           after: qty,
           valueMinor: amount,
@@ -966,7 +976,7 @@ export function registerInventoryTerminal(
         d.id,
         reason,
         lines,
-        { draftId: d.id, items: snapshots }
+        { draftId: d.id, countReportVersion: 1, items: snapshots }
       );
       await execute(
         c,

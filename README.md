@@ -55,6 +55,8 @@ Finans işlemleri integer kuruş kullanır. Banka teyidi, gerçek Turpak/OCR ver
 
 ## Market ön muhasebesi — 17 Ekim 2026
 
+**23 Ekim sayım raporları:** Onaylanmış terminal sayımlarına tarih filtresi, dönem toplamı, ürün/parti ayrıntısı ve CSV eklendi. Tutarlar kayıtlı fişten, adetler sayım anındaki veriden alınır. Yeni SQL göçü yok; 0017 dahil şema gerekir. [Sayım raporu rehberi](docs/market-sayim-raporlari-2026-10-23.md).
+
 **El terminalinde parti sayımı:** Takipli ürünlerde gerçek parti seçimi, sayılmayanı koruma, ortak cihazdan okutma, stok değişince yeniden sayım ve yetkili net maliyet onayı eklendi. `0017_terminal_lot_counts` gerekir. [Parti sayımı rehberi](docs/market-terminal-parti-sayimi-2026-10-19.md) kullanım ve muhasebe kurallarını açıklar.
 
 **19 Ekim ürün listesi güncellemesi:** Dosya/yapıştırma önizlemesi, kaynak stok kodu, mevcut kart koruması, grup %1/%10/%20 KDV seçimi ve yalnız DEMO için artı başlangıç stoğu/net maliyet aktarımı eklendi. `0015_catalog_imports` ve `0016_catalog_opening` gerekir. [Ürün aktarım rehberi](docs/market-urun-aktarimi-2026-10-19.md), muhasebe etkisini ve Windows güncellemesini açıklar.

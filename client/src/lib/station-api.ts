@@ -222,3 +222,22 @@ export function loadCatalogHistory(
     `/market-accounting/inventory/catalog-history?${new URLSearchParams({ stationId })}`
   );
 }
+
+export function loadCountReports(
+  stationId: string,
+  from: string,
+  to: string,
+  cursor = ""
+): Promise<import("@shared/count-report").CountReportPage> {
+  return request(
+    `/market-accounting/inventory/count-reports?${new URLSearchParams({ stationId, from, to, cursor })}`
+  );
+}
+export function loadCountReport(
+  stationId: string,
+  entryId: string
+): Promise<import("@shared/count-report").CountReportDetail> {
+  return request(
+    `/market-accounting/inventory/count-reports/${encodeURIComponent(entryId)}?${new URLSearchParams({ stationId })}`
+  );
+}

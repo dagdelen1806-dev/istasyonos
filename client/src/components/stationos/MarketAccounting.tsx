@@ -1,3 +1,4 @@
+import { CountReports } from "./CountReports";
 import { InventoryManagement } from "./InventoryManagement";
 import { CatalogImport } from "./CatalogImport";
 import { InventoryLots } from "./InventoryLots";
@@ -48,6 +49,7 @@ const tabs = [
   ["stock", "Stok ve fiyat", Package],
   ["catalog", "Ürün aktarımı", Package],
   ["lots", "Lot ve SKT", Package],
+  ["counts", "Sayım raporları", Package],
   ["monthly", "Aylık kâr–zarar", BookOpen],
   ["purchase", "Alış ve mal kabul", Receipt],
   ["returns", "İadeler", Undo2],
@@ -426,6 +428,9 @@ function MarketAccountingWorkspace({
               canWrite={canProduct}
               action={w.action}
             />
+          )}
+          {tab === "counts" && (
+            <CountReports stationId={stationId} today={d.today} />
           )}
           {tab === "monthly" && (
             <MonthlyMarketReport stationId={stationId} today={d.today} />

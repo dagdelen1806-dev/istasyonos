@@ -50,3 +50,5 @@ pnpm dev
 İki ayrı Chromium bağlamı geliştirme ve üretimde 390px personel terminali/masaüstü yetkili, parti CSV'si, gizlilik, sayılmayan parti/karantina koruması ve hem okutma hem mali onayda yanıt kaybı/yenileme/aynı-ID tek kayıt kontrolünü geçti. JS sayfa hatası, haricî ağ isteği ve yatay taşma görülmedi. Mevcut stok/terminal ve lot/SKT/FEFO/iade/fire HTTP paketleri de son üretim/0017 ile geçti. Fizikî Windows/MySQL8/TC73 ve enerji/ağ kesintisi saha kabulü ayrıca gerekir.
 
 Özel test erişimleri ve ekran görüntüleri Git dışında `/workspace/terminal-lot-test` altında tutulur; kullanıcı fiyat listesi, `.env`, DB ve parolalar kaynak paketine eklenmez.
+
+23 Ekim: Onaylanmış sayımların tarihli mali incelemesi için [Sayım raporları](market-sayim-raporlari-2026-10-23.md) eklendi. Yeni toplam 81 testtir; yukarıdaki 75 test terminal parti sayımı tesliminin tarihli sonucudur.
