@@ -1,6 +1,6 @@
 {
   "not": "Güncel kaynak sürümü; manifest kendisi hariç tüm Git kaynakları.",
-  "dosya_sayisi": 366,
+  "dosya_sayisi": 367,
   "dosyalar": [
     {
       "dosya": ".dockerignore",
@@ -786,6 +786,11 @@
       "dosya": "docs/market-raf-etiketleri-2026-10-24.md",
       "byte": 9535,
       "sha256": "7546dcd5636ffec3782b21d64c9370b61a88146aecf17b4dee96d23148f4de40"
+    },
+    {
+      "dosya": "docs/market-raporlar-plani-2026-10-24.md",
+      "byte": 14991,
+      "sha256": "d9a005af6f280491b6f1dfabe2583b2c7af000ec0a238c289769ee1746c1354c"
     },
     {
       "dosya": "docs/market-satin-alma-siparisleri-2026-10-24.md",
