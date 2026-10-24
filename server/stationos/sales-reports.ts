@@ -1,3 +1,10 @@
+import {
+  reportFilters,
+  saleFilter,
+  validateReportFilters,
+  reportOptions,
+} from "./report-filters";
+import type { ReportFilters } from "../../shared/market-reports";
 import type { Express } from "express";
 import type { PoolConnection } from "mysql2/promise";
 import type { Services, Row } from "./market-pos";
@@ -24,21 +31,27 @@ const where =
   "e.tenant_id=? AND e.station_id=? AND e.business_date BETWEEN ? AND ? AND e.seq<=?";
 const saleFrom =
   "FROM st_market_entries e JOIN st_pos_sales s ON s.id=e.source_id AND s.station_id=e.station_id AND s.tenant_id=e.tenant_id";
-async function metrics(c: PoolConnection, p: unknown[]) {
+async function metrics(c: PoolConnection, p: unknown[], f: ReportFilters) {
+  const sf = saleFilter("s", f),
+    lf = saleFilter("fs", f),
+    filtered = !!(f.registerId || f.userId);
+  const ledgerFilter = filtered
+    ? ` AND ((e.kind='POS_SALE' AND EXISTS(SELECT 1 FROM st_pos_sales fs WHERE fs.id=e.source_id AND fs.station_id=e.station_id ${lf.sql})) OR (e.kind='SALE_RETURN' AND EXISTS(SELECT 1 FROM st_market_returns fr JOIN st_market_entries oe ON oe.id=fr.source_entry_id AND oe.kind='POS_SALE' JOIN st_pos_sales fs ON fs.id=oe.source_id WHERE fr.entry_id=e.id AND fs.station_id=e.station_id ${lf.sql})))`
+    : "";
   const b = await rows<Row[]>(
     c,
-    `SELECT l.account_code,SUM(l.debit_minor-l.credit_minor) amount FROM st_market_entries e JOIN st_market_lines l ON l.entry_id=e.id WHERE ${where} GROUP BY l.account_code`,
-    p
+    `SELECT l.account_code,SUM(l.debit_minor-l.credit_minor) amount FROM st_market_entries e JOIN st_market_lines l ON l.entry_id=e.id WHERE ${where} ${ledgerFilter} GROUP BY l.account_code`,
+    [...p, ...(filtered ? [...lf.params, ...lf.params] : [])]
   );
   const s = await first<Row>(
     c,
-    `SELECT COUNT(*) n,COALESCE(SUM(s.total_minor),0) gross,COALESCE(SUM(s.cash_amount_minor),0) cash,COALESCE(SUM(s.card_amount_minor),0) card,COALESCE(SUM(s.receivable_amount_minor),0) credit ${saleFrom} WHERE ${where} AND e.kind='POS_SALE'`,
-    p
+    `SELECT COUNT(*) n,COALESCE(SUM(s.total_minor),0) gross,COALESCE(SUM(s.cash_amount_minor),0) cash,COALESCE(SUM(s.card_amount_minor),0) card,COALESCE(SUM(s.receivable_amount_minor),0) credit ${saleFrom} WHERE ${where} AND e.kind='POS_SALE' ${sf.sql}`,
+    [...p, ...sf.params]
   );
   const r = await first<Row>(
     c,
-    `SELECT COUNT(*) n,COALESCE(SUM(r.gross_minor),0) gross,COALESCE(SUM(CASE WHEN r.wallet='CASH_SAFE' THEN r.refund_minor ELSE 0 END),0) cash,COALESCE(SUM(CASE WHEN r.wallet='BANK' THEN r.refund_minor ELSE 0 END),0) bank,COALESCE(SUM(r.credited_minor),0) credit FROM st_market_entries e JOIN st_market_returns r ON r.entry_id=e.id AND r.station_id=e.station_id WHERE ${where} AND e.kind='SALE_RETURN'`,
-    p
+    `SELECT COUNT(*) n,COALESCE(SUM(r.gross_minor),0) gross,COALESCE(SUM(CASE WHEN r.wallet='CASH_SAFE' THEN r.refund_minor ELSE 0 END),0) cash,COALESCE(SUM(CASE WHEN r.wallet='BANK' THEN r.refund_minor ELSE 0 END),0) bank,COALESCE(SUM(r.credited_minor),0) credit FROM st_market_entries e JOIN st_market_returns r ON r.entry_id=e.id AND r.station_id=e.station_id JOIN st_market_entries oe ON oe.id=r.source_entry_id AND oe.kind='POS_SALE' JOIN st_pos_sales s ON s.id=oe.source_id AND s.station_id=e.station_id WHERE ${where} AND e.kind='SALE_RETURN' ${sf.sql}`,
+    [...p, ...sf.params]
   );
   return salesMetrics(
     Object.fromEntries(b.map(x => [x.account_code, integer(x.amount)])),
@@ -62,11 +75,34 @@ const sale = (r: Row): ReportSale => ({
 });
 const saleSelect = `SELECT s.*,e.id entry_id,e.seq,e.business_date,u.name actor_name,g.name register_name ${saleFrom} JOIN users u ON u.id=s.user_id JOIN st_pos_registers g ON g.id=s.register_id`;
 export function registerSalesReports(app: Express, services: Services) {
+  app.get(
+    "/api/stationos/market-accounting/reports/options",
+    async (req, res) => {
+      try {
+        const actor = services.actor(req),
+          station = requireId(req.query.stationId, "stationId");
+        res.json(
+          await withTransaction(async c => {
+            const { scope } = await services.requireStation(
+              c,
+              actor,
+              station,
+              READ
+            );
+            return reportOptions(c, scope.tenantId, station);
+          })
+        );
+      } catch (e) {
+        services.error(res, e);
+      }
+    }
+  );
   app.get(prefix, async (req, res) => {
     try {
       const actor = services.actor(req),
         station = requireId(req.query.stationId, "stationId"),
         today = businessToday();
+      const filters = reportFilters(req.query);
       const range = reportRange(
         req.query.from ?? today.slice(0, 7) + "-01",
         req.query.to ?? today
@@ -85,6 +121,8 @@ export function registerSalesReports(app: Express, services: Services) {
             station,
             READ
           );
+          await validateReportFilters(c, scope.tenantId, station, filters);
+          const sf = saleFilter("s", filters);
           const boundary = await first<Row>(
             c,
             "SELECT COALESCE(MAX(seq),0) seq FROM st_market_entries WHERE tenant_id=? AND station_id=?",
@@ -100,18 +138,22 @@ export function registerSalesReports(app: Express, services: Services) {
               "Rapor kayıt sınırı mevcut kayıtlardan ileride."
             );
           const p = [scope.tenantId, station, range.from, range.to, asOf];
-          const totals = await metrics(c, p),
-            previous = await metrics(c, [
-              scope.tenantId,
-              station,
-              range.previousFrom,
-              range.previousTo,
-              asOf,
-            ]);
+          const totals = await metrics(c, p, filters),
+            previous = await metrics(
+              c,
+              [
+                scope.tenantId,
+                station,
+                range.previousFrom,
+                range.previousTo,
+                asOf,
+              ],
+              filters
+            );
           const selected = await rows<Row[]>(
             c,
-            `${saleSelect} WHERE ${where} AND e.kind='POS_SALE' ${cursor ? "AND e.seq<?" : ""} ORDER BY e.seq DESC LIMIT 51`,
-            [...p, ...(cursor ? [cursor] : [])]
+            `${saleSelect} WHERE ${where} AND e.kind='POS_SALE' ${sf.sql} ${cursor ? "AND e.seq<?" : ""} ORDER BY e.seq DESC LIMIT 51`,
+            [...p, ...sf.params, ...(cursor ? [cursor] : [])]
           );
           const book = await first<Row>(
             c,
@@ -124,6 +166,8 @@ export function registerSalesReports(app: Express, services: Services) {
             p.slice(0, 4)
           );
           return {
+            filters,
+            salesOnly: !!(filters.registerId || filters.userId),
             from: range.from,
             to: range.to,
             previousFrom: range.previousFrom,
@@ -150,6 +194,8 @@ export function registerSalesReports(app: Express, services: Services) {
         station = requireId(req.query.stationId, "stationId"),
         range = reportRange(req.query.from, req.query.to),
         asOf = reportSequence(req.query.asOf);
+      const filters = reportFilters(req.query),
+        sf = saleFilter("s", filters);
       const cursor = req.query.cursor
         ? requireId(req.query.cursor, "cursor")
         : null;
@@ -162,13 +208,20 @@ export function registerSalesReports(app: Express, services: Services) {
               READ
             ),
             p = [scope.tenantId, station, range.from, range.to, asOf];
+          await validateReportFilters(c, scope.tenantId, station, filters);
           const result = await rows<Row[]>(
             c,
             `SELECT x.product_id,p.name,p.barcode,SUM(x.sold) sold,SUM(x.returned) returned,SUM(x.net) net,SUM(x.cost) cost,SUM(x.missing) missing FROM (
-          SELECT l.product_id,l.quantity sold,0 returned,l.net_total_minor net,l.cost_total_minor cost,(l.net_total_minor IS NULL OR l.cost_total_minor IS NULL) missing ${saleFrom} JOIN st_pos_sale_lines l ON l.sale_id=s.id WHERE ${where} AND e.kind='POS_SALE'
-          UNION ALL SELECT l.product_id,0 sold,l.quantity returned,-l.net_minor net,-l.cost_minor cost,0 missing FROM st_market_entries e JOIN st_market_returns r ON r.entry_id=e.id AND r.station_id=e.station_id JOIN st_market_return_lines l ON l.return_id=r.id WHERE ${where} AND e.kind='SALE_RETURN'
+          SELECT l.product_id,l.quantity sold,0 returned,l.net_total_minor net,l.cost_total_minor cost,(l.net_total_minor IS NULL OR l.cost_total_minor IS NULL) missing ${saleFrom} JOIN st_pos_sale_lines l ON l.sale_id=s.id WHERE ${where} AND e.kind='POS_SALE' ${sf.sql}
+          UNION ALL SELECT l.product_id,0 sold,l.quantity returned,-l.net_minor net,-l.cost_minor cost,0 missing FROM st_market_entries e JOIN st_market_returns r ON r.entry_id=e.id AND r.station_id=e.station_id JOIN st_market_entries oe ON oe.id=r.source_entry_id AND oe.kind='POS_SALE' JOIN st_pos_sales s ON s.id=oe.source_id AND s.station_id=e.station_id JOIN st_market_return_lines l ON l.return_id=r.id WHERE ${where} AND e.kind='SALE_RETURN' ${sf.sql}
         ) x JOIN st_products p ON p.id=x.product_id ${cursor ? "WHERE x.product_id>?" : ""} GROUP BY x.product_id,p.name,p.barcode ORDER BY x.product_id LIMIT 51`,
-            [...p, ...p, ...(cursor ? [cursor] : [])]
+            [
+              ...p,
+              ...sf.params,
+              ...p,
+              ...sf.params,
+              ...(cursor ? [cursor] : []),
+            ]
           );
           if (result.some(r => integer(r.missing) > 0))
             fail(

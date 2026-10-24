@@ -1,11 +1,14 @@
+import { CancellationReports } from "./CancellationReports";
 import { useEffect, useState } from "react";
 import { money, type AppState } from "@shared/station";
 import type {
   SalesReport,
   SalesProducts,
   ReportSaleDetail,
+  ReportOptions,
 } from "@shared/market-reports";
 import {
+  loadReportOptions,
   loadSalesReport,
   loadSalesProducts,
   loadReportSale,
@@ -61,7 +64,34 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
   const [tab, setTab] = useState("sales"),
     [from, setFrom] = useState(today.slice(0, 7) + "-01"),
     [to, setTo] = useState(today);
-  const [query, setQuery] = useState({ from, to, cursor: "", asOf: "" }),
+  const [registerId, setRegisterId] = useState(""),
+    [userId, setUserId] = useState("");
+  const [options, setOptions] = useState<ReportOptions>({
+      registers: [],
+      users: [],
+    }),
+    [optionsError, setOptionsError] = useState("");
+  useEffect(() => {
+    let active = true;
+    loadReportOptions(stationId)
+      .then(o => {
+        if (active) setOptions(o);
+      })
+      .catch(e => {
+        if (active) setOptionsError(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [stationId]);
+  const [query, setQuery] = useState({
+      from,
+      to,
+      cursor: "",
+      asOf: "",
+      registerId: "",
+      userId: "",
+    }),
     [report, setReport] = useState<SalesReport | null>(null),
     [error, setError] = useState("");
   const [products, setProducts] = useState<SalesProducts | null>(null),
@@ -76,7 +106,10 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
     setError("");
     setSelected("");
     setDetail(null);
-    loadSalesReport(stationId, query.from, query.to, query.cursor, query.asOf)
+    loadSalesReport(stationId, query.from, query.to, query.cursor, query.asOf, {
+      registerId: query.registerId,
+      userId: query.userId,
+    })
       .then(r => {
         if (active) setReport(r);
       })
@@ -97,7 +130,8 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
         report.from,
         report.to,
         report.asOf,
-        productCursor
+        productCursor,
+        report.filters
       )
         .then(p => {
           if (active) setProducts(p);
@@ -108,7 +142,15 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
     return () => {
       active = false;
     };
-  }, [stationId, report?.from, report?.to, report?.asOf, productCursor]);
+  }, [
+    stationId,
+    report?.from,
+    report?.to,
+    report?.asOf,
+    report?.filters.registerId,
+    report?.filters.userId,
+    productCursor,
+  ]);
   useEffect(() => {
     let active = true;
     setDetail(null);
@@ -129,7 +171,7 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
     setFrom(f);
     setTo(t);
     setProductCursor("");
-    setQuery({ from: f, to: t, cursor: "", asOf: "" });
+    setQuery({ from: f, to: t, cursor: "", asOf: "", registerId, userId });
   }
   const shift = (days: number) => {
     const d = new Date(today + "T12:00:00Z");
@@ -150,6 +192,7 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
           ["products", "Ürün kârlılığı"],
           ["monthly", "Aylık kâr–zarar"],
           ["counts", "Sayım raporları"],
+          ["cancellations", "Sepet iptal denetimi"],
         ].map(([id, label]) => (
           <button
             key={id}
@@ -190,6 +233,36 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
                 required
               />
             </label>
+            <label>
+              Kasa
+              <select
+                aria-label="Rapor kasa filtresi"
+                value={registerId}
+                onChange={e => setRegisterId(e.target.value)}
+              >
+                <option value="">Bütün kasalar</option>
+                {options.registers.map(o => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Satışı yapan
+              <select
+                aria-label="Rapor kasiyer filtresi"
+                value={userId}
+                onChange={e => setUserId(e.target.value)}
+              >
+                <option value="">Bütün satış kullanıcıları</option>
+                {options.users.map(o => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button className="btn primary" type="submit">
               Raporu getir / yenile
             </button>
@@ -215,6 +288,9 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
               Bu ay
             </button>
           </form>
+          {optionsError && (
+            <p role="alert">Filtre seçenekleri yüklenemedi: {optionsError}</p>
+          )}
           {error && (
             <p role="alert" className="ma-error">
               {error}
@@ -228,6 +304,23 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
                 {report.startedOn ?? "ticari defter açılmadı"} ·{" "}
                 {report.closedDays}/{report.totalDays} gün sonu kayıtlı. Defter
                 öncesi satışlar dahil değil. Açık gün tutarları değişebilir.
+              </p>
+              {report.salesOnly && (
+                <p className="notice">
+                  Kasa / satış kullanıcısı filtresi uygulanıyor. İadeler özgün
+                  satışın kasasına/kullanıcısına bağlıdır. Genel giderler
+                  dağıtılmaz; faaliyet sonucu bu kapsamda gösterilmez.
+                </p>
+              )}
+              <p>
+                Uygulanan kasa:{" "}
+                {options.registers.find(o => o.id === report.filters.registerId)
+                  ?.name ??
+                  (report.filters.registerId || "Bütün kasalar")}{" "}
+                · Satışı yapan:{" "}
+                {options.users.find(o => o.id === report.filters.userId)
+                  ?.name ??
+                  (report.filters.userId || "Bütün kullanıcılar")}
               </p>
               <p className="ma-hint">
                 Üretim: {dateTR(report.generatedAt)} · Kayıt sınırı:{" "}
@@ -250,12 +343,22 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
                       ["Gider ve kayıplar", report.totals.expensesMinor],
                       ["Diğer kayıtlı kazançlar", report.totals.gainsMinor],
                       ["Faaliyet sonucu", report.totals.resultMinor],
-                    ].map(([label, value]) => (
-                      <div key={String(label)}>
-                        <span>{label}</span>
-                        <strong>{money(Number(value))}</strong>
-                      </div>
-                    ))}
+                    ]
+                      .filter(
+                        ([label]) =>
+                          !report.salesOnly ||
+                          ![
+                            "Gider ve kayıplar",
+                            "Diğer kayıtlı kazançlar",
+                            "Faaliyet sonucu",
+                          ].includes(String(label))
+                      )
+                      .map(([label, value]) => (
+                        <div key={String(label)}>
+                          <span>{label}</span>
+                          <strong>{money(Number(value))}</strong>
+                        </div>
+                      ))}
                   </div>
                   <p>
                     {report.totals.saleCount} satış fişi · Ortalama satış fişi:{" "}
@@ -276,10 +379,16 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
                   </p>
                   <p>
                     Önceki eşit dönem {report.previousFrom}–{report.previousTo}:
-                    net ciro {money(report.previous.netGrossMinor)} · Faaliyet
-                    sonucu farkı{" "}
+                    net ciro {money(report.previous.netGrossMinor)} ·{" "}
+                    {report.salesOnly
+                      ? "Brüt kâr farkı"
+                      : "Faaliyet sonucu farkı"}{" "}
                     {money(
-                      report.totals.resultMinor - report.previous.resultMinor
+                      report.salesOnly
+                        ? report.totals.grossProfitMinor -
+                            report.previous.grossProfitMinor
+                        : report.totals.resultMinor -
+                            report.previous.resultMinor
                     )}
                   </p>
                   <section className="ma-panel">
@@ -327,6 +436,10 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
                               report.to,
                               "Kayıt sınırı",
                               report.asOf,
+                              "Kasa ID",
+                              report.filters.registerId,
+                              "Satış kullanıcı ID",
+                              report.filters.userId,
                             ],
                             [
                               "Fiş ID",
@@ -633,6 +746,13 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
             </>
           )}
         </>
+      )}
+      {tab === "cancellations" && (
+        <CancellationReports
+          stationId={stationId}
+          today={today}
+          options={options}
+        />
       )}
       {tab === "monthly" && (
         <MonthlyMarketReport stationId={stationId} today={today} />

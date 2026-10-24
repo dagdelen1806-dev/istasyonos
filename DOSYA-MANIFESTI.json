@@ -1,6 +1,6 @@
 {
   "not": "Güncel kaynak sürümü; manifest kendisi hariç tüm Git kaynakları.",
-  "dosya_sayisi": 375,
+  "dosya_sayisi": 383,
   "dosyalar": [
     {
       "dosya": ".dockerignore",
@@ -34,8 +34,8 @@
     },
     {
       "dosya": "CLAUDE.md",
-      "byte": 25116,
-      "sha256": "ec82d9a528408417a8008283f144f02e727bd5d404f680be017107ec5989783b"
+      "byte": 26096,
+      "sha256": "93e2c751f16bcc44501ded5753b68281ce7058a550a0b543fe23932abde491a6"
     },
     {
       "dosya": "Dockerfile",
@@ -49,18 +49,18 @@
     },
     {
       "dosya": "PAKET-BILGISI.json",
-      "byte": 9389,
-      "sha256": "e8cb65dd22565f7155fc927303237e871a13945b933684f8b1fcac729045abbf"
+      "byte": 9821,
+      "sha256": "2ea48098c8799c0bf01b5df55ff9c7c07ec8ec31d163c0592e1f160a6a700ada"
     },
     {
       "dosya": "README-PAKET.md",
-      "byte": 3020,
-      "sha256": "935ebb29c4d1d043c2d6cd45d156ffc93885fa669a6fc3cb5748f3be227b5e5e"
+      "byte": 3226,
+      "sha256": "1c67a8475c2dd8d8aaba3caba5c64ecc3368f5c3dd8844a2000211fc9d134897"
     },
     {
       "dosya": "README.md",
-      "byte": 10939,
-      "sha256": "ae87d59baeb155d3b63df44f400775706fd4a2f7010d5b0f518b5b00be1506b9"
+      "byte": 11263,
+      "sha256": "8886ae2c765c30fd4ef025fef445cb33d540c1c2eb1c7d0248c20c825603ead1"
     },
     {
       "dosya": "TODO.md",
@@ -178,6 +178,11 @@
       "sha256": "a089a1300d01d2d2d31a04ba75b2a24c581b7f4c7436443eb878806100dccb9a"
     },
     {
+      "dosya": "client/src/components/stationos/CancellationReports.tsx",
+      "byte": 10430,
+      "sha256": "b26aa1075821a9d5fd374eae33379cb3be3d40e8cfd0950dcd7b7122099d557e"
+    },
+    {
       "dosya": "client/src/components/stationos/CatalogImport.tsx",
       "byte": 19099,
       "sha256": "24ffa4073a25811f432963b2308399e1fcc3155899856397f95cbc49c0ee59f4"
@@ -229,8 +234,8 @@
     },
     {
       "dosya": "client/src/components/stationos/MarketReports.tsx",
-      "byte": 25454,
-      "sha256": "1a0915c05c9fd4ef2916639b16a79b0bfbbf6e3ee96d9ca0d02114bf90aad330"
+      "byte": 29451,
+      "sha256": "16043c9cd0d9685b8149ff8535b432ba1fccb90aa0e682053f7d8a50c8569b66"
     },
     {
       "dosya": "client/src/components/stationos/MarketReturns.tsx",
@@ -284,8 +289,8 @@
     },
     {
       "dosya": "client/src/components/stationos/market-reports.css",
-      "byte": 543,
-      "sha256": "3b20dcb466b891a34e307a446a764f52c5703307537c7b134438fd581038abab"
+      "byte": 563,
+      "sha256": "b94a75db0c1d1bdd30f1f2863c4622acb8e4c6a4aad6e948a5d50a9c728b0e03"
     },
     {
       "dosya": "client/src/components/stationos/pos.css",
@@ -614,8 +619,8 @@
     },
     {
       "dosya": "client/src/lib/station-api.ts",
-      "byte": 9560,
-      "sha256": "f75debad57c3b3cc9ffeee836028395c2090a0d6b85c561fbfdb5f6e52a86588"
+      "byte": 10439,
+      "sha256": "5d0d725b87e8bf23008bf08d9b201f8d3762e51f8e464d9214ecdf7fd5f4a8c2"
     },
     {
       "dosya": "client/src/lib/trpc.ts",
@@ -798,14 +803,19 @@
       "sha256": "7546dcd5636ffec3782b21d64c9370b61a88146aecf17b4dee96d23148f4de40"
     },
     {
+      "dosya": "docs/market-rapor-kontrol-2026-10-24.md",
+      "byte": 9551,
+      "sha256": "60724b4513dc746babd939a8fdddefe92e6ea4e1db7629d7e630e7670550afd6"
+    },
+    {
       "dosya": "docs/market-raporlar-merkezi-2026-10-24.md",
-      "byte": 9773,
-      "sha256": "24ca96fca80071cd5753e1e4fe1f1235708cb0ecb8b61480cc43cb97d6f365eb"
+      "byte": 9995,
+      "sha256": "1f924cc1599c554c813f0da3d115e8f77d59d78e1cbfb870769adf6d4e25f527"
     },
     {
       "dosya": "docs/market-raporlar-plani-2026-10-24.md",
-      "byte": 15164,
-      "sha256": "bb62d675a314ed35a3987a9398563df8d0240c4418ba2cde64877b7e33045bf3"
+      "byte": 15393,
+      "sha256": "a435b1bae4ed454392c59782eb017936b20637e3400ea03b7de5dcd369d1a21e"
     },
     {
       "dosya": "docs/market-satin-alma-siparisleri-2026-10-24.md",
@@ -1263,6 +1273,11 @@
       "sha256": "d3088027b77156349bddd551f29336e4689ab67fe9a17ba8522d827166c844ac"
     },
     {
+      "dosya": "scripts/smoke-report-controls.ts",
+      "byte": 11670,
+      "sha256": "96a05fdabefd946df75919ab26c8bdbe41dcba2e2e0dca2b9ad4905e5f58ffaf"
+    },
+    {
       "dosya": "scripts/smoke-shelf-labels.ts",
       "byte": 15801,
       "sha256": "a29ca4c8f26cefd67943d3c31bd2137cc102ed18ba1fea453f2d151c423f33de"
@@ -1418,6 +1433,16 @@
       "sha256": "6f6f85223d7f22a7872b3bca0f88f4dfd23a096dd1cf887a05c57ed52795cd7d"
     },
     {
+      "dosya": "server/stationos/cancellation-report-domain.ts",
+      "byte": 3354,
+      "sha256": "39108dfc80fe0113d59d9ff7318b27c64b36204d2723a2a65139d0ab85c1ef88"
+    },
+    {
+      "dosya": "server/stationos/cancellation-reports.ts",
+      "byte": 5467,
+      "sha256": "9781f2d70c5d8a7feebff4badb47b744ef9b5508c7f4289657637fec9ba570bb"
+    },
+    {
       "dosya": "server/stationos/catalog-import.test.ts",
       "byte": 4094,
       "sha256": "eb1be11e5daac38578ada9b32f851120b9773817f39e26d3f1684528b6274f4c"
@@ -1554,8 +1579,8 @@
     },
     {
       "dosya": "server/stationos/market-accounting.ts",
-      "byte": 42681,
-      "sha256": "2480f1d8578e1177419c07bbf66acc78deb1cd65783573b0c7beb820ba814bbc"
+      "byte": 42797,
+      "sha256": "52dccfbac2bcc6a3d56f5e1d6c87d483e2e6724ba5da41eee60694ba7b931508"
     },
     {
       "dosya": "server/stationos/market-inventory.ts",
@@ -1698,6 +1723,11 @@
       "sha256": "ddd22c69b419628adf3a6bd8744857a2e90622eb833e95f6caea7e4cb2939662"
     },
     {
+      "dosya": "server/stationos/migrations/0020_cart_event_sequence.sql",
+      "byte": 292,
+      "sha256": "0d77326c7294502ac896d1557ede45946b32866e482ce21774d5e6ea1d2511de"
+    },
+    {
       "dosya": "server/stationos/pos-carts.ts",
       "byte": 15330,
       "sha256": "21c4c0f21da399667d2e26b04e6fdceb8b01701f1cd28c4551b89cc47e9b6f55"
@@ -1723,6 +1753,16 @@
       "sha256": "57e22b81bb6d5f0a9a2079dc36bc7ce0612e39325b320d9635434492e69525b3"
     },
     {
+      "dosya": "server/stationos/report-analysis.test.ts",
+      "byte": 3585,
+      "sha256": "e64c4e54ff08b0b01cb879b2b3e958414484491b31b8b5fe95cfe3f2a093121a"
+    },
+    {
+      "dosya": "server/stationos/report-filters.ts",
+      "byte": 2560,
+      "sha256": "b7c02f1eb0c3527b1ed47cb47c804312b0a3354e3995b85dc5c8b82b2da25fd0"
+    },
+    {
       "dosya": "server/stationos/safety.test.ts",
       "byte": 1417,
       "sha256": "4e87222c1f4cf3ceff2967e0006fda9acb478239b9fcb6921f5d1e0386d91d7c"
@@ -1744,8 +1784,8 @@
     },
     {
       "dosya": "server/stationos/sales-reports.ts",
-      "byte": 11730,
-      "sha256": "d9b5ac942be0683870654fa6bb47ddc3ab15e4117a130479c9eaba61ba1d1e76"
+      "byte": 14148,
+      "sha256": "82b9c7caf31ca3395938698cb405a3994068ab29ee2eff4e0252f5db5c5d3868"
     },
     {
       "dosya": "server/stationos/shelf-label-domain.ts",
@@ -1819,8 +1859,8 @@
     },
     {
       "dosya": "shared/market-reports.ts",
-      "byte": 1960,
-      "sha256": "812e089500975c5a1131b93850f18bc689467c807f44e7807eacec42ff35d859"
+      "byte": 2939,
+      "sha256": "ce9c5af0e6836515835798b12ca3a932a678f60e2c6392f75e32d4d0ad7c5bb7"
     },
     {
       "dosya": "shared/market-return-math.ts",

@@ -289,9 +289,13 @@ export async function loadSalesReport(
   from: string,
   to: string,
   cursor = "",
-  asOf = ""
+  asOf = "",
+  filters: import("@shared/market-reports").ReportFilters = {
+    registerId: "",
+    userId: "",
+  }
 ) {
-  const params = new URLSearchParams({ stationId, from, to });
+  const params = new URLSearchParams({ stationId, from, to, ...filters });
   if (cursor) params.set("cursor", cursor);
   if (asOf) params.set("asOf", asOf);
   return request(`/market-accounting/reports/sales?${params}`) as Promise<
@@ -303,10 +307,14 @@ export async function loadSalesProducts(
   from: string,
   to: string,
   asOf: string,
-  cursor = ""
+  cursor = "",
+  filters: import("@shared/market-reports").ReportFilters = {
+    registerId: "",
+    userId: "",
+  }
 ) {
   return request(
-    `/market-accounting/reports/sales/products?${new URLSearchParams({ stationId, from, to, asOf, cursor })}`
+    `/market-accounting/reports/sales/products?${new URLSearchParams({ stationId, from, to, asOf, cursor, ...filters })}`
   ) as Promise<import("@shared/market-reports").SalesProducts>;
 }
 export async function loadReportSale(
@@ -317,4 +325,24 @@ export async function loadReportSale(
   return request(
     `/market-accounting/reports/sales/${encodeURIComponent(saleId)}?${new URLSearchParams({ stationId, asOf })}`
   ) as Promise<import("@shared/market-reports").ReportSaleDetail>;
+}
+
+export function loadReportOptions(
+  stationId: string
+): Promise<import("@shared/market-reports").ReportOptions> {
+  return request(
+    `/market-accounting/reports/options?${new URLSearchParams({ stationId })}`
+  );
+}
+export function loadCancellations(
+  stationId: string,
+  from: string,
+  to: string,
+  filters: import("@shared/market-reports").ReportFilters,
+  asOf = "",
+  cursor = ""
+): Promise<import("@shared/market-reports").CancellationReport> {
+  return request(
+    `/market-accounting/reports/cancellations?${new URLSearchParams({ stationId, from, to, ...filters, ...(asOf ? { asOf } : {}), ...(cursor ? { cursor } : {}) })}`
+  );
 }

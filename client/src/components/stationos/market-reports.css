@@ -14,7 +14,8 @@
   gap: 5px;
   max-width: 100%;
 }
-.mr-filters input {
+.mr-filters input,
+.mr-filters select {
   padding: 8px;
   border: 1px solid #ccd9d2;
   border-radius: 6px;

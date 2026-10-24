@@ -33,6 +33,8 @@ export interface ReportSale {
   creditMinor: number;
 }
 export interface SalesReport {
+  filters: ReportFilters;
+  salesOnly: boolean;
   from: string;
   to: string;
   previousFrom: string;
@@ -88,4 +90,49 @@ export interface ReportSaleDetail extends ReportSale {
     creditedMinor: number;
     wallet: string | null;
   }[];
+}
+
+export interface ReportFilters {
+  registerId: string;
+  userId: string;
+}
+export interface ReportOptions {
+  registers: { id: string; name: string }[];
+  users: { id: string; name: string }[];
+}
+export interface CancellationRow {
+  id: string;
+  cartId: string;
+  version: number;
+  date: string;
+  actorName: string;
+  registerName: string;
+  deviceId: string;
+  action: "REDUCE" | "CANCEL";
+  reason: string | null;
+  removedMinor: number;
+  lines: {
+    productId: string;
+    name: string;
+    barcode: string;
+    beforeQty: number;
+    afterQty: number;
+    removedQty: number;
+    unitPriceMinor: number;
+    removedMinor: number;
+  }[];
+}
+export interface CancellationReport {
+  from: string;
+  to: string;
+  asOf: string;
+  nextCursor: string | null;
+  filters: ReportFilters;
+  totals: {
+    events: number;
+    reductions: number;
+    cancellations: number;
+    removedMinor: number;
+  };
+  rows: CancellationRow[];
 }

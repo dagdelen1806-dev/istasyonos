@@ -1,5 +1,7 @@
 # Market Raporlar merkezi — ilk teslim, 24 Ekim 2026
 
+**Sonraki teslim:** Kasa/kasiyer filtreleri ve sepet iptal denetimi [yeni rehberde](market-rapor-kontrol-2026-10-24.md); 0020 gerekir. Aşağıdaki yeni göç gerektirmeyen kapsam ilk teslimin tarihsel açıklamasıdır.
+
 İhtiyaç planı: [Raporlar planı](market-raporlar-plani-2026-10-24.md). Bu teslim **Raporlar** menüsüne (`/raporlar`) tarihli satış özeti, ödeme dağılımı, fiş ayrıntısı ve sayfalı ürün kârlılığı ekler. Mevcut aylık kâr–zarar ve terminal sayım raporları aynı bileşenlerle bu merkezden açılır; eski muhasebe ekranındaki erişimleri sürer. Yeni SQL migration veya bağımlılık yoktur; mevcut 0019 dahil kurulu şema kullanılır.
 
 ## Kullanım ve kapsam
