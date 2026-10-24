@@ -346,3 +346,29 @@ export function loadCancellations(
     `/market-accounting/reports/cancellations?${new URLSearchParams({ stationId, from, to, ...filters, ...(asOf ? { asOf } : {}), ...(cursor ? { cursor } : {}) })}`
   );
 }
+
+export function loadStockHealth(
+  stationId: string,
+  ageDays: string,
+  mode: string,
+  search: string,
+  cursor = "",
+  snapshot = ""
+): Promise<import("@shared/stock-health").StockHealthReport> {
+  return request(
+    `/market-accounting/reports/stock-health?${new URLSearchParams({ stationId, ageDays, mode, search, ...(cursor ? { cursor } : {}), ...(snapshot ? { snapshot } : {}) })}`
+  );
+}
+export function loadMarginAlerts(
+  stationId: string,
+  from: string,
+  to: string,
+  thresholdBps: string,
+  mode: string,
+  cursor = "",
+  asOf = ""
+): Promise<import("@shared/stock-health").MarginReport> {
+  return request(
+    `/market-accounting/reports/margin-alerts?${new URLSearchParams({ stationId, from, to, thresholdBps, mode, ...(cursor ? { cursor } : {}), ...(asOf ? { asOf } : {}) })}`
+  );
+}

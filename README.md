@@ -55,6 +55,8 @@ Finans işlemleri integer kuruş kullanır. Banka teyidi, gerçek Turpak/OCR ver
 
 ## Market ön muhasebesi — 17 Ekim 2026
 
+**24 Ekim stokta bağlı para ve marj uyarıları:** Raporlar merkezine güncel mali stok değeri, 30/60/90 günlük hareketsizlik/gözlem kapsamı, satılabilir–kapalı miktar ve özgün satış satırından zarar/düşük marj analizi eklendi. Yeni migration yok; 0020 dahil kurulum gerekir. [Kullanım ve hesaplama rehberi](docs/market-stok-sagligi-marj-2026-10-24.md).
+
 **24 Ekim rapor filtreleri ve iptal denetimi:** Satış/ürün raporlarına kasa ve satışı yapan kişi filtresi; ayrı açıklamalı sepet iptal raporu eklendi. Filtreli görünümde genel giderler kasiyere dağıtılmaz. `0020_cart_event_sequence` gerekir. [Kullanım rehberi](docs/market-rapor-kontrol-2026-10-24.md).
 
 **24 Ekim Raporlar merkezi:** Yeni `/raporlar` menüsünde tarihli satış özeti, nakit/kart/veresiye payları, kaynak fiş/iade ayrıntısı ve sayfalı ürün kârlılığı eklendi. Aylık kâr–zarar ve sayım raporları aynı merkezden açılır. Yeni migration yok; mevcut 0019 gerekir. [Kullanım ve kapsam](docs/market-raporlar-merkezi-2026-10-24.md).

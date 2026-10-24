@@ -1,5 +1,7 @@
 # Market Raporlar merkezi — ihtiyaç analizi ve geliştirme planı
 
+**Stok/marj teslimi:** Güncel mali stok değeri, 30/60/90 hareketsizlik/gözlem ve özgün satış marjı uyarıları [eklendi](market-stok-sagligi-marj-2026-10-24.md). Tarihsel stok/devir, kategori/saat, cari ve sonraki analizler plan olarak kalır.
+
 **Teslim güncellemesi:** Kasa/kasiyer filtreleri ve sepet iptal denetimi eklendi; [çalışan kapsam ve 0020 güncellemesi](market-rapor-kontrol-2026-10-24.md). Kategori/saat ve sonraki stok/cari raporları plan olarak kalır.
 
 24 Ekim 2026. Bu belge plan ve kabul ölçütüdür. İlk satış/ödeme/fiş/ürün paketi sonradan teslim edildi: [çalışan kapsam](market-raporlar-merkezi-2026-10-24.md). Diğer öneriler tamamlanmış özellik değildir. İnceleme tabanı GitHub main `8fbb293`: MarketAccounting, MonthlyMarketReport, CountReports, MarketStatement, inventory-reports ve market-report-domain. Öncelik markettir; akaryakıt vardiya kaynaklarını market satışına eklemeyiz.

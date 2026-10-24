@@ -16,7 +16,7 @@ Göçler 0020 dahil uygulanır. Yeni/boş kurulumda kullanıcı tabloları için
 
 ## Kapsam ve doğrulama
 
-24 Ekim 2026: TypeScript, 20 dosyada 112 test ve üretim derlemesi başarılı. Liste aktarımının geliştirme/üretim HTTP ve Chromium testleri geçti. Lot/SKT kontrollerinin tarihli kanıtları ilgili rehberdedir. Fizikî Windows/okuyucu/yazıcı ve banka/e-belge/ÖKC saha kabulü yapılmadı. POS DEMO sınırlaması ve bağlı sunucu/LAN gereksinimi devam eder; bağlantısız tarayıcı mali kuyruğu yoktur.
+24 Ekim 2026: TypeScript, 21 dosyada 125 test ve üretim derlemesi başarılı. Liste aktarımının geliştirme/üretim HTTP ve Chromium testleri geçti. Lot/SKT kontrollerinin tarihli kanıtları ilgili rehberdedir. Fizikî Windows/okuyucu/yazıcı ve banka/e-belge/ÖKC saha kabulü yapılmadı. POS DEMO sınırlaması ve bağlı sunucu/LAN gereksinimi devam eder; bağlantısız tarayıcı mali kuyruğu yoktur.
 
 `.env`, parolalar, kullanıcı fiyat listesi, DB, `.git`, `node_modules` ve `dist` pakete dahil edilmez. Bağımlılıklar lockfile üzerinden kurulur. `DOSYA-MANIFESTI.json` kendi dosyası hariç kaynak dosyalarının SHA-256 envanteridir. Eski `paket-2026-10-19` dalındaki RAR/ZIP önceki kopyadır; güncel geliştirme kaynağı `main` dalıdır.
 
@@ -31,3 +31,5 @@ Raf etiketi kuyruğu, A4/PDF baskı paketleri, ayrı fizikî yerleştirme ve ona
 Raporlar merkezi: `/raporlar` altında tarihli satış/ödeme dağılımı, kaynak fiş/iade, sayfalı ürün kârlılığı, mevcut aylık/sayım raporları. Yeni migration yok; 0019 dahil şema gerekir. Kullanım/sınırlar: `docs/market-raporlar-merkezi-2026-10-24.md`.
 
 Kasa/kasiyer satış filtreleri ve açıklamalı sepet iptal denetimi: `docs/market-rapor-kontrol-2026-10-24.md`. 0020 göçü gerekir. İptal tutarı gerçekleşmiş satış veya stok hareketi değildir.
+
+Stokta bağlı para/hareketsizlik ve özgün satış marjı uyarıları: `docs/market-stok-sagligi-marj-2026-10-24.md`. Yeni migration yok; 0020 gerekir. Güncel mali değer geçmiş stok veya stok devir hızı değildir.
