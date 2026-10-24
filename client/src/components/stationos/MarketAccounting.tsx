@@ -1,3 +1,4 @@
+import { ShelfLabels } from "./ShelfLabels";
 import { PurchaseOrders } from "./PurchaseOrders";
 import { CountReports } from "./CountReports";
 import { InventoryManagement } from "./InventoryManagement";
@@ -48,6 +49,7 @@ import "./inventory.css";
 const tabs = [
   ["overview", "Özet", BookOpen],
   ["stock", "Stok ve fiyat", Package],
+  ["shelf", "Raf etiketleri", Package],
   ["catalog", "Ürün aktarımı", Package],
   ["lots", "Lot ve SKT", Package],
   ["counts", "Sayım raporları", Package],
@@ -428,6 +430,14 @@ function MarketAccountingWorkspace({
               closedToday={d.closedToday}
               locked={w.locked}
               canWrite={canProduct}
+              action={w.action}
+            />
+          )}
+          {tab === "shelf" && (
+            <ShelfLabels
+              stationId={stationId}
+              refreshKey={d.stock}
+              locked={w.locked}
               action={w.action}
             />
           )}

@@ -12,11 +12,11 @@ pnpm tsx server/stationos/migrate.ts
 pnpm dev
 ```
 
-Göçler 0018 dahil uygulanır. Yeni/boş kurulumda kullanıcı tabloları için ayrıca `pnpm db:migrate` gerekir; `README.md` ve `WINDOWS-BASLANGIC.md` rehberlerini izleyin. Tarayıcı adresi `http://localhost:3000`; `istasyonos.test` Windows/Laragon proxy ayarınıza bağlıdır. Bulut kodlaması Windows dosyalarını kendiliğinden değiştirmez.
+Göçler 0019 dahil uygulanır. Yeni/boş kurulumda kullanıcı tabloları için ayrıca `pnpm db:migrate` gerekir; `README.md` ve `WINDOWS-BASLANGIC.md` rehberlerini izleyin. Tarayıcı adresi `http://localhost:3000`; `istasyonos.test` Windows/Laragon proxy ayarınıza bağlıdır. Bulut kodlaması Windows dosyalarını kendiliğinden değiştirmez.
 
 ## Kapsam ve doğrulama
 
-24 Ekim 2026: TypeScript, 17 dosyada 87 test ve üretim derlemesi başarılı. Liste aktarımının geliştirme/üretim HTTP ve Chromium testleri geçti. Lot/SKT kontrollerinin tarihli kanıtları ilgili rehberdedir. Fizikî Windows/okuyucu/yazıcı ve banka/e-belge/ÖKC saha kabulü yapılmadı. POS DEMO sınırlaması ve bağlı sunucu/LAN gereksinimi devam eder; bağlantısız tarayıcı mali kuyruğu yoktur.
+24 Ekim 2026: TypeScript, 18 dosyada 94 test ve üretim derlemesi başarılı. Liste aktarımının geliştirme/üretim HTTP ve Chromium testleri geçti. Lot/SKT kontrollerinin tarihli kanıtları ilgili rehberdedir. Fizikî Windows/okuyucu/yazıcı ve banka/e-belge/ÖKC saha kabulü yapılmadı. POS DEMO sınırlaması ve bağlı sunucu/LAN gereksinimi devam eder; bağlantısız tarayıcı mali kuyruğu yoktur.
 
 `.env`, parolalar, kullanıcı fiyat listesi, DB, `.git`, `node_modules` ve `dist` pakete dahil edilmez. Bağımlılıklar lockfile üzerinden kurulur. `DOSYA-MANIFESTI.json` kendi dosyası hariç kaynak dosyalarının SHA-256 envanteridir. Eski `paket-2026-10-19` dalındaki RAR/ZIP önceki kopyadır; güncel geliştirme kaynağı `main` dalıdır.
 
@@ -25,3 +25,5 @@ El terminali parti sayımı için `docs/market-terminal-parti-sayimi-2026-10-19.
 Onaylanmış terminal sayımları için tarihli rapor ve CSV: `docs/market-sayim-raporlari-2026-10-23.md`. Bu rapor güncellemesi yeni SQL göçü eklemez.
 
 Satın alma siparişleri, kısmi kabul ve yönetici fiyat revizyonu için `docs/market-satin-alma-siparisleri-2026-10-24.md` rehberini okuyun; 0018 göçü gerekir.
+
+Raf etiketi kuyruğu, A4/PDF baskı paketleri, ayrı fizikî yerleştirme ve onaylı cihazdan raf/kasa fiyat kontrolü: `docs/market-raf-etiketleri-2026-10-24.md`. 0019 göçü gerekir. Geliştirme/üretim HTTP ve Chromium, fiyat değişiminde eski baskıyı durdurma ve bağımsız A4 PDF okuması başarılı; fizikî yazıcı/okuyucu denenmedi.

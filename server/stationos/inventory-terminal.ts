@@ -40,7 +40,7 @@ const MANAGE: StationRole[] = ["OWNER", "MANAGER"];
 const full = (role: StationRole) => POST.includes(role);
 const deviceId = (body: Record<string, unknown>) =>
   requireId(body.__stationDevice, "Cihaz kimliği");
-async function approvedDevice(
+export async function approvedDevice(
   c: PoolConnection,
   station: string,
   body: Record<string, unknown>

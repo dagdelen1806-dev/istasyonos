@@ -259,3 +259,27 @@ export function loadPurchaseOrder(
     `/market-accounting/inventory/orders/${encodeURIComponent(orderId)}?${new URLSearchParams({ stationId })}`
   );
 }
+
+export function loadShelfLabels(
+  stationId: string
+): Promise<import("@shared/shelf-labels").ShelfState> {
+  return request(
+    `/market-accounting/inventory/shelf-labels?${new URLSearchParams({ stationId })}`
+  );
+}
+export function loadShelfBatch(
+  stationId: string,
+  batchId: string
+): Promise<import("@shared/shelf-labels").ShelfBatch> {
+  return request(
+    `/market-accounting/inventory/shelf-batches/${encodeURIComponent(batchId)}?${new URLSearchParams({ stationId })}`
+  );
+}
+export function lookupShelfPrice(
+  stationId: string,
+  barcode: string
+): Promise<import("@shared/shelf-labels").ShelfItem & { barcode: string }> {
+  return request(
+    `/market-accounting/inventory/shelf-check?${new URLSearchParams({ stationId, barcode })}`
+  );
+}

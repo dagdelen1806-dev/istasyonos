@@ -55,6 +55,8 @@ Finans işlemleri integer kuruş kullanır. Banka teyidi, gerçek Turpak/OCR ver
 
 ## Market ön muhasebesi — 17 Ekim 2026
 
+**24 Ekim raf etiketleri:** Perakende fiyatına göre etiket kuyruğu, kayıtlı A4/PDF baskı paketi, ayrı fizikî yerleştirme teyidi ve onaylı el terminalinden raf/kasa fiyat kontrolü eklendi. Eski paketler güncel fiyatla kontrol edilir; fiyat farkı otomatik indirim veya fiyat değişikliği yapmaz. `0019_shelf_labels` gerekir. [Etiket rehberi](docs/market-raf-etiketleri-2026-10-24.md).
+
 **24 Ekim satın alma siparişleri:** Kritik stoktan tedarikçi taslağı, yönetici onayı, kısmi/tam teslimat, kalan fiyat revizyonu ve açıklamalı kapatma eklendi. Sipariş borç doğurmaz; gerçek kabul ortak stok/KDV/cari akışını kullanır. Açık onaylı miktarlar stok önerisine katılır. `0018_purchase_orders` gerekir. [Sipariş rehberi](docs/market-satin-alma-siparisleri-2026-10-24.md).
 
 **23 Ekim sayım raporları:** Onaylanmış terminal sayımlarına tarih filtresi, dönem toplamı, ürün/parti ayrıntısı ve CSV eklendi. Tutarlar kayıtlı fişten, adetler sayım anındaki veriden alınır. Yeni SQL göçü yok; 0017 dahil şema gerekir. [Sayım raporu rehberi](docs/market-sayim-raporlari-2026-10-23.md).

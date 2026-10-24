@@ -11,6 +11,7 @@ import {
 import { newRequestId } from "@/lib/id";
 type Pending = { path: string; payload: Record<string, unknown>; id: string };
 const paths = [
+  "shelf-check",
   "device-register",
   "device-approve",
   "draft-create",

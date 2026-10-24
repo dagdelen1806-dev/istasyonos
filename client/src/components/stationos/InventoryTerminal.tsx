@@ -1,3 +1,4 @@
+import { ShelfPriceCheck } from "./ShelfPriceCheck";
 import { lotCountPlan } from "@shared/lot-count";
 import {
   LotReceiptFields,
@@ -272,6 +273,12 @@ function TerminalWorkspace({
               </details>
             )}
           </section>
+          <ShelfPriceCheck
+            stationId={stationId}
+            locked={w.locked}
+            approved={!!d.device?.enabled}
+            action={w.action}
+          />
           <section className="ma-panel">
             <div className="ma-panel-head">
               <div>

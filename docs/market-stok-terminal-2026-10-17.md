@@ -1,5 +1,7 @@
 # Market stok ve el terminali — 17 Ekim 2026
 
+**24 Ekim raf etiketi güncellemesi:** A4/PDF, ayrı yerleştirme ve el terminalinden raf/kasa fiyat kontrolü için [etiket rehberini](market-raf-etiketleri-2026-10-24.md) okuyun; 0019 gerekir.
+
 **Sonraki güncelleme:** 0014 lot/SKT, FEFO, karantina ve parti sayımı/fire ekler; [lot rehberini](market-lot-skt-2026-10-17.md) okuyun. Aşağıdaki kapsam, 0013 teslimini açıklar.
 
 **Market muhasebesi → Stok ve fiyat**: ürün/raf kartı, çoklu barkod, fiyat listesi ve kritik stok. **El terminali** (`/el-terminali`): tarayıcıdan cihaz kaydı, ortak mal kabul ve stok sayımı. **Aylık kâr–zarar**: iadeler sonrası net satış, maliyet ve giderler. Ticari defter açılışı gerekir; eski satış, iade, cari ve gün sonları korunur.
