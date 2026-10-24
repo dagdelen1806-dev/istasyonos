@@ -1,0 +1,67 @@
+CREATE TABLE st_purchase_orders (
+ id CHAR(36) NOT NULL PRIMARY KEY,
+ seq BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
+ tenant_id CHAR(36) NOT NULL,
+ station_id CHAR(36) NOT NULL,
+ supplier_id CHAR(36) NOT NULL,
+ supplier_name VARCHAR(190) NOT NULL,
+ label VARCHAR(100) NOT NULL,
+ expected_date DATE NOT NULL,
+ status ENUM('DRAFT','APPROVED','PARTIAL','RECEIVED','CLOSED','CANCELLED') NOT NULL DEFAULT 'DRAFT',
+ version BIGINT NOT NULL DEFAULT 0,
+ created_by_user_id INT NOT NULL,
+ approved_by_user_id INT NULL,
+ created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ KEY ix_orders_station (tenant_id,station_id,status,seq),
+ FOREIGN KEY (tenant_id) REFERENCES st_tenants(id),
+ FOREIGN KEY (station_id) REFERENCES st_stations(id),
+ FOREIGN KEY (supplier_id) REFERENCES st_market_parties(id),
+ FOREIGN KEY (created_by_user_id) REFERENCES users(id),
+ FOREIGN KEY (approved_by_user_id) REFERENCES users(id),
+ CONSTRAINT ck_order_version CHECK (version>=0)
+) ENGINE=InnoDB;
+CREATE TABLE st_purchase_order_lines (
+ order_id CHAR(36) NOT NULL,
+ product_id CHAR(36) NOT NULL,
+ product_name VARCHAR(190) NOT NULL,
+ barcode VARCHAR(190) NOT NULL,
+ base_unit VARCHAR(32) NOT NULL,
+ ordered_qty BIGINT NOT NULL,
+ received_qty BIGINT NOT NULL DEFAULT 0,
+ unit_net_minor BIGINT NOT NULL,
+ vat_bps SMALLINT UNSIGNED NOT NULL,
+ PRIMARY KEY (order_id,product_id),
+ KEY ix_order_line_product (product_id),
+ FOREIGN KEY (order_id) REFERENCES st_purchase_orders(id),
+ FOREIGN KEY (product_id) REFERENCES st_products(id),
+ CONSTRAINT ck_order_line CHECK (ordered_qty BETWEEN 1 AND 1000000000 AND received_qty BETWEEN 0 AND ordered_qty AND unit_net_minor>=0 AND vat_bps<=10000)
+) ENGINE=InnoDB;
+CREATE TABLE st_purchase_order_receipts (
+ purchase_id CHAR(36) NOT NULL PRIMARY KEY,
+ order_id CHAR(36) NOT NULL,
+ entry_id CHAR(36) NOT NULL UNIQUE,
+ approved_version BIGINT NOT NULL,
+ reference VARCHAR(100) NOT NULL,
+ due_date DATE NOT NULL,
+ total_minor BIGINT NOT NULL,
+ items_json JSON NOT NULL,
+ received_by_user_id INT NOT NULL,
+ created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ KEY ix_order_receipts (order_id,created_at,purchase_id),
+ FOREIGN KEY (order_id) REFERENCES st_purchase_orders(id),
+ FOREIGN KEY (entry_id) REFERENCES st_market_entries(id),
+ FOREIGN KEY (received_by_user_id) REFERENCES users(id),
+ CONSTRAINT ck_order_receipt CHECK (total_minor>0 AND approved_version>=0)
+) ENGINE=InnoDB;
+CREATE TABLE st_purchase_order_events (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ order_id CHAR(36) NOT NULL,
+ kind VARCHAR(32) NOT NULL,
+ actor_user_id INT NOT NULL,
+ detail_json JSON NOT NULL,
+ created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ KEY ix_order_events (order_id,id),
+ FOREIGN KEY (order_id) REFERENCES st_purchase_orders(id),
+ FOREIGN KEY (actor_user_id) REFERENCES users(id)
+) ENGINE=InnoDB;

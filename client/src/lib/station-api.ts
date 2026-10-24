@@ -241,3 +241,21 @@ export function loadCountReport(
     `/market-accounting/inventory/count-reports/${encodeURIComponent(entryId)}?${new URLSearchParams({ stationId })}`
   );
 }
+
+export function loadPurchaseOrders(
+  stationId: string,
+  status = "OPEN",
+  cursor = ""
+): Promise<import("@shared/purchase-order").OrderPage> {
+  return request(
+    `/market-accounting/inventory/orders?${new URLSearchParams({ stationId, status, cursor })}`
+  );
+}
+export function loadPurchaseOrder(
+  stationId: string,
+  orderId: string
+): Promise<import("@shared/purchase-order").OrderDetail> {
+  return request(
+    `/market-accounting/inventory/orders/${encodeURIComponent(orderId)}?${new URLSearchParams({ stationId })}`
+  );
+}

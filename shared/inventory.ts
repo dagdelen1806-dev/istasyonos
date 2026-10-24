@@ -28,6 +28,7 @@ export interface InventoryItem {
   unit: string;
   shelf: string;
   quantity: number;
+  onOrderQty: number;
   valueMinor: number;
   averageCostMinor: number;
   salePriceMinor: number;

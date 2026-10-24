@@ -42,7 +42,7 @@ export function registerInventory(
           );
           const products = await rows<Row[]>(
             c,
-            "SELECT p.*,mb.station_id AS book_id,i.value_minor,(SELECT COALESCE(SUM(l.quantity),0) FROM st_inventory_lots l WHERE l.product_id=p.id AND l.status='AVAILABLE' AND l.expiry_date>=?) AS saleable_qty,s.name AS supplier_name,s.payable_limit_minor,COALESCE(b.balance_minor,0) AS supplier_balance FROM st_products p LEFT JOIN st_market_books mb ON mb.station_id=p.station_id LEFT JOIN st_market_inventory i ON i.product_id=p.id LEFT JOIN st_market_parties s ON s.id=p.market_supplier_id LEFT JOIN st_market_balances b ON b.station_id=p.station_id AND b.account_code='PAYABLE' AND b.party_key=s.id AND b.register_key='' WHERE p.tenant_id=? AND p.station_id=? ORDER BY p.name LIMIT 5000",
+            "SELECT p.*,mb.station_id AS book_id,i.value_minor,(SELECT COALESCE(SUM(ol.ordered_qty-ol.received_qty),0) FROM st_purchase_order_lines ol JOIN st_purchase_orders o ON o.id=ol.order_id WHERE ol.product_id=p.id AND o.station_id=p.station_id AND o.status IN ('APPROVED','PARTIAL')) AS on_order_qty,(SELECT COALESCE(SUM(l.quantity),0) FROM st_inventory_lots l WHERE l.product_id=p.id AND l.status='AVAILABLE' AND l.expiry_date>=?) AS saleable_qty,s.name AS supplier_name,s.payable_limit_minor,COALESCE(b.balance_minor,0) AS supplier_balance FROM st_products p LEFT JOIN st_market_books mb ON mb.station_id=p.station_id LEFT JOIN st_market_inventory i ON i.product_id=p.id LEFT JOIN st_market_parties s ON s.id=p.market_supplier_id LEFT JOIN st_market_balances b ON b.station_id=p.station_id AND b.account_code='PAYABLE' AND b.party_key=s.id AND b.register_key='' WHERE p.tenant_id=? AND p.station_id=? ORDER BY p.name LIMIT 5000",
             [businessToday(), scope.tenantId, station]
           );
           const sold = await rows<Row[]>(
@@ -71,6 +71,19 @@ export function registerInventory(
                 integer(p.safety_days),
                 integer(p.order_pack_qty)
               );
+              const planned = stockSuggestion(
+                safeAdd(
+                  p.lot_tracking ? integer(p.saleable_qty) : quantity,
+                  integer(p.on_order_qty)
+                ),
+                integer(p.minimum_qty),
+                integer(p.maximum_qty),
+                sales,
+                integer(p.lead_days),
+                integer(p.review_days),
+                integer(p.safety_days),
+                integer(p.order_pack_qty)
+              );
               const unit =
                 p.last_purchase_net_minor === null
                   ? quantity
@@ -78,7 +91,7 @@ export function registerInventory(
                     : integer(p.purchase_price_minor)
                   : integer(p.last_purchase_net_minor);
               const estimate = estimateOrder(
-                s.quantity,
+                planned.quantity,
                 unit,
                 p.purchase_vat_bps === null ? null : integer(p.purchase_vat_bps)
               );
@@ -105,6 +118,7 @@ export function registerInventory(
                 unit: p.base_unit,
                 shelf: p.shelf,
                 quantity,
+                onOrderQty: integer(p.on_order_qty),
                 lotTracking: !!p.lot_tracking,
                 saleableQty: p.lot_tracking
                   ? integer(p.saleable_qty)
@@ -138,7 +152,7 @@ export function registerInventory(
                 sold28: sales,
                 dailySales: s.daily,
                 coverDays: s.coverDays,
-                suggestedQty: s.quantity,
+                suggestedQty: planned.quantity,
                 estimatedNetMinor: estimate.net,
                 estimatedGrossMinor: estimate.gross,
                 creditStatus: "REVIEW",

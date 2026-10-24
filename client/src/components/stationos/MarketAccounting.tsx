@@ -1,3 +1,4 @@
+import { PurchaseOrders } from "./PurchaseOrders";
 import { CountReports } from "./CountReports";
 import { InventoryManagement } from "./InventoryManagement";
 import { CatalogImport } from "./CatalogImport";
@@ -51,6 +52,7 @@ const tabs = [
   ["lots", "Lot ve SKT", Package],
   ["counts", "Sayım raporları", Package],
   ["monthly", "Aylık kâr–zarar", BookOpen],
+  ["orders", "Satın alma siparişleri", Package],
   ["purchase", "Alış ve mal kabul", Receipt],
   ["returns", "İadeler", Undo2],
   ["parties", "Cariler", Users],
@@ -440,6 +442,15 @@ function MarketAccountingWorkspace({
               stationId={stationId}
               revision={d.revision}
               locked={w.locked}
+              action={w.action}
+            />
+          )}
+          {tab === "orders" && (
+            <PurchaseOrders
+              stationId={stationId}
+              ledger={d}
+              locked={w.locked}
+              canApprove={canProduct}
               action={w.action}
             />
           )}

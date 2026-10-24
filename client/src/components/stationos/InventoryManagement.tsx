@@ -221,6 +221,7 @@ export function InventoryManagement({
                       </td>
                       <td>
                         {p.quantity} {p.unit}
+                        <small>Onaylı açık sipariş: {p.onOrderQty}</small>
                         {p.lotTracking && (
                           <small>
                             Satılabilir {p.saleableQty} · Kapalı {p.blockedQty}
@@ -326,6 +327,7 @@ export function InventoryManagement({
                       "Kategori",
                       "Raf",
                       "Stok",
+                      "Açık onaylı sipariş",
                       "Birim",
                       "Min",
                       "Maks",
@@ -342,6 +344,7 @@ export function InventoryManagement({
                       p.category,
                       p.shelf,
                       p.quantity,
+                      p.onOrderQty,
                       p.unit,
                       p.minimumQty,
                       p.maximumQty,

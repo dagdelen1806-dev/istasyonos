@@ -11,6 +11,11 @@ import { newRequestId } from "@/lib/id";
 import { today } from "./Common";
 type Pending = { path: string; payload: Record<string, unknown>; id: string };
 const allowed = [
+  "inventory/order-save",
+  "inventory/order-approve",
+  "inventory/order-reprice",
+  "inventory/order-close",
+  "inventory/order-receive",
   "inventory/catalog-import",
   "inventory/lot-enable",
   "inventory/lot-status",
