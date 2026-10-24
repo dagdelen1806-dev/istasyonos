@@ -5,6 +5,9 @@ import { lazy, Suspense } from "react";
 const MarketAccounting = lazy(
   () => import("@/components/stationos/MarketAccounting")
 );
+const MarketReports = lazy(
+  () => import("@/components/stationos/MarketReports")
+);
 const MarketPos = lazy(() => import("@/components/stationos/MarketPos"));
 const InventoryTerminal = lazy(
   () => import("@/components/stationos/InventoryTerminal")
@@ -101,6 +104,7 @@ const navItems = [
   { path: "/satinalma", label: "Satın alma", icon: ShoppingCart },
   { path: "/cari", label: "Cari ve alacak", icon: Users },
   { path: "/finans", label: "Finansal görünüm", icon: Wallet },
+  { path: "/raporlar", label: "Raporlar", icon: Activity },
   { path: "/market-muhasebe", label: "Market muhasebesi", icon: Wallet },
   { path: "/el-terminali", label: "El terminali", icon: Smartphone },
   {
@@ -114,6 +118,10 @@ const navItems = [
   { path: "/denetim", label: "İşlem geçmişi", icon: ShieldCheck },
 ];
 const pageInfo: Record<string, [string, string]> = {
+  "/raporlar": [
+    "Raporlar",
+    "Satış, ürün kârlılığı ve kayıtlı raporlar tek merkezde.",
+  ],
   "/el-terminali": [
     "El terminali",
     "Cihaz tanımı, ortak mal kabul ve sayım taslakları.",
@@ -541,6 +549,10 @@ export default function StationApp() {
           {navItems
             .filter(
               n =>
+                (n.path !== "/raporlar" ||
+                  ["OWNER", "MANAGER", "ACCOUNTANT"].includes(
+                    state?.member?.role ?? ""
+                  )) &&
                 (n.path !== "/el-terminali" ||
                   [
                     "OWNER",
@@ -1383,6 +1395,11 @@ export default function StationApp() {
                     </div>
                   </Panel>
                 </>
+              )}
+              {path === "/raporlar" && (
+                <Suspense fallback={<p>Raporlar yükleniyor…</p>}>
+                  <MarketReports state={state} stationId={stationId} />
+                </Suspense>
               )}
               {path === "/market-muhasebe" && (
                 <Suspense fallback={<p>Market muhasebesi yükleniyor…</p>}>

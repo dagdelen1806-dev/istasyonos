@@ -1,6 +1,6 @@
 # Market Raporlar merkezi — ihtiyaç analizi ve geliştirme planı
 
-24 Ekim 2026. Bu belge plan ve kabul ölçütüdür; aşağıda önerilen raporlar tamamlanmış özellik değildir. İnceleme tabanı GitHub main `8fbb293`: MarketAccounting, MonthlyMarketReport, CountReports, MarketStatement, inventory-reports ve market-report-domain. Öncelik markettir; akaryakıt vardiya kaynaklarını market satışına eklemeyiz.
+24 Ekim 2026. Bu belge plan ve kabul ölçütüdür. İlk satış/ödeme/fiş/ürün paketi sonradan teslim edildi: [çalışan kapsam](market-raporlar-merkezi-2026-10-24.md). Diğer öneriler tamamlanmış özellik değildir. İnceleme tabanı GitHub main `8fbb293`: MarketAccounting, MonthlyMarketReport, CountReports, MarketStatement, inventory-reports ve market-report-domain. Öncelik markettir; akaryakıt vardiya kaynaklarını market satışına eklemeyiz.
 
 ## Mevcut durum
 
@@ -91,7 +91,7 @@ CSV mevcut güvenli metin işleme ile ilk aşamada; yazdır/PDF rapor kapsamı a
 4. **Finans ve kontroller:** Güncel cari yaşlandırma, gerçekleşen nakit akışı/kart alacağı, gider/KDV/gün sonu ve raf farkı. Geçmiş yaşlandırma ve stok raporunu veri yeterliliğine göre aç.
 5. **İleri analiz:** ABC ve karşılaştırmalar, yeterli geçmiş varsa devir/sepet analizi; varsayımlı tahminler ayrı ekran.
 
-Her teslimde sentetik DEMO ile nakit/kart/karma/veresiye satış; kısmi ve başka gün iade; aynı kasada iki kişi; aynı-ID kayıp yanıt; transfer/ödemenin satışa katılmaması; kapalı gün geçmişinin korunması doğrulanır. İptal edilen sepet gerçek satışa eklenmez. Filtreli alt toplamlar doğru kapsamda ana toplamla mutabık olmalı; ürün raporunda ürün dışı gider için açıklamalı mutabakat farkı bulunabilir.
+Her teslimde sentetik DEMO ile nakit/kart/karma/veresiye satış; kısmi ve başka gün iade; aynı kullanıcının iki cihazı ve farklı kullanıcıların kendi kasa oturumları; aynı-ID kayıp yanıt; transfer/ödemenin satışa katılmaması; kapalı gün geçmişinin korunması doğrulanır. İptal edilen sepet gerçek satışa eklenmez. Filtreli alt toplamlar doğru kapsamda ana toplamla mutabık olmalı; ürün raporunda ürün dışı gider için açıklamalı mutabakat farkı bulunabilir.
 
 Satır çoğaltan JOIN'lerde satış, ödeme, iade ve olay sayıları önceden kendi tanelerinde toplanmalı; karma ödeme/çok parti/çok olay fişi çoğaltmamalı. Her rapor için kaynak ve toplama düzeyi tasarım sırasında kaydedilir. Eksik snapshot, sıfır maliyet ve bozuk kaynak sessizce tahmin edilmez.
 

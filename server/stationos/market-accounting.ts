@@ -1,3 +1,4 @@
+import { registerSalesReports } from "./sales-reports";
 import { registerShelfLabels } from "./shelf-labels";
 import { registerPurchaseOrders } from "./purchase-orders";
 import { registerInventoryCountReports } from "./inventory-count-reports";
@@ -268,6 +269,7 @@ export function registerMarketAccountingRoutes(
   }
   registerMarketReturns(app, services, post);
   registerInventory(app, services, post);
+  registerSalesReports(app, services);
   registerShelfLabels(app, services, post);
   registerPurchaseOrders(app, services, post);
   registerInventoryTerminal(app, services, post);

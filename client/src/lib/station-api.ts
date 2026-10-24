@@ -283,3 +283,38 @@ export function lookupShelfPrice(
     `/market-accounting/inventory/shelf-check?${new URLSearchParams({ stationId, barcode })}`
   );
 }
+
+export async function loadSalesReport(
+  stationId: string,
+  from: string,
+  to: string,
+  cursor = "",
+  asOf = ""
+) {
+  const params = new URLSearchParams({ stationId, from, to });
+  if (cursor) params.set("cursor", cursor);
+  if (asOf) params.set("asOf", asOf);
+  return request(`/market-accounting/reports/sales?${params}`) as Promise<
+    import("@shared/market-reports").SalesReport
+  >;
+}
+export async function loadSalesProducts(
+  stationId: string,
+  from: string,
+  to: string,
+  asOf: string,
+  cursor = ""
+) {
+  return request(
+    `/market-accounting/reports/sales/products?${new URLSearchParams({ stationId, from, to, asOf, cursor })}`
+  ) as Promise<import("@shared/market-reports").SalesProducts>;
+}
+export async function loadReportSale(
+  stationId: string,
+  saleId: string,
+  asOf: string
+) {
+  return request(
+    `/market-accounting/reports/sales/${encodeURIComponent(saleId)}?${new URLSearchParams({ stationId, asOf })}`
+  ) as Promise<import("@shared/market-reports").ReportSaleDetail>;
+}

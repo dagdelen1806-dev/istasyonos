@@ -1,8 +1,21 @@
 {
   "routes": [
-    { "path": "/el-terminali", "title": "El terminali ve stok sayımı" },
-    { "path": "/market-muhasebe", "title": "Market muhasebesi" },
-    { "path": "/kasa", "title": "Satış kasası" },
+    {
+      "path": "/raporlar",
+      "title": "Market raporları"
+    },
+    {
+      "path": "/el-terminali",
+      "title": "El terminali ve stok sayımı"
+    },
+    {
+      "path": "/market-muhasebe",
+      "title": "Market muhasebesi"
+    },
+    {
+      "path": "/kasa",
+      "title": "Satış kasası"
+    },
     {
       "path": "/",
       "title": "Genel bakış"
