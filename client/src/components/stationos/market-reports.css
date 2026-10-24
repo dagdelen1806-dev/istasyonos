@@ -36,3 +36,10 @@
     flex: 1 1 140px;
   }
 }
+
+/* Keep submit labels readable when another screen's shared hover styles load. */
+.mr-root .mr-filters .btn.primary,
+.mr-root .mr-filters .btn.primary:hover {
+  background: #087c61;
+  color: #fff;
+}

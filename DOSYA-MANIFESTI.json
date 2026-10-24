@@ -289,8 +289,8 @@
     },
     {
       "dosya": "client/src/components/stationos/market-reports.css",
-      "byte": 563,
-      "sha256": "b94a75db0c1d1bdd30f1f2863c4622acb8e4c6a4aad6e948a5d50a9c728b0e03"
+      "byte": 763,
+      "sha256": "f74fb783e40bb346d9fa8de9df54130f623a8ea3ec6e8a9010868a381061bcaa"
     },
     {
       "dosya": "client/src/components/stationos/pos.css",
