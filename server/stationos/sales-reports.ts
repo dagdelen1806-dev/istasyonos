@@ -31,7 +31,7 @@ const where =
   "e.tenant_id=? AND e.station_id=? AND e.business_date BETWEEN ? AND ? AND e.seq<=?";
 const saleFrom =
   "FROM st_market_entries e JOIN st_pos_sales s ON s.id=e.source_id AND s.station_id=e.station_id AND s.tenant_id=e.tenant_id";
-async function metrics(c: PoolConnection, p: unknown[], f: ReportFilters) {
+export async function salesReportMetrics(c: PoolConnection, p: unknown[], f: ReportFilters) {
   const sf = saleFilter("s", f),
     lf = saleFilter("fs", f),
     filtered = !!(f.registerId || f.userId);
@@ -138,8 +138,8 @@ export function registerSalesReports(app: Express, services: Services) {
               "Rapor kayıt sınırı mevcut kayıtlardan ileride."
             );
           const p = [scope.tenantId, station, range.from, range.to, asOf];
-          const totals = await metrics(c, p, filters),
-            previous = await metrics(
+          const totals = await salesReportMetrics(c, p, filters),
+            previous = await salesReportMetrics(
               c,
               [
                 scope.tenantId,

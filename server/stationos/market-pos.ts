@@ -531,7 +531,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
     for (const line of lines) {
       const p = await first<Row>(
         c,
-        "SELECT id,name,barcode,stock_qty,sale_price_minor FROM st_products WHERE id=? AND tenant_id=? AND station_id=? FOR UPDATE",
+        "SELECT id,name,barcode,category,stock_qty,sale_price_minor FROM st_products WHERE id=? AND tenant_id=? AND station_id=? FOR UPDATE",
         [line.productId, scope.tenantId, stationId]
       );
       if (!p)
@@ -557,6 +557,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       snapshots.push({
         ...line,
         name: p.name,
+        category: p.category ?? "",
         barcode: p.barcode,
         lineTotal,
         priceListName: price.listName,
@@ -630,7 +631,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
       await sellLots(c, lotProduct, line.quantity, id, actor.id);
       await execute(
         c,
-        "INSERT INTO st_pos_sale_lines (id,sale_id,product_id,product_name,barcode,quantity,unit_price_minor,total_minor,price_list_id,price_list_name) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO st_pos_sale_lines (id,sale_id,product_id,product_name,barcode,quantity,unit_price_minor,total_minor,price_list_id,price_list_name,category_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
         [
           randomUUID(),
           id,
@@ -642,6 +643,7 @@ export function registerMarketPosRoutes(app: Express, services: Services) {
           line.lineTotal,
           line.priceListId ?? null,
           line.priceListName,
+          line.category,
         ]
       );
       await execute(

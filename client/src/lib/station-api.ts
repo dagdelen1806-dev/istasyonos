@@ -372,3 +372,15 @@ export function loadMarginAlerts(
     `/market-accounting/reports/margin-alerts?${new URLSearchParams({ stationId, from, to, thresholdBps, mode, ...(cursor ? { cursor } : {}), ...(asOf ? { asOf } : {}) })}`
   );
 }
+
+export function loadSalesAnalysis(
+  stationId: string,
+  from: string,
+  to: string,
+  filters: import("@shared/market-reports").ReportFilters,
+  asOf = ""
+): Promise<import("@shared/sales-analysis").SalesAnalysis> {
+  return request(
+    `/market-accounting/reports/sales-analysis?${new URLSearchParams({ stationId, from, to, ...filters, ...(asOf ? { asOf } : {}) })}`
+  );
+}

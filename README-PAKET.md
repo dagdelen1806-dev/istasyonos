@@ -12,11 +12,11 @@ pnpm tsx server/stationos/migrate.ts
 pnpm dev
 ```
 
-Göçler 0020 dahil uygulanır. Yeni/boş kurulumda kullanıcı tabloları için ayrıca `pnpm db:migrate` gerekir; `README.md` ve `WINDOWS-BASLANGIC.md` rehberlerini izleyin. Tarayıcı adresi `http://localhost:3000`; `istasyonos.test` Windows/Laragon proxy ayarınıza bağlıdır. Bulut kodlaması Windows dosyalarını kendiliğinden değiştirmez.
+Göçler 0021 dahil uygulanır. Yeni/boş kurulumda kullanıcı tabloları için ayrıca `pnpm db:migrate` gerekir; `README.md` ve `WINDOWS-BASLANGIC.md` rehberlerini izleyin. Tarayıcı adresi `http://localhost:3000`; `istasyonos.test` Windows/Laragon proxy ayarınıza bağlıdır. Bulut kodlaması Windows dosyalarını kendiliğinden değiştirmez.
 
 ## Kapsam ve doğrulama
 
-24 Ekim 2026: TypeScript, 21 dosyada 125 test ve üretim derlemesi başarılı. Liste aktarımının geliştirme/üretim HTTP ve Chromium testleri geçti. Lot/SKT kontrollerinin tarihli kanıtları ilgili rehberdedir. Fizikî Windows/okuyucu/yazıcı ve banka/e-belge/ÖKC saha kabulü yapılmadı. POS DEMO sınırlaması ve bağlı sunucu/LAN gereksinimi devam eder; bağlantısız tarayıcı mali kuyruğu yoktur.
+24 Ekim 2026: TypeScript, 22 dosyada 134 test ve üretim derlemesi başarılı. Liste aktarımının geliştirme/üretim HTTP ve Chromium testleri geçti. Lot/SKT kontrollerinin tarihli kanıtları ilgili rehberdedir. Fizikî Windows/okuyucu/yazıcı ve banka/e-belge/ÖKC saha kabulü yapılmadı. POS DEMO sınırlaması ve bağlı sunucu/LAN gereksinimi devam eder; bağlantısız tarayıcı mali kuyruğu yoktur.
 
 `.env`, parolalar, kullanıcı fiyat listesi, DB, `.git`, `node_modules` ve `dist` pakete dahil edilmez. Bağımlılıklar lockfile üzerinden kurulur. `DOSYA-MANIFESTI.json` kendi dosyası hariç kaynak dosyalarının SHA-256 envanteridir. Eski `paket-2026-10-19` dalındaki RAR/ZIP önceki kopyadır; güncel geliştirme kaynağı `main` dalıdır.
 
@@ -33,3 +33,5 @@ Raporlar merkezi: `/raporlar` altında tarihli satış/ödeme dağılımı, kayn
 Kasa/kasiyer satış filtreleri ve açıklamalı sepet iptal denetimi: `docs/market-rapor-kontrol-2026-10-24.md`. 0020 göçü gerekir. İptal tutarı gerçekleşmiş satış veya stok hareketi değildir.
 
 Stokta bağlı para/hareketsizlik ve özgün satış marjı uyarıları: `docs/market-stok-sagligi-marj-2026-10-24.md`. Yeni migration yok; 0020 gerekir. Güncel mali değer geçmiş stok veya stok devir hızı değildir.
+
+Satış anındaki kategori ve 24 İstanbul saati analizi: `docs/market-kategori-saat-2026-10-24.md`. 0021 göçü gerekir; eski kategoriler güncel karttan doldurulmaz.

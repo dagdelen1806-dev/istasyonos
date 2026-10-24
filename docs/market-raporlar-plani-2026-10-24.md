@@ -1,5 +1,7 @@
 # Market Raporlar merkezi — ihtiyaç analizi ve geliştirme planı
 
+**Kategori/saat teslimi:** Satış anı kategorisi, eski kategori eksikliği ayrımı ve İstanbul saatlik analiz [eklendi](market-kategori-saat-2026-10-24.md); 0021 gerekir. Sonraki SKT/fire, cari/vade, tedarikçi ve gün sonu birleşik raporları plan olarak sürer.
+
 **Stok/marj teslimi:** Güncel mali stok değeri, 30/60/90 hareketsizlik/gözlem ve özgün satış marjı uyarıları [eklendi](market-stok-sagligi-marj-2026-10-24.md). Tarihsel stok/devir, kategori/saat, cari ve sonraki analizler plan olarak kalır.
 
 **Teslim güncellemesi:** Kasa/kasiyer filtreleri ve sepet iptal denetimi eklendi; [çalışan kapsam ve 0020 güncellemesi](market-rapor-kontrol-2026-10-24.md). Kategori/saat ve sonraki stok/cari raporları plan olarak kalır.

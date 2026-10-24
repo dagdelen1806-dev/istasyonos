@@ -1,3 +1,4 @@
+import { SalesAnalysis } from "./SalesAnalysis";
 import { StockHealthReports, MarginAlertReports } from "./StockHealthReports";
 import { CancellationReports } from "./CancellationReports";
 import { useEffect, useState } from "react";
@@ -196,6 +197,7 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
           ["cancellations", "Sepet iptal denetimi"],
           ["stockHealth", "Stokta bağlı para"],
           ["marginAlerts", "Satış marjı uyarıları"],
+          ["analysis", "Kategori / saat analizi"],
         ].map(([id, label]) => (
           <button
             key={id}
@@ -760,6 +762,9 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
       {tab === "stockHealth" && <StockHealthReports stationId={stationId} />}
       {tab === "marginAlerts" && (
         <MarginAlertReports stationId={stationId} today={today} />
+      )}
+      {tab === "analysis" && (
+        <SalesAnalysis stationId={stationId} today={today} options={options} />
       )}
       {tab === "monthly" && (
         <MonthlyMarketReport stationId={stationId} today={today} />

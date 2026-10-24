@@ -1,3 +1,4 @@
+import { registerSalesAnalysis } from "./sales-analysis";
 import { registerStockHealthReports } from "./stock-health-reports";
 import { registerCancellationReports } from "./cancellation-reports";
 import { registerSalesReports } from "./sales-reports";
@@ -273,6 +274,7 @@ export function registerMarketAccountingRoutes(
   registerInventory(app, services, post);
   registerCancellationReports(app, services);
   registerStockHealthReports(app, services);
+  registerSalesAnalysis(app, services);
   registerSalesReports(app, services);
   registerShelfLabels(app, services, post);
   registerPurchaseOrders(app, services, post);

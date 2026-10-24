@@ -43,3 +43,10 @@
   background: #087c61;
   color: #fff;
 }
+
+.mr-hour-chart [role="button"] {
+  cursor: pointer;
+}
+.mr-hour-chart [role="button"]:focus-visible {
+  outline: 2px solid #d18a23;
+}
