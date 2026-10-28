@@ -1,4 +1,4 @@
-# İstasyonOS güncel kaynak paketi — 24 Ekim 2026
+# İstasyonOS güncel kaynak paketi — 28 Ekim 2026
 
 Yerel e-posta/parola girişi Manus olmadan çalışır. Kaynak kod paketidir; hazır Windows EXE veya veritabanı kopyası değildir. Stok/el terminali, lot/SKT/FEFO/karantina/fire ve grup KDV seçimiyle DEMO liste açılışı ve el terminalinde parti sayımı içerir. Ayrıntılar `docs/market-urun-aktarimi-2026-10-19.md` ve `docs/market-lot-skt-2026-10-17.md` içindedir.
 
@@ -16,7 +16,7 @@ Göçler 0021 dahil uygulanır. Yeni/boş kurulumda kullanıcı tabloları için
 
 ## Kapsam ve doğrulama
 
-24 Ekim 2026: TypeScript, 22 dosyada 134 test ve üretim derlemesi başarılı. Liste aktarımının geliştirme/üretim HTTP ve Chromium testleri geçti. Lot/SKT kontrollerinin tarihli kanıtları ilgili rehberdedir. Fizikî Windows/okuyucu/yazıcı ve banka/e-belge/ÖKC saha kabulü yapılmadı. POS DEMO sınırlaması ve bağlı sunucu/LAN gereksinimi devam eder; bağlantısız tarayıcı mali kuyruğu yoktur.
+28 Ekim 2026: TypeScript, 23 dosyada 144 test ve üretim derlemesi başarılı. Liste aktarımının geliştirme/üretim HTTP ve Chromium testleri geçti. Lot/SKT kontrollerinin tarihli kanıtları ilgili rehberdedir. Fizikî Windows/okuyucu/yazıcı ve banka/e-belge/ÖKC saha kabulü yapılmadı. POS DEMO sınırlaması ve bağlı sunucu/LAN gereksinimi devam eder; bağlantısız tarayıcı mali kuyruğu yoktur.
 
 `.env`, parolalar, kullanıcı fiyat listesi, DB, `.git`, `node_modules` ve `dist` pakete dahil edilmez. Bağımlılıklar lockfile üzerinden kurulur. `DOSYA-MANIFESTI.json` kendi dosyası hariç kaynak dosyalarının SHA-256 envanteridir. Eski `paket-2026-10-19` dalındaki RAR/ZIP önceki kopyadır; güncel geliştirme kaynağı `main` dalıdır.
 
@@ -35,3 +35,5 @@ Kasa/kasiyer satış filtreleri ve açıklamalı sepet iptal denetimi: `docs/mar
 Stokta bağlı para/hareketsizlik ve özgün satış marjı uyarıları: `docs/market-stok-sagligi-marj-2026-10-24.md`. Yeni migration yok; 0020 gerekir. Güncel mali değer geçmiş stok veya stok devir hızı değildir.
 
 Satış anındaki kategori ve 24 İstanbul saati analizi: `docs/market-kategori-saat-2026-10-24.md`. 0021 göçü gerekir; eski kategoriler güncel karttan doldurulmaz.
+
+28 Ekim SKT/karantina/fire kontrol paneli: `docs/market-skt-fire-kontrol-2026-10-28.md`. Yeni migration yok; 0021 dahil kurulum gerekir. Güncel uyarı mali fire değildir; geçmiş maliyet kayıttan, eksik eski etiket güncel diye işaretlenir.

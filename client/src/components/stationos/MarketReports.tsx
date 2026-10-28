@@ -1,3 +1,4 @@
+import { LotControlReports } from "./LotControlReports";
 import { SalesAnalysis } from "./SalesAnalysis";
 import { StockHealthReports, MarginAlertReports } from "./StockHealthReports";
 import { CancellationReports } from "./CancellationReports";
@@ -198,6 +199,7 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
           ["stockHealth", "Stokta bağlı para"],
           ["marginAlerts", "Satış marjı uyarıları"],
           ["analysis", "Kategori / saat analizi"],
+          ["lotControl", "SKT / fire kontrolü"],
         ].map(([id, label]) => (
           <button
             key={id}
@@ -765,6 +767,9 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
       )}
       {tab === "analysis" && (
         <SalesAnalysis stationId={stationId} today={today} options={options} />
+      )}
+      {tab === "lotControl" && (
+        <LotControlReports stationId={stationId} today={today} />
       )}
       {tab === "monthly" && (
         <MonthlyMarketReport stationId={stationId} today={today} />

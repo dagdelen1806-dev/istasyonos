@@ -1,3 +1,4 @@
+import { registerLotControl } from "./lot-control-reports";
 import { registerSalesAnalysis } from "./sales-analysis";
 import { registerStockHealthReports } from "./stock-health-reports";
 import { registerCancellationReports } from "./cancellation-reports";
@@ -274,6 +275,7 @@ export function registerMarketAccountingRoutes(
   registerInventory(app, services, post);
   registerCancellationReports(app, services);
   registerStockHealthReports(app, services);
+  registerLotControl(app, services);
   registerSalesAnalysis(app, services);
   registerSalesReports(app, services);
   registerShelfLabels(app, services, post);

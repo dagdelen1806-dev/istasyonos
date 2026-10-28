@@ -384,3 +384,30 @@ export function loadSalesAnalysis(
     `/market-accounting/reports/sales-analysis?${new URLSearchParams({ stationId, from, to, ...filters, ...(asOf ? { asOf } : {}) })}`
   );
 }
+
+export function loadLotControl(
+  stationId: string,
+  horizon: string,
+  mode: string,
+  search: string,
+  productId: string,
+  cursor = "",
+  snapshot = ""
+): Promise<import("@shared/lot-control").LotControl> {
+  return request(
+    `/market-accounting/reports/lot-control?${new URLSearchParams({ stationId, horizon, mode, search, productId, ...(cursor ? { cursor } : {}), ...(snapshot ? { snapshot } : {}) })}`
+  );
+}
+export function loadInventoryLosses(
+  stationId: string,
+  from: string,
+  to: string,
+  kind: string,
+  productId: string,
+  cursor = "",
+  asOf = ""
+): Promise<import("@shared/lot-control").LossReport> {
+  return request(
+    `/market-accounting/reports/inventory-losses?${new URLSearchParams({ stationId, from, to, kind, productId, ...(cursor ? { cursor } : {}), ...(asOf ? { asOf } : {}) })}`
+  );
+}
