@@ -37,3 +37,7 @@ Stokta bağlı para/hareketsizlik ve özgün satış marjı uyarıları: `docs/m
 Satış anındaki kategori ve 24 İstanbul saati analizi: `docs/market-kategori-saat-2026-10-24.md`. 0021 göçü gerekir; eski kategoriler güncel karttan doldurulmaz.
 
 28 Ekim SKT/karantina/fire kontrol paneli: `docs/market-skt-fire-kontrol-2026-10-28.md`. Yeni migration yok; 0021 dahil kurulum gerekir. Güncel uyarı mali fire değildir; geçmiş maliyet kayıttan, eksik eski etiket güncel diye işaretlenir.
+
+## 28 Ekim cari vade teslimi
+
+Raporlar → Cari vade / ödeme takvimi: ayrı müşteri alacağı/tedarikçi borcu, yaşlandırma, 90 günlük takvim, cari/yön/vade filtreleri ve CSV. Güncel açık belgeler gerçek defterle mutabıktır; geçmiş tarihli bakiye veya otomatik ödeme değildir. [Rehber](docs/market-cari-vade-2026-10-28.md). Yeni migration yok.

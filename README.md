@@ -90,3 +90,7 @@ Finans işlemleri integer kuruş kullanır. Banka teyidi, gerçek Turpak/OCR ver
 Yeni **Satış kasası** menüsü (`/kasa`), barkod/ürün seçimi, sepet, ayrı kasa oturumları ve kasa kapanışı sunar. Aynı kullanıcı farklı tarayıcılarda farklı kasaları açabilir; farklı kasaların çekmeceleri ayrıdır. Aynı kasada çalışmak için ikinci bilgisayar **Mevcut kasaya katıl** düğmesiyle tek oturuma katılır; sepetler ayrı, bakiye ve kapanış ortaktır. Yeni kayıtlar `0007_market_pos.sql`, ortak cihaz katılımı ise `0008_shared_register_devices.sql` migration’ıyla eklenir. Güncelleme ve sınırlar için [market kasa pilotu rehberi](docs/market-kasa-pilotu-2026-10-16.md) dosyasını okuyun.
 
 Satış kaydı ilk aşamada yalnız DEMO firmada açıktır. Banka cihazı, mali belge, yazıcı/çekmece protokolü ve merkez senkronizasyonu henüz bağlı değildir. Satışın stok hareketi aynı DB transaction’ında kaydedilir; bu kayıtlar eski personel vardiya hesabına otomatik ödeme/slip olarak eklenmez.
+
+## Cari vade ve ödeme takvimi
+
+Raporlar menüsünde cari/yön filtreli güncel açık alacak ve borç, gecikme dilimleri, bugün ve sonraki 90 günün vade takvimi, belge ayrıntısı ve CSV vardır. Ödeme/iade mahsupları gerçek cari defterle karşılaştırılır; otomatik ödeme oluşturulmaz. [Kapsam ve Windows güncellemesi](docs/market-cari-vade-2026-10-28.md). Yeni migration yok; 0021 dahil güncel şema yeterlidir.

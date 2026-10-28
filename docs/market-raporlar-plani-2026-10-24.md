@@ -1,5 +1,7 @@
 # Market Raporlar merkezi — ihtiyaç analizi ve geliştirme planı
 
+**28 Ekim cari vade teslimi:** Güncel açık alacak/borç yaşlandırması ve bugün+90 günlük ödeme/tahsilat vade takvimi [eklendi](market-cari-vade-2026-10-28.md). Geçmiş tarihli yaşlandırma, banka/kart mutabakatı, tedarikçi performansı ve birleşik gün sonu kontrolü sonraki paketlerdir. Aşağıdaki tarihli notlar teslim sırasının geçmişidir.
+
 **28 Ekim SKT/fire teslimi:** Güncel SKT/karantina ve kayıtlı fire/parti/masaüstü/terminal sayım paneli [eklendi](market-skt-fire-kontrol-2026-10-28.md). Cari vade/ödeme takvimi ve sonraki finans/tedarikçi analizleri plan olarak sürer.
 
 **Kategori/saat teslimi:** Satış anı kategorisi, eski kategori eksikliği ayrımı ve İstanbul saatlik analiz [eklendi](market-kategori-saat-2026-10-24.md); 0021 gerekir. Sonraki SKT/fire, cari/vade, tedarikçi ve gün sonu birleşik raporları plan olarak sürer.

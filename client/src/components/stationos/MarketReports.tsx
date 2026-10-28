@@ -1,3 +1,4 @@
+import { PartyDuesReports } from "./PartyDuesReports";
 import { LotControlReports } from "./LotControlReports";
 import { SalesAnalysis } from "./SalesAnalysis";
 import { StockHealthReports, MarginAlertReports } from "./StockHealthReports";
@@ -200,6 +201,7 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
           ["marginAlerts", "Satış marjı uyarıları"],
           ["analysis", "Kategori / saat analizi"],
           ["lotControl", "SKT / fire kontrolü"],
+          ["partyDues", "Cari vade / ödeme takvimi"],
         ].map(([id, label]) => (
           <button
             key={id}
@@ -768,6 +770,7 @@ function ReportsWorkspace({ stationId }: { stationId: string }) {
       {tab === "analysis" && (
         <SalesAnalysis stationId={stationId} today={today} options={options} />
       )}
+      {tab === "partyDues" && <PartyDuesReports stationId={stationId} />}
       {tab === "lotControl" && (
         <LotControlReports stationId={stationId} today={today} />
       )}

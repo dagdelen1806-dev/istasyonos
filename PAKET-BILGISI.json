@@ -1,6 +1,6 @@
 {
   "proje": "İstasyonOS — Windows masaüstü geliştirme paketi",
-  "hazirlanma": "2026-10-28T12:17:18.756821+03:00",
+  "hazirlanma": "2026-10-28T13:46:46.849698+03:00",
   "baslangic": "WINDOWS-BASLANGIC.md / BASLAT.cmd",
   "orijinal_kaynak_tarihi": "2026-10-14",
   "manus_gerekli": false,
@@ -17,7 +17,7 @@
     "node": "24.19.0",
     "veritabani": "MariaDB 11.8.6, ayrı test DB",
     "typescript": "başarılı",
-    "birim_sozlesme_testleri": 144,
+    "birim_sozlesme_testleri": 150,
     "production_build": "başarılı",
     "market_http_smoke": "Yeni 0012 şemayla üretimde ortak POS ve kalıcı sepet paketleri başarılı.",
     "onceki_vardiya_http_smoke": "0012 şemayla üretimde eski vardiya, iki ayrı mali imza/IBAN bekleyen kapanış ve çıkışta iptal başarılı.",
@@ -46,7 +46,8 @@
     "rapor_kontrol": "20 dosyada 112 test, TypeScript/build başarılı. 0020 test/ana yerel DB üzerine uygulandı, tekrar göç no-op. Dev/üretim HTTP ve Chromium: kasa/kasiyer/kesişim, özgün satış aktörüne iade, filtreli ürün ve gider dağıtmama, 52/53 iptal ve aynı milisaniye 50/2-3 sayfalama/asOf sınırı, snapshot/bozuk kayıt/same-ID/rol/tenant/CSV/kapalı gün değişmezliği geçti. 390px taşma, JS ve haricî HTTP yok. Fizikî Windows/yük testi yapılmadı.",
     "stok_sagligi_marj": "21 dosyada 125 test, TypeScript ve son build başarılı. Yeni migration yok; 0020 şema. Dev/üretim HTTP: güncel mali stok/defter ve lot mutabakatı, 30/60/90 gözlem/hareketsizlik, karantina, 50+ ürün ve canlı hash, marj satır uyarısı/eşik/kaynak snapshot/return-only, toplam mali mutabakat ve asOf, bozuk miktar/değer/maliyet reddi, yetki ve kapalı gün değişmezliği geçti. Dev/son üretim Chromium: stok/arama/gözlem/karantina/CSV/eski görüntü reddi, marj/kaynak fiş/50+4 sayfa, 390px yönetici ve engelli personel; JS/harici HTTP/taşma yok. Fizikî Windows/yük testi yapılmadı.",
     "kategori_saat": "22 dosyada 134 test, TypeScript ve build başarılı. 0021 verili test/ana DB üzerinde uygulandı, tekrar no-op. Dev/üretim HTTP: 56 kategori/106 fiş, kategori snapshotı/kart değişimi/özgün kategoriye iade, NULL-boş ayrımı, gece yarısı/ayrı iade saati, çok satırda distinct fiş/same-ID, filtre/asOf/bozuk snapshot ve kapalı gün değişmezliği geçti. Son üretimde kayıtlı sepet checkout kategorisi de doğrulandı. Dev/üretim Chromium: 50+6 kategori, 24 saat/grafik/CSV, kapsam/filtre/boş dönem ve 390px yetkili/personel sınırı; JS/harici HTTP/taşma yok. Fizikî Windows/yük kabulü yapılmadı.",
-    "skt_fire_kontrol": "23 dosyada 144 test, TypeScript ve üretim build başarılı. Dev/üretim HTTP: 51 parti, 7/15/30/bugün/geçmiş/bilinmeyen SKT/karantina/açıklama, güncel hash ve miktar mutabakatı; gerçek 52 fire ve üç sayım türü, 57 SKU satırında 50+7 sayfa/mali mutabakat/ürün filtresi/asOf/same-ID/eski etiket/payload uyumu ve bozuk kayıt reddi geçti. Dev/üretim Chromium: current50+1/history50+7, filtre/CSV/etiket/ayrıntı ve 390px yetki; stok/bakiye/revizyon/kapanış değişmedi, JS/harici HTTP/taşma yok. Yeni migration yok; 0021 gerekir. Fizikî Windows/yük kabulü yapılmadı."
+    "skt_fire_kontrol": "23 dosyada 144 test, TypeScript ve üretim build başarılı. Dev/üretim HTTP: 51 parti, 7/15/30/bugün/geçmiş/bilinmeyen SKT/karantina/açıklama, güncel hash ve miktar mutabakatı; gerçek 52 fire ve üç sayım türü, 57 SKU satırında 50+7 sayfa/mali mutabakat/ürün filtresi/asOf/same-ID/eski etiket/payload uyumu ve bozuk kayıt reddi geçti. Dev/üretim Chromium: current50+1/history50+7, filtre/CSV/etiket/ayrıntı ve 390px yetki; stok/bakiye/revizyon/kapanış değişmedi, JS/harici HTTP/taşma yok. Yeni migration yok; 0021 gerekir. Fizikî Windows/yük kabulü yapılmadı.",
+    "cari_vade": "24 dosyada 150 test, TypeScript/build başarılı. Dev/üretim HTTP: 54 belge 50+4, cari/yön ve yaşlandırma mutabakatı, bugün/7/30/90 sınırları, gerçek kısmi ödeme/tam tahsilat/ters kayıt/kaynak iade, rol/tenant/filtre/imleç/hash/tutarsızlık ve kapalı gün değişmezliği geçti. Dev/üretim Chromium masaüstü/390px: filtre/ayrıntı/CSV/pending scope/eski görüntü reddi; JS/harici HTTP/taşma yok. Yeni migration yok; 0021 yeterli. Fizikî Windows/yük kabulü yapılmadı."
   },
-  "surum_notu": "28 Ekim SKT, karantina ve fire kontrol paneli: güncel 7/15/30 ve son durum açıklaması; ayrı mali fire/parti/masaüstü/terminal sayımı, ürün filtresi ve tarihsel maliyet/etiket kaynağı. Yeni migration yok; 0021 gerekir. Uyarı otomatik stok/fire/indirim oluşturmaz, çok partide maliyet tahminen dağıtılmaz. Önceki kategori/saat/stok/marj korunur. Sırlar/kullanıcı fiyat listesi içermez; POS DEMO ve erişilebilir ortak sunucu/LAN gerekir."
+  "surum_notu": "28 Ekim cari vade ve ödeme takvimi: güncel açık müşteri alacakları/tedarikçi borçları ayrı, yaşlandırma ve 90 günlük kayıtlı vade takvimi, cari/yön/gelecek-gecikme filtreleri, belge ve CSV. Gerçek mali defter mutabakatı ve canlı görüntü koruması; geçmiş tarihli yaşlandırma veya otomatik ödeme değildir. Yeni migration yok; 0021 yeterli. Önceki raporlar korunur. Sırlar/gerçek kullanıcı listesi içermez; POS DEMO ve erişilebilir ortak sunucu/LAN gerekir."
 }

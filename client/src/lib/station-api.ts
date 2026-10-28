@@ -411,3 +411,18 @@ export function loadInventoryLosses(
     `/market-accounting/reports/inventory-losses?${new URLSearchParams({ stationId, from, to, kind, productId, ...(cursor ? { cursor } : {}), ...(asOf ? { asOf } : {}) })}`
   );
 }
+
+export function loadPartyDues(
+  stationId: string,
+  filters: {
+    partyId: string;
+    direction: string;
+    view: string;
+    cursor: string;
+    snapshot: string;
+  }
+): Promise<import("@shared/party-dues").PartyDues> {
+  return request(
+    `/market-accounting/reports/party-dues?${new URLSearchParams({ stationId, ...filters })}`
+  );
+}
