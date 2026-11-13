@@ -1,4 +1,11 @@
 import { StationError } from "./types";
+import type { StationRole, StockKind } from "./types";
+
+export function stockMutationRoles(kind: StockKind): StationRole[] {
+  return kind === "SALE"
+    ? ["OWNER", "MANAGER", "MARKET_STAFF"]
+    : ["OWNER", "MANAGER", "PURCHASER"];
+}
 
 export function safeAdd(...amounts: number[]): number {
   const total = amounts.reduce((sum, value) => {

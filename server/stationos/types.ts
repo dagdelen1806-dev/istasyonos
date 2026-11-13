@@ -9,7 +9,7 @@ export const STATION_ROLES = [
 export type StationRole = (typeof STATION_ROLES)[number];
 
 export type BusinessUnit = "FUEL" | "MARKET";
-export type PaymentKind = "CASH" | "IBAN" | "DEBT" | "AR_COLLECTION";
+export type PaymentKind = "CASH" | "IBAN" | "FAST" | "DEBT" | "AR_COLLECTION";
 export type StockKind = "RECEIPT" | "SALE" | "ADJUSTMENT";
 export type TerminalKind = "DESKTOP" | "MOBILE";
 
@@ -32,6 +32,7 @@ export type AccountTotals = {
   cashSalesMinor: number;
   cardTotalMinor: number;
   ibanMinor: number;
+  fastMinor: number;
   debtMinor: number;
   arCollectionMinor: number;
   expectedCashMinor: number;

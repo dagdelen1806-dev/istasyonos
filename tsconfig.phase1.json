@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "incremental": false },
+  "include": [
+    "server/stationos/daily-ocr-layout.test.ts",
+    "server/stationos/tanker-document.test.ts",
+    "server/stationos/daily-ocr.test.ts",
+    "server/stationos/daily-numeric.test.ts",
+    "server/stationos/daily-report.test.ts",
+    "server/stationos/tank-volumes.test.ts",
+    "server/stationos/tank-validation.test.ts",
+    "server/stationos/tank.test.ts",
+    "server/stationos/icmal.test.ts",
+    "server/stationos/fuel.test.ts",
+    "server/password-change.test.ts",
+    "server/stationos/invitation-response.test.ts",
+    "server/stationos/invitation-flow.test.ts",
+    "server/stationos/datetime.test.ts",
+    "server/stationos/utc-pool.test.ts",
+    "server/migrations/*.test.ts",
+    "server/stationos/request-recovery.test.ts",
+    "server/stationos/operation-client.test.ts",
+    "server/stationos/transaction-evidence.test.ts"
+  ],
+  "exclude": []
+}

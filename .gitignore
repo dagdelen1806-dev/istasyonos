@@ -114,3 +114,22 @@ client/public/__manus__/version.json
 
 # Local standalone runtime and demo access
 .local/
+
+# GitHub source backup: private configuration and local data
+.env*
+*.local
+*.dump
+*.sql.gz
+*.sql.zip
+*.pem
+*.key
+*.p12
+*.pfx
+*.zip
+*.rar
+*.7z
+credentials*.json
+secrets*.json
+.manus-logs/
+attachments/
+backups/

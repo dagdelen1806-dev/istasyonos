@@ -26,6 +26,8 @@ services:
       AUTH_PROVIDER: local
       APP_ID: istasyonos-desktop
       SESSION_SECRET: ${SESSION_SECRET:?Run KUR.ps1 first}
+      INVITATION_RESPONSE_ACTIVE_KEY: ${INVITATION_RESPONSE_ACTIVE_KEY:-}
+      INVITATION_RESPONSE_KEYS: ${INVITATION_RESPONSE_KEYS:-}
       DATABASE_URL: mysql://istasyonos:${DB_PASSWORD}@db:3306/istasyonos
       COOKIE_SECURE: "false"
     ports:
@@ -41,5 +43,16 @@ services:
       retries: 30
       start_period: 30s
     restart: unless-stopped
+  migrator:
+    profiles: ["maintenance"]
+    build: .
+    environment:
+      DATABASE_URL: mysql://istasyonos:${DB_PASSWORD}@db:3306/istasyonos
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["node", "--import", "tsx", "scripts/migrations.ts"]
+    command: ["status"]
+    restart: "no"
 volumes:
   database:

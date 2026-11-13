@@ -1,21 +1,9 @@
 {
   "routes": [
-    {
-      "path": "/raporlar",
-      "title": "Market raporları"
-    },
-    {
-      "path": "/el-terminali",
-      "title": "El terminali ve stok sayımı"
-    },
-    {
-      "path": "/market-muhasebe",
-      "title": "Market muhasebesi"
-    },
-    {
-      "path": "/kasa",
-      "title": "Satış kasası"
-    },
+    { "path": "/sayaclar", "title": "Sayaç mutabakatı" },
+    { "path": "/icmal", "title": "Vardiya Mali Hesap" },
+    { "path": "/tanklar", "title": "Tank ve yakıt stoku" },
+    { "path": "/tank-dogrulama", "title": "Tank veri doğrulama" },
     {
       "path": "/",
       "title": "Genel bakış"
@@ -63,6 +51,14 @@
     {
       "path": "/asistan",
       "title": "Rol bazlı operasyon asistanı"
+    },
+    {
+      "path": "/profil",
+      "title": "Profilim"
+    },
+    {
+      "path": "/personel",
+      "title": "Personel yönetimi"
     }
   ]
 }

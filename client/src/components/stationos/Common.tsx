@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { calendarDate, parseInstant, turkeyToday } from "@shared/datetime";
 import {
   X,
   ArrowUpRight,
@@ -236,8 +237,14 @@ export function SubmitButton({
 }
 export function fmtDate(date: string | null | undefined, time = true) {
   if (!date) return "—";
-  const value = new Date(date);
-  if (Number.isNaN(value.getTime())) return date;
+  let value: Date;
+  try {
+    value = /^\d{4}-\d{2}-\d{2}$/.test(date)
+      ? parseInstant(`${calendarDate(date)}T12:00:00Z`)
+      : parseInstant(date);
+  } catch {
+    return "—";
+  }
   return new Intl.DateTimeFormat("tr-TR", {
     timeZone: "Europe/Istanbul",
     day: "2-digit",
@@ -246,9 +253,7 @@ export function fmtDate(date: string | null | undefined, time = true) {
   }).format(value);
 }
 export function today() {
-  return new Date().toLocaleDateString("en-CA", {
-    timeZone: "Europe/Istanbul",
-  });
+  return turkeyToday();
 }
 export function formObject(form: HTMLFormElement) {
   return Object.fromEntries(new FormData(form).entries()) as Record<

@@ -18,8 +18,8 @@ fi
 bash scripts/cloud-db-start.sh
 npm --cache /tmp/istasyonos-npm-cache exec --yes --package=pnpm@10.18.0 -- pnpm install --frozen-lockfile --store-dir /workspace/.pnpm-store
 node scripts/cloud-config.mjs
-./node_modules/.bin/pnpm db:migrate
-./node_modules/.bin/pnpm tsx server/stationos/migrate.ts
+./node_modules/.bin/pnpm db:check
+printf '%s\n' 'Schema migrations are not automatic. Review docs/faz1-paket3-migration-guvenligi.md and run the explicit approved migration/baseline command before starting the app.'
 ./node_modules/.bin/pnpm check
 ./node_modules/.bin/pnpm test
 ./node_modules/.bin/pnpm build

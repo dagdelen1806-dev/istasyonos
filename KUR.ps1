@@ -40,7 +40,7 @@ COOKIE_SECURE=false
 }
 
 docker compose up -d --build --wait --wait-timeout 180
-if ($LASTEXITCODE -ne 0) { throw "Baslatma basarisiz. Ayrinti: docker compose logs --tail 80" }
+if ($LASTEXITCODE -ne 0) { throw "Baslatma basarisiz. Migration artik otomatik calismaz. Once docs/faz1-paket3-migration-guvenligi.md icindeki acik baseline/apply prosedurunu inceleyin. Ayrinti: docker compose logs --tail 80" }
 $port = "3000"
 $line = Get-Content ".env" | Where-Object { $_ -match '^PORT=\d+$' } | Select-Object -First 1
 if ($line) { $port = ($line -split '=', 2)[1] }

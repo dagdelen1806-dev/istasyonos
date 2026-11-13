@@ -1,0 +1,154 @@
+{
+  "format": 1,
+  "drizzleJournalChecksum": "4c8c0367ee3891ddc2aa0e4f32d26a1b7060491c515da61f4d14b90f249b0184",
+  "entries": [
+    {
+      "kind": "drizzle",
+      "version": "0000_initial_users",
+      "sourceIndex": 0,
+      "timestamp": 1788785580464,
+      "file": "drizzle/0000_initial_users.sql",
+      "checksum": "96168d50097c6d417b7449651a2e617a98e7ffd93dbc832e9cf1d2a0c237a0ec"
+    },
+    {
+      "kind": "operations",
+      "version": "0001_stationos",
+      "sourceIndex": 0,
+      "file": "server/stationos/migrations/0001_stationos.sql",
+      "checksum": "c5d797d7e57f82329eb0fc1742c6df10067db9bde9bbb63a7b8b684a641b2965"
+    },
+    {
+      "kind": "operations",
+      "version": "0002_slip_identity",
+      "sourceIndex": 1,
+      "file": "server/stationos/migrations/0002_slip_identity.sql",
+      "checksum": "6e2b6cc6ed7b615686c0e35a124116385a8a79de7e3c8f1ea3c7c74f2bb0ea06"
+    },
+    {
+      "kind": "operations",
+      "version": "0003_slip_identity_index",
+      "sourceIndex": 2,
+      "file": "server/stationos/migrations/0003_slip_identity_index.sql",
+      "checksum": "8fc73483ba2d908ba0c94ea2e2a1b51b098e61f8c2ec90d52505c811cb6a5db1"
+    },
+    {
+      "kind": "operations",
+      "version": "0004_account_events",
+      "sourceIndex": 3,
+      "file": "server/stationos/migrations/0004_account_events.sql",
+      "checksum": "df16f1203b524f4df1e8ee2a70cb9941b59f309d949d19f384197d6c2af3c903"
+    },
+    {
+      "kind": "operations",
+      "version": "0005_assistant_requests",
+      "sourceIndex": 4,
+      "file": "server/stationos/migrations/0005_assistant_requests.sql",
+      "checksum": "8175cf276ca96bd12dfb52397bb2db2fbe2bab307c01106def78868aec2a5901"
+    },
+    {
+      "kind": "operations",
+      "version": "0006_local_auth",
+      "sourceIndex": 5,
+      "file": "server/stationos/migrations/0006_local_auth.sql",
+      "checksum": "970137e338f550271cbc1472e2b4c9d6ba0db4820384bfb17dfcc43b600354b0"
+    },
+    {
+      "kind": "operations",
+      "version": "0007_request_recovery",
+      "sourceIndex": 6,
+      "file": "server/stationos/migrations/0007_request_recovery.sql",
+      "checksum": "ce646b7bd065540b997f7f5144fded437e2b7097cff7e924c3b844e61371fa26"
+    },
+    {
+      "kind": "operations",
+      "version": "0008_fuel_meters",
+      "sourceIndex": 7,
+      "file": "server/stationos/migrations/0008_fuel_meters.sql",
+      "checksum": "2feaaf232d1d480fb5b297730652fdf628f0c8efbad6b45ce85da4c8494b7ed4"
+    },
+    {
+      "kind": "operations",
+      "version": "0009_shift_icmal",
+      "sourceIndex": 8,
+      "file": "server/stationos/migrations/0009_shift_icmal.sql",
+      "checksum": "6d960a1747c8868e9a2035fc4c6d0d149c3c3c7d629c90b100202b38f5d11b94"
+    },
+    {
+      "kind": "operations",
+      "version": "0010_tank_stock",
+      "sourceIndex": 9,
+      "file": "server/stationos/migrations/0010_tank_stock.sql",
+      "checksum": "85ccc30c4785ef5f201cd7e07463cfcb2e339d0c17d482cb5c730343094a7d84"
+    },
+    {
+      "kind": "operations",
+      "version": "0011_tank_photo_validation",
+      "sourceIndex": 10,
+      "file": "server/stationos/migrations/0011_tank_photo_validation.sql",
+      "checksum": "af943103e92f69eb63d5acd3b214171fdbc9644bc946899690afba7077bc62ee"
+    },
+    {
+      "kind": "operations",
+      "version": "0012_dual_tank_volumes",
+      "sourceIndex": 11,
+      "file": "server/stationos/migrations/0012_dual_tank_volumes.sql",
+      "checksum": "9725641e5522fcd3a2716dd5b5646a784492d0eedd479b9625061c1525bc03c4"
+    },
+    {
+      "kind": "operations",
+      "version": "0013_daily_report_drafts",
+      "sourceIndex": 12,
+      "file": "server/stationos/migrations/0013_daily_report_drafts.sql",
+      "checksum": "0057276c680cff1d1d95d0cec40fff2c612ced5b916d9327e6a847e8b9303e29"
+    },
+    {
+      "kind": "operations",
+      "version": "0014_daily_numeric_drafts",
+      "sourceIndex": 13,
+      "file": "server/stationos/migrations/0014_daily_numeric_drafts.sql",
+      "checksum": "2612d4aa9821a54b7e4e9032614a18cb5e9763dd4b52cb1cfb50c9ed298afb6b"
+    },
+    {
+      "kind": "operations",
+      "version": "0015_daily_ocr_suggestions",
+      "sourceIndex": 14,
+      "file": "server/stationos/migrations/0015_daily_ocr_suggestions.sql",
+      "checksum": "fb220adb0e3647920879b885ccf57681b1f5372a138f2c2640a83935b34703f4"
+    },
+    {
+      "kind": "operations",
+      "version": "0016_tanker_document_drafts",
+      "sourceIndex": 15,
+      "file": "server/stationos/migrations/0016_tanker_document_drafts.sql",
+      "checksum": "b2968cbf77a1851f2ddeb199674580474f02ffbeb9f2d9f61dc62d6ea5522c23"
+    },
+    {
+      "kind": "operations",
+      "version": "0017_gemini_ocr",
+      "sourceIndex": 16,
+      "file": "server/stationos/migrations/0017_gemini_ocr.sql",
+      "checksum": "b22ebbdd9dfd6c85e58de356b901882309f751e71f99c3aff22bd124151fcea1"
+    },
+    {
+      "kind": "operations",
+      "version": "0018_fast_payment",
+      "sourceIndex": 17,
+      "file": "server/stationos/migrations/0018_fast_payment.sql",
+      "checksum": "387643b7f2364738936fa54ee7303d9eaa400cdb065dfaa2eddc14df34ba2c02"
+    },
+    {
+      "kind": "operations",
+      "version": "0019_pos_slip_ocr_drafts",
+      "sourceIndex": 18,
+      "file": "server/stationos/migrations/0019_pos_slip_ocr_drafts.sql",
+      "checksum": "9d15a4674ed8cc3fbaf989c0946df8a98814c815489d337cba8472106e191bb0"
+    },
+    {
+      "kind": "operations",
+      "version": "0020_personnel_shift_assignments",
+      "sourceIndex": 19,
+      "file": "server/stationos/migrations/0020_personnel_shift_assignments.sql",
+      "checksum": "b679e4dadf0a8adda3672d8c1eb8a14deb0ba763df2bd23475781c8681d84437"
+    }
+  ]
+}
