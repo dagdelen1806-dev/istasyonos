@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { accountTotals, invitationHash, payloadHash, recommendationStatus } from "./domain";
+import {
+  accountTotals,
+  invitationHash,
+  payloadHash,
+  recommendationStatus,
+} from "./domain";
 
 describe("StationOS domain kuralları", () => {
   it("nakit beklenen tutara para üstünü ve eski cari tahsilatı eklemez", () => {

@@ -1,0 +1,74 @@
+-- HISTORICAL DRAFT. Superseded by
+-- server/stationos/migrations/0020_personnel_shift_assignments.sql.
+-- Do not apply this file; the canonical migrator reads only its catalog.
+-- Preflight must find zero existing membership rows whose station belongs to a
+-- different tenant. Do not repair such rows automatically; stop for review.
+-- This draft is forward-only and contains multiple MySQL DDL statements.
+-- Prove partial-failure detection/recovery in a disposable database first.
+-- Existing and newly joined memberships require explicit owner/manager review.
+-- Never infer ACTIVE from a pre-status membership row during this migration.
+ALTER TABLE st_stations
+  ADD UNIQUE KEY uq_st_stations_tenant_id (tenant_id, id);
+
+ALTER TABLE st_member_stations
+  ADD COLUMN status ENUM('ACTIVE','INACTIVE','REVIEW_REQUIRED') NOT NULL DEFAULT 'REVIEW_REQUIRED',
+  ADD CONSTRAINT fk_st_member_stations_tenant_station
+    FOREIGN KEY (tenant_id, station_id)
+    REFERENCES st_stations(tenant_id, id);
+
+ALTER TABLE st_shifts
+  ADD UNIQUE KEY uq_st_shifts_scope (tenant_id, station_id, id);
+
+CREATE TABLE st_shift_assignments (
+  id CHAR(36) NOT NULL PRIMARY KEY,
+  tenant_id CHAR(36) NOT NULL,
+  station_id CHAR(36) NOT NULL,
+  shift_id CHAR(36) NOT NULL,
+  user_id INT NOT NULL,
+  status ENUM('ASSIGNED','REMOVED') NOT NULL DEFAULT 'REMOVED',
+  assigned_by_user_id INT NOT NULL,
+  updated_by_user_id INT NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  UNIQUE KEY uq_st_shift_assignment_user (tenant_id, shift_id, user_id),
+  KEY ix_st_shift_assignment_scope (tenant_id, station_id, shift_id, status),
+  KEY ix_st_shift_assignment_user_status (tenant_id, user_id, status, shift_id),
+  CONSTRAINT fk_st_shift_assignment_station_user
+    FOREIGN KEY (tenant_id, user_id, station_id)
+    REFERENCES st_member_stations(tenant_id, user_id, station_id),
+  CONSTRAINT fk_st_shift_assignment_shift
+    FOREIGN KEY (tenant_id, station_id, shift_id)
+    REFERENCES st_shifts(tenant_id, station_id, id),
+  CONSTRAINT fk_st_shift_assignment_creator
+    FOREIGN KEY (tenant_id, assigned_by_user_id)
+    REFERENCES st_members(tenant_id, user_id),
+  CONSTRAINT fk_st_shift_assignment_updater
+    FOREIGN KEY (tenant_id, updated_by_user_id)
+    REFERENCES st_members(tenant_id, user_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE st_staffing_events (
+  id CHAR(36) NOT NULL PRIMARY KEY,
+  tenant_id CHAR(36) NOT NULL,
+  station_id CHAR(36) NOT NULL,
+  shift_id CHAR(36) NULL,
+  target_user_id INT NOT NULL,
+  actor_user_id INT NOT NULL,
+  event_type VARCHAR(64) NOT NULL,
+  payload_json LONGTEXT NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  KEY ix_st_staffing_event_scope (tenant_id, station_id, created_at),
+  KEY ix_st_staffing_event_shift (shift_id, target_user_id, created_at),
+  CONSTRAINT fk_st_staffing_event_station_scope
+    FOREIGN KEY (tenant_id, station_id)
+    REFERENCES st_stations(tenant_id, id),
+  CONSTRAINT fk_st_staffing_event_shift
+    FOREIGN KEY (tenant_id, station_id, shift_id)
+    REFERENCES st_shifts(tenant_id, station_id, id),
+  CONSTRAINT fk_st_staffing_event_target
+    FOREIGN KEY (tenant_id, target_user_id)
+    REFERENCES st_members(tenant_id, user_id),
+  CONSTRAINT fk_st_staffing_event_actor
+    FOREIGN KEY (tenant_id, actor_user_id)
+    REFERENCES st_members(tenant_id, user_id)
+) ENGINE=InnoDB;

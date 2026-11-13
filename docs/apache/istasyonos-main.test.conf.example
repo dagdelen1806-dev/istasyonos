@@ -1,0 +1,66 @@
+# TASLAK: sites-enabled altina kopyalanmadi; calisan Apache degistirilmedi.
+# Ayni ServerName icin mevcut auto.istasyonos-main.test.conf ile birlikte
+# etkinlestirmeyin. Diger projelerin vhost dosyalarini degistirmeyin.
+# Apache 2.4.54 / Laragon Windows icin; uygulama hedefi sabit 127.0.0.1:3000.
+
+<IfModule !proxy_module>
+    LoadModule proxy_module modules/mod_proxy.so
+</IfModule>
+<IfModule !proxy_http_module>
+    LoadModule proxy_http_module modules/mod_proxy_http.so
+</IfModule>
+<IfModule !headers_module>
+    LoadModule headers_module modules/mod_headers.so
+</IfModule>
+
+<VirtualHost *:80>
+    ServerName istasyonos-main.test
+    DocumentRoot "C:/laragon/www/istasyonos-main/client/public"
+
+    <Directory "C:/laragon/www/istasyonos-main">
+        Options -Indexes
+        AllowOverride None
+        Require all denied
+    </Directory>
+
+    <Location "/">
+        Require local
+    </Location>
+
+    # Yerel gelistirme: tarayicida kalici yonlendirme onbellegi olusturmaz.
+    Redirect 302 "/" "https://istasyonos-main.test/"
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName istasyonos-main.test
+    DocumentRoot "C:/laragon/www/istasyonos-main/client/public"
+
+    SSLEngine on
+    SSLCertificateFile "C:/laragon/etc/ssl/laragon.crt"
+    SSLCertificateKeyFile "C:/laragon/etc/ssl/laragon.key"
+
+    <Directory "C:/laragon/www/istasyonos-main">
+        Options -Indexes
+        AllowOverride None
+        Require all denied
+    </Directory>
+
+    <Location "/">
+        Require local
+    </Location>
+
+    ProxyRequests Off
+    ProxyPreserveHost On
+    ProxyAddHeaders Off
+
+    # Istemciden gelen protokol/host bildirimini kullanma.
+    RequestHeader set X-Forwarded-Proto "https"
+    RequestHeader set X-Forwarded-Host "istasyonos-main.test"
+    RequestHeader unset X-Forwarded-For
+    RequestHeader unset Forwarded
+
+    # Apache >=2.4.47: mod_proxy_http HTTP ve WebSocket Upgrade'i birlikte tasir.
+    # Vite HMR icin ayri bir ws portu veya genis kapsamli rewrite gerekmez.
+    ProxyPass "/" "http://127.0.0.1:3000/" upgrade=websocket connectiontimeout=5 timeout=60
+    ProxyPassReverse "/" "http://127.0.0.1:3000/"
+</VirtualHost>

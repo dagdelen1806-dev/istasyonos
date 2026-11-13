@@ -1,9 +1,9 @@
-import { newRequestId } from "@/lib/id";
 import { useRef, useState } from "react";
 import { ArrowUpRight, Sparkles, ShieldCheck, RefreshCw } from "lucide-react";
 import type { AppState } from "@shared/station";
 import { ApiError, mutate } from "@/lib/station-api";
 import { Empty, Panel } from "./Common";
+import { formatTurkeyInstant } from "@shared/datetime";
 
 type Reply = {
   text: string;
@@ -40,7 +40,7 @@ export default function AssistantPanel({ state }: { state: AppState }) {
     const job = retry
       ? pending.current
       : {
-          id: newRequestId(),
+          id: crypto.randomUUID(),
           question: question.trim(),
           stationId:
             state.member?.stationIds.length === 1
@@ -162,7 +162,7 @@ export default function AssistantPanel({ state }: { state: AppState }) {
         title="Yanıt ve veri kapsamı"
         subtitle={
           reply
-            ? `Oluşturulma: ${new Date(reply.generatedAt).toLocaleString("tr-TR")}`
+            ? `Oluşturulma: ${formatTurkeyInstant(reply.generatedAt)}`
             : "Yanıt yalnız yetkili kayıtlardan hazırlanır."
         }
       >

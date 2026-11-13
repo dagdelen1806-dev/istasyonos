@@ -1,4 +1,3 @@
-import { newRequestId } from "@/lib/id";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   ArrowDownToLine,
@@ -33,6 +32,7 @@ import type {
   Supplier,
 } from "../../../../shared/station";
 import { money, parseMoney } from "../../../../shared/station";
+import { calendarDate, turkeyToday } from "@shared/datetime";
 import {
   Badge,
   Empty,
@@ -106,7 +106,11 @@ const viewMeta: Record<
   },
 };
 
-const requestId = newRequestId;
+function requestId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
+    return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 function numberText(
   value: number | null | undefined,
@@ -452,7 +456,7 @@ function StockMovementModal({
               onChange={event => setReference(event.target.value)}
               name="reference"
               required
-              maxLength={240}
+              maxLength={190}
             />
           </Field>
         </div>
@@ -672,6 +676,10 @@ function MarketView({
           </div>
         )}
         <div className="market-footnote">
+          <small>
+            Stok satış hareketi envanteri azaltır; market kasa satışına veya
+            tahsilat hesabına bağlı değildir.
+          </small>
           <FileText size={15} />
           Mal kabul referansı tutulur; fatura eşleştirme ve e-fatura bağlantısı
           bu sürümde otomatik değildir. Adet satışları yakıt hesabına sessizce
@@ -885,7 +893,7 @@ function PayableModal({
               onChange={event => setReference(event.target.value)}
               name="reference"
               required
-              maxLength={240}
+              maxLength={190}
             />
           </Field>
         </div>
@@ -946,7 +954,7 @@ function exportRecommendations(rows: Recommendation[]) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `istasyonos-satin-alma-onerileri-${new Date().toISOString().slice(0, 10)}.csv`;
+  anchor.download = `istasyonos-satin-alma-onerileri-${turkeyToday()}.csv`;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
@@ -1358,7 +1366,7 @@ function CollectionModal({
               onChange={event => setReference(event.target.value)}
               name="reference"
               required
-              maxLength={240}
+              maxLength={190}
             />
           </Field>
         </div>
@@ -1547,7 +1555,8 @@ function ReceivablesView({
 function paymentMethodLabel(kind: PaymentKind) {
   const labels: Record<PaymentKind, string> = {
     CASH: "Nakit satış",
-    IBAN: "IBAN satış beyanı",
+    IBAN: "Havale / IBAN beyanı · teyit bekliyor",
+    FAST: "FAST beyanı · teyit bekliyor",
     DEBT: "Borçlu satış",
     AR_COLLECTION: "Eski cari tahsilatı",
   };
@@ -1555,8 +1564,11 @@ function paymentMethodLabel(kind: PaymentKind) {
 }
 
 function dateAtNoon(value: string) {
-  const parsed = new Date(`${value}T12:00:00+03:00`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  try {
+    return new Date(`${calendarDate(value)}T12:00:00+03:00`);
+  } catch {
+    return null;
+  }
 }
 
 function FinanceView({
@@ -1586,14 +1598,18 @@ function FinanceView({
       ),
     [accountIds, state.payments]
   );
-  const methods: PaymentKind[] = ["CASH", "IBAN", "DEBT", "AR_COLLECTION"];
+  const methods: PaymentKind[] = [
+    "CASH",
+    "IBAN",
+    "FAST",
+    "DEBT",
+    "AR_COLLECTION",
+  ];
   const paymentTotal = (kind: PaymentKind) =>
     payments
       .filter(payment => payment.kind === kind)
       .reduce((total, payment) => total + payment.amountMinor, 0);
-  const todayKey = new Date().toLocaleDateString("en-CA", {
-    timeZone: "Europe/Istanbul",
-  });
+  const todayKey = turkeyToday();
   const todayDate = new Date(`${todayKey}T00:00:00+03:00`);
   const upcoming = useMemo(
     () =>
@@ -1773,7 +1789,7 @@ function FinanceView({
                       <strong>{payable.supplierName}</strong>
                     </td>
                     <td>{money(payable.amountMinor)}</td>
-                    <td>{fmtDate(`${payable.dueDate}T12:00:00`, false)}</td>
+                    <td>{fmtDate(payable.dueDate, false)}</td>
                     <td>
                       <Badge status={payable.status} />
                     </td>
@@ -1808,10 +1824,6 @@ export function BusinessModules({
   const Icon = meta.icon;
   return (
     <div className="business-module">
-      <div className="notice">
-        Bağlı stok maliyeti, market cari, ödeme ve gün sonu için{" "}
-        <a href="/market-muhasebe">Market muhasebesini açın</a>.
-      </div>
       <header className="business-header">
         <div>
           <span className="business-eyebrow">{meta.eyebrow}</span>

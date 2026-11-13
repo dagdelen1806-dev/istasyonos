@@ -18,7 +18,7 @@ Alternatif: VS Code → Terminal → New Terminal. PowerShell terminalinde, proj
 powershell -NoProfile -ExecutionPolicy RemoteSigned -File .\KUR.ps1
 ```
 
-İlk çalıştırma internetten resmî container image’larını ve bağımlılıkları indirip derler; birkaç dakika sürebilir. Betik bilgisayarınıza özel rastgele parolalarla `.env` oluşturur, mevcut dosyayı ezmez. Veritabanını ve uygulamayı başlatır, migration’ları uygular ve sağlık kontrolünden sonra tarayıcıyı açar.
+İlk çalıştırma internetten resmî container image’larını ve bağımlılıkları indirip derler; birkaç dakika sürebilir. Betik bilgisayarınıza özel rastgele parolalarla `.env` oluşturur, mevcut dosyayı ezmez. **Migration çalıştırmaz.** Boş veya checksum baseline kaydı olmayan veritabanında uygulama güvenli biçimde durur; önce [Y-07 prosedüründeki](docs/faz1-paket3-migration-guvenligi.md) ayrı, açıkça onaylanmış bakım adımı gerekir. Başlatma ancak geçmiş doğrulaması başarılıysa tarayıcıyı açar.
 
 Bilgisayarınızdaki giriş adresi: **http://localhost:3000**. Bu adres bilgisayarınızda Docker çalıştıktan sonra kullanılabilir; bulut ortamının adresi değildir.
 
@@ -55,12 +55,19 @@ npm install --global pnpm@10.18.0
 docker compose stop app
 docker compose up -d db --wait
 pnpm install --frozen-lockfile
-pnpm db:migrate
-pnpm tsx server/stationos/migrate.ts
+pnpm db:check
+# Gerekliyse ayrı onaylı baseline/apply adımı: Y-07 belgesine bakın.
 pnpm dev
 ```
 
 Bu komutlar ilk `KUR.ps1` çalışmasının oluşturduğu `.env` dosyasını kullanır. Veritabanı bu bilgisayarda `127.0.0.1:3307` üzerinden erişilir; app container’ı ise kendi bağlantısını `db:3306` üzerinden kurar. `pnpm dev` Windows PowerShell ile uyumludur. Durdurmak için Ctrl+C kullanın.
+
+Laragon MySQL kullanıyorsanız Docker MariaDB’den ayrı hedef olduğunu unutmayın.
+Onaylı bağlantıyı elle yapılandırın; `--database` hedefini ayrıca belirtin.
+Migration araçları işletim sisteminden bağımsız Node komutlarıdır. SQL ve manifest
+dosyalarının LF/CRLF baytlarını değiştirmeyin; farklı checksum otomatik kabul edilmez.
+Eski `db:push` uygulama yolu kapalıdır; `db:generate` yalnız dosya üretir ve
+incelemeden manifest/geçmiş güncellemek için kullanılmamalıdır.
 
 Kontroller ve üretim derlemesi:
 

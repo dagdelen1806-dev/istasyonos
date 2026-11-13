@@ -1,0 +1,21 @@
+CREATE TABLE st_daily_numeric_reviews (
+ id CHAR(36) NOT NULL PRIMARY KEY,
+ package_id CHAR(36) NOT NULL,
+ revision INT UNSIGNED NOT NULL,
+ source_revision INT UNSIGNED NOT NULL,
+ shift_id CHAR(36) NULL,
+ decision ENUM('PENDING','VERIFIED_DRAFT','REJECTED') NOT NULL,
+ rows_json LONGTEXT NOT NULL,
+ snapshot_hash CHAR(64) NOT NULL,
+ comparison_json LONGTEXT NOT NULL,
+ source_confirmed BOOLEAN NOT NULL,
+ shift_confirmed BOOLEAN NOT NULL,
+ note VARCHAR(1000) NOT NULL,
+ evidence VARCHAR(500) NOT NULL,
+ reviewer_id INT NOT NULL,
+ created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ UNIQUE KEY uq_daily_numeric_revision (package_id,revision),
+ FOREIGN KEY (package_id) REFERENCES st_daily_report_packages(id),
+ FOREIGN KEY (shift_id) REFERENCES st_shifts(id),
+ FOREIGN KEY (reviewer_id) REFERENCES users(id)
+) ENGINE=InnoDB;

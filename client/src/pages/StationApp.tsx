@@ -1,19 +1,33 @@
-import { newRequestId } from "@/lib/id";
 import LocalLoginForm from "./LocalLoginForm";
+import { TankValidationPanel } from "@/components/stationos/TankValidationPanel";
+import { TankerDocumentPanel } from "@/components/stationos/TankerDocumentPanel";
+import { PosSlipPanel } from "@/components/stationos/PosSlipPanel";
+import { PompaciMobilePage } from "@/components/stationos/PompaciMobilePage";
+import { loadOfflineContext, saveOfflineContext } from "@/lib/mobile-outbox";
+import { TankPanel } from "@/components/stationos/TankPanel";
+import { IcmalPanel } from "@/components/stationos/IcmalPanel";
+import { FuelPanel } from "@/components/stationos/FuelPanel";
+import { ProfilePanel } from "@/components/stationos/ProfilePanel";
+import { PersonnelPanel } from "@/components/stationos/PersonnelPanel";
+import { useOperationRecovery } from "@/hooks/useOperationRecovery";
+import { OperationRecoveryNotice } from "@/components/stationos/OperationRecoveryNotice";
+import { isRecoverableOperation } from "@shared/operation-recovery";
+import { HistoricalDashboard } from "@/components/stationos/HistoricalDashboard";
+import { SmartAssistantPanel } from "@/components/stationos/SmartAssistantPanel";
+import {
+  formatTurkeyInstant,
+  turkeyDateTimeInput,
+  turkeyInputToIso,
+} from "@shared/datetime";
 import { MessageSquare } from "lucide-react";
 import { lazy, Suspense } from "react";
-const MarketAccounting = lazy(
-  () => import("@/components/stationos/MarketAccounting")
-);
-const MarketReports = lazy(
-  () => import("@/components/stationos/MarketReports")
-);
-const MarketPos = lazy(() => import("@/components/stationos/MarketPos"));
-const InventoryTerminal = lazy(
-  () => import("@/components/stationos/InventoryTerminal")
-);
 const AssistantPanel = lazy(
   () => import("@/components/stationos/AssistantPanel")
+);
+const DailyReportPanel = lazy(() =>
+  import("@/components/stationos/DailyReportPanel").then(module => ({
+    default: module.DailyReportPanel,
+  }))
 );
 import {
   useCallback,
@@ -37,6 +51,9 @@ import {
   amountInput,
   roleLabels,
   paymentLabels,
+  roleLandingPath,
+  roleCanAccessPath,
+  accountDeclaredTotalMinor,
   type AppState,
   type Account,
   type AppRole,
@@ -97,16 +114,19 @@ const navItems = [
     group: "OPERASYON",
   },
   { path: "/vardiyalar", label: "Vardiya hesapları", icon: Clock3 },
+  { path: "/mobil/pompaci", label: "ÖSSE Mobil", icon: Smartphone },
+  { path: "/sayaclar", label: "Sayaç mutabakatı", icon: Fuel },
+  { path: "/icmal", label: "Vardiya Mali Hesap", icon: FileCheck2 },
+  { path: "/tanklar", label: "Tank ve yakıt stoku", icon: Fuel },
+  { path: "/tank-dogrulama", label: "Tank veri doğrulama", icon: ShieldCheck },
+  { path: "/gunluk-rapor", label: "Günlük rapor aktarımı", icon: FileCheck2 },
+  { path: "/tanker-belge", label: "Tanker evrakı", icon: FileCheck2 },
   { path: "/slipler", label: "Slip ve ödeme", icon: CreditCard },
   { path: "/muhasebe", label: "Onay kuyruğu", icon: FileCheck2 },
-  { path: "/kasa", label: "Satış kasası", icon: ShoppingCart },
   { path: "/market", label: "Market ve stok", icon: Package, group: "İŞLETME" },
   { path: "/satinalma", label: "Satın alma", icon: ShoppingCart },
   { path: "/cari", label: "Cari ve alacak", icon: Users },
   { path: "/finans", label: "Finansal görünüm", icon: Wallet },
-  { path: "/raporlar", label: "Raporlar", icon: Activity },
-  { path: "/market-muhasebe", label: "Market muhasebesi", icon: Wallet },
-  { path: "/el-terminali", label: "El terminali", icon: Smartphone },
   {
     path: "/kurulum",
     label: "Firma ve istasyon",
@@ -114,25 +134,35 @@ const navItems = [
     group: "YÖNETİM",
   },
   { path: "/entegrasyon", label: "Entegrasyonlar", icon: Link2 },
-  { path: "/asistan", label: "Operasyon asistanı", icon: MessageSquare },
+  { path: "/personel", label: "Personel", icon: Users },
+  { path: "/asistan", label: "Akıllı Asistan", icon: MessageSquare },
   { path: "/denetim", label: "İşlem geçmişi", icon: ShieldCheck },
+  { path: "/profil", label: "Profilim", icon: LockKeyhole },
 ];
 const pageInfo: Record<string, [string, string]> = {
-  "/raporlar": [
-    "Raporlar",
-    "Satış, ürün kârlılığı ve kayıtlı raporlar tek merkezde.",
+  "/tanker-belge": [
+    "Tanker evrakı ve yakıt kabulü",
+    "Belge okuma önerisi, kullanıcı kontrolü ve bağımsız stok onayı.",
   ],
-  "/el-terminali": [
-    "El terminali",
-    "Cihaz tanımı, ortak mal kabul ve sayım taslakları.",
+  "/gunluk-rapor": [
+    "Günlük rapor aktarımı",
+    "ZIP kaynakları, fotoğraflar ve kullanıcı doğrulamalı DEMO taslakları.",
   ],
-  "/market-muhasebe": [
-    "Market ön muhasebesi",
-    "Stok maliyeti, cari, ödeme ve gün sonu aynı hareket defterinde.",
+  "/tank-dogrulama": [
+    "Tank veri doğrulama",
+    "Kaynak fotoğraf, önerilen değer ve DEMO taslak kararı.",
   ],
-  "/kasa": [
-    "Market satış kasası",
-    "Barkod, sepet ve birbirinden ayrı kasa oturumları · DEMO pilot",
+  "/tanklar": [
+    "Tank ve yakıt stok yönetimi",
+    "Onaylı stok defteri, tanker kabulü ve manuel ölçüm mutabakatı.",
+  ],
+  "/icmal": [
+    "Vardiya Mali Hesap",
+    "Sayaç, ticari satış, özel işlemler ve tank mutabakatı.",
+  ],
+  "/sayaclar": [
+    "Pompa ve sayaç mutabakatı",
+    "Manuel açılış, fiyat ara okuması ve litre–tutar kontrolü.",
   ],
   "/": [
     "İşletmenizin operasyon görünümü",
@@ -175,10 +205,15 @@ const pageInfo: Record<string, [string, string]> = {
     "Yetkili veri bağlantıları ve güvenli geçiş durumu.",
   ],
   "/asistan": [
-    "Operasyon asistanı",
+    "Akıllı Asistan",
     "Yetkili, anonim sayısal kayıtlarınıza dayalı salt okunur açıklama.",
   ],
   "/denetim": ["İşlem geçmişi", "Gerçek kullanıcı, işlem zamanı ve kayıt izi."],
+  "/profil": ["Profilim", "Hesap bilgileriniz ve şifre güvenliğiniz."],
+  "/personel": [
+    "Personel yönetimi",
+    "Kullanıcılar, roller ve istasyon erişimleri.",
+  ],
 };
 function Logo({ inverse = false }: { inverse?: boolean }) {
   return (
@@ -196,11 +231,10 @@ function Logo({ inverse = false }: { inverse?: boolean }) {
   );
 }
 function dateTimeLocal() {
-  const d = new Date(Date.now() + 3 * 60 * 60 * 1000);
-  return d.toISOString().slice(0, 16);
+  return turkeyDateTimeInput();
 }
 function isoTr(s: string) {
-  return new Date(`${s}:00+03:00`).toISOString();
+  return turkeyInputToIso(s);
 }
 function sum(values: (number | null)[]) {
   if (values.some(value => value === null)) return null;
@@ -219,7 +253,18 @@ export default function StationApp() {
   const auth = useAuth();
   const [location, navigate] = useLocation();
   const path = location.split("?")[0];
+  const knownUnauthorized =
+    (auth.error as { data?: { code?: string } } | null)?.data?.code ===
+    "UNAUTHORIZED";
+  const offlineAuthError = auth.error && !knownUnauthorized;
   const [state, setState] = useState<AppState | null>(null);
+  const [networkOnline, setNetworkOnline] = useState(() => navigator.onLine);
+  const [offlineContext, setOfflineContext] = useState<{
+    state: AppState;
+    savedAt: string;
+  } | null>(null);
+  const [offlineStorageWarning, setOfflineStorageWarning] = useState("");
+  const [syncVersion, setSyncVersion] = useState(0);
   const [loadError, setLoadError] = useState("");
   const [stationId, setStationId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -231,6 +276,7 @@ export default function StationApp() {
   );
   const [search, setSearch] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [formError, setFormError] = useState("");
   const [pending, setPending] = useState<{
     path: string;
@@ -238,11 +284,28 @@ export default function StationApp() {
     id: string;
   } | null>(null);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const recoveryOwner =
+    state?.tenant && state.user.id === auth.user?.id
+      ? { userId: state.user.id, tenantId: state.tenant.id }
+      : null;
+  const recovery = useOperationRecovery(recoveryOwner);
+  const writeBlocked = busy || !!pending || recovery.blocked;
   const stateRef = useRef<AppState | null>(null);
   const selectedRef = useRef(stationId);
   const refreshSequence = useRef(0);
   stateRef.current = state;
   selectedRef.current = stationId;
+
+  useEffect(() => {
+    const online = () => setNetworkOnline(true);
+    const offline = () => setNetworkOnline(false);
+    window.addEventListener("online", online);
+    window.addEventListener("offline", offline);
+    return () => {
+      window.removeEventListener("online", online);
+      window.removeEventListener("offline", offline);
+    };
+  }, []);
 
   const refresh = useCallback(async () => {
     const sequence = ++refreshSequence.current;
@@ -252,6 +315,14 @@ export default function StationApp() {
       if (sequence !== refreshSequence.current || scope !== selectedRef.current)
         return;
       setState(next);
+      if (next.member?.role === "FUEL_STAFF")
+        void saveOfflineContext(next)
+          .then(() => setOfflineStorageWarning(""))
+          .catch(() =>
+            setOfflineStorageWarning(
+              "Önceden doğrulanmış çevrimdışı vardiya kapsamı saklanamadı; sayfa yeniden açılırsa internet gerekebilir."
+            )
+          );
       setLoadError("");
     } catch (e) {
       if (sequence === refreshSequence.current)
@@ -260,6 +331,55 @@ export default function StationApp() {
       if (sequence === refreshSequence.current) setLoading(false);
     }
   }, []);
+  useEffect(() => {
+    if (
+      auth.user ||
+      auth.loading ||
+      path !== "/mobil/pompaci" ||
+      (networkOnline && !offlineAuthError)
+    )
+      return;
+    let active = true;
+    void loadOfflineContext()
+      .then(context => {
+        if (active) setOfflineContext(context);
+      })
+      .catch(() => {
+        if (active) setOfflineContext(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    auth.user?.id,
+    auth.loading,
+    auth.error,
+    path,
+    offlineAuthError,
+    networkOnline,
+  ]);
+  useEffect(() => {
+    setInviteCode("");
+    setPending(null);
+  }, [auth.user?.id]);
+  const recoveredId = useRef("");
+  useEffect(() => {
+    const current = recovery.view;
+    if (
+      !current ||
+      current.status.state !== "COMPLETED" ||
+      recoveredId.current === current.record.requestId
+    )
+      return;
+    recoveredId.current = current.record.requestId;
+    const result = current.status.response?.result;
+    if (
+      current.record.operation === "/invite" &&
+      typeof result?.code === "string"
+    )
+      setInviteCode(result.code);
+    void refresh();
+  }, [recovery.view, refresh]);
   useEffect(() => {
     if (!auth.user) {
       setState(null);
@@ -278,6 +398,11 @@ export default function StationApp() {
     setSearch("");
   }, [path]);
   useEffect(() => {
+    if (loading || path !== "/" || !state?.member) return;
+    const landingPath = roleLandingPath(state.member.role);
+    if (landingPath) navigate(landingPath, { replace: true });
+  }, [loading, navigate, path, state?.member?.role]);
+  useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e);
@@ -291,8 +416,43 @@ export default function StationApp() {
     payload: Record<string, unknown>,
     retry?: { id: string }
   ) => {
+    if (isRecoverableOperation(route)) {
+      if (!recoveryOwner || busy || pending || recovery.blocked) return false;
+      setBusy(true);
+      setFormError("");
+      try {
+        const response = await recovery.submit(
+          route,
+          payload,
+          stateRef.current?.csrfToken
+        );
+        if (!response) return false;
+        if (route === "/invite" && typeof response.result.code === "string") {
+          setInviteCode(response.result.code);
+          setInviteEmail(String(response.result.invitedEmail ?? ""));
+        }
+        toast.success(
+          typeof response.result.message === "string"
+            ? response.result.message
+            : "Kayıt başarıyla işlendi."
+        );
+        await recovery.acknowledge();
+        await refresh();
+        return true;
+      } catch (failure) {
+        const message =
+          failure instanceof Error
+            ? failure.message
+            : "Kalıcı işlem takibi doğrulanamadı.";
+        setFormError(message);
+        toast.error(message);
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    }
     if (busy || (pending && !retry)) return false;
-    const id = retry?.id || newRequestId();
+    const id = retry?.id || crypto.randomUUID();
     setBusy(true);
     setFormError("");
     try {
@@ -333,6 +493,10 @@ export default function StationApp() {
     run(route, payload);
   const openModal = (name: string, account?: Account) => {
     setFormError("");
+    if (name === "invite") {
+      setInviteCode("");
+      setInviteEmail("");
+    }
     if (account) setSelectedAccountId(account.id);
     setModal(name);
   };
@@ -382,10 +546,9 @@ export default function StationApp() {
         return {
           route: "/invite",
           payload: {
+            email: f.email,
             role: f.role,
-            stationIds: f.stationId
-              ? [f.stationId]
-              : state!.stations.map(s => s.id),
+            stationIds: [f.stationId],
           },
         };
       case "shift":
@@ -488,6 +651,25 @@ export default function StationApp() {
         <p>Güvenli oturum kontrol ediliyor…</p>
       </div>
     );
+  if (
+    !auth.user &&
+    path === "/mobil/pompaci" &&
+    !knownUnauthorized &&
+    (!networkOnline || offlineAuthError) &&
+    offlineContext
+  )
+    return (
+      <PompaciMobilePage
+        state={offlineContext.state}
+        busy={false}
+        offlineOnly
+        offlineContextSavedAt={offlineContext.savedAt}
+        offlineStorageWarning=""
+        onRefresh={() => Promise.resolve()}
+        onSyncVersion={() => setSyncVersion(value => value + 1)}
+        onAction={onAction}
+      />
+    );
   if (!auth.user)
     return (
       <LoginScreen
@@ -499,6 +681,22 @@ export default function StationApp() {
           }
         }}
       />
+    );
+
+  if (state?.member && !roleCanAccessPath(state.member.role, path))
+    return (
+      <main className="workspace-main" role="alert">
+        <Notice warning>Bu ekran görev rolünüz için kullanılamaz.</Notice>
+        <button
+          className="btn secondary"
+          onClick={() => {
+            const landing = roleLandingPath(state.member!.role);
+            navigate(landing || "/");
+          }}
+        >
+          Görev ekranıma dön
+        </button>
+      </main>
     );
 
   const accounts = state?.accounts || [];
@@ -547,35 +745,11 @@ export default function StationApp() {
         </div>
         <nav aria-label="Ana menü">
           {navItems
+            .filter(n => n.path !== "/personel" || !!ownerOrManager)
             .filter(
               n =>
-                (n.path !== "/raporlar" ||
-                  ["OWNER", "MANAGER", "ACCOUNTANT"].includes(
-                    state?.member?.role ?? ""
-                  )) &&
-                (n.path !== "/el-terminali" ||
-                  [
-                    "OWNER",
-                    "MANAGER",
-                    "ACCOUNTANT",
-                    "MARKET_STAFF",
-                    "PURCHASER",
-                  ].includes(state?.member?.role ?? "")) &&
-                (n.path !== "/kasa" ||
-                  ["OWNER", "MANAGER", "MARKET_STAFF", "ACCOUNTANT"].includes(
-                    state?.member?.role ?? ""
-                  )) &&
-                (!staff ||
-                  [
-                    "/",
-                    "/vardiyalar",
-                    "/slipler",
-                    "/market",
-                    "/kasa",
-                    "/el-terminali",
-                    "/cari",
-                    "/entegrasyon",
-                  ].includes(n.path))
+                !staff ||
+                roleCanAccessPath(state!.member!.role, n.path)
             )
             .map(item => (
               <div key={item.path}>
@@ -662,6 +836,13 @@ export default function StationApp() {
             </div>
             <button
               className="icon-button"
+              aria-label="Profilim"
+              onClick={() => navigate("/profil")}
+            >
+              <LockKeyhole size={16} />
+            </button>
+            <button
+              className="icon-button"
               aria-label="Oturumu kapat"
               onClick={() => void auth.logout()}
             >
@@ -727,6 +908,23 @@ export default function StationApp() {
               . Sayfayı kapatmadan sonuç alın.
             </Notice>
           )}
+          <OperationRecoveryNotice
+            view={recovery.view}
+            error={recovery.error}
+            onCheck={() => void recovery.check()}
+            onAcknowledge={() => {
+              void recovery
+                .acknowledge()
+                .then(() => refresh())
+                .catch(error =>
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "İşlem sonucu doğrulanamadı."
+                  )
+                );
+            }}
+          />
           {loadError && (
             <Notice warning>
               {loadError}{" "}
@@ -754,16 +952,35 @@ export default function StationApp() {
                 </button>
               }
             />
+          ) : path === "/profil" ? (
+            <ProfilePanel
+              name={auth.user.name || "Kullanıcı"}
+              email={auth.user.email}
+            />
           ) : !state.member ? (
             <SetupScreen
               state={state}
-              busy={busy || !!pending}
+              busy={writeBlocked}
               onAction={onAction}
             />
           ) : (
             <>
               {path === "/" && (
                 <>
+                  {state.tenant?.isDemo &&
+                    ["OWNER", "MANAGER", "ACCOUNTANT"].includes(
+                      state.member.role
+                    ) && (
+                      <HistoricalDashboard
+                        state={state}
+                        stationId={stationId}
+                      />
+                    )}
+                  {["OWNER", "MANAGER", "ACCOUNTANT"].includes(
+                    state.member.role
+                  ) && (
+                    <SmartAssistantPanel state={state} stationId={stationId} />
+                  )}
                   <div className="overview-intro">
                     <div>
                       <span className="live-dot" />
@@ -779,15 +996,7 @@ export default function StationApp() {
                     <Metric
                       label="Hesaplarda satış beyanı"
                       value={money(
-                        sum(
-                          accounts.map(
-                            a =>
-                              a.cashSalesMinor +
-                              a.cardTotalMinor +
-                              a.ibanMinor +
-                              a.debtMinor
-                          )
-                        )
+                        sum(accounts.map(a => accountDeclaredTotalMinor(a)))
                       )}
                       detail="Açık ve teslimli hesaplar · banka bakiyesi değil"
                       icon={<Banknote size={18} />}
@@ -862,12 +1071,7 @@ export default function StationApp() {
                                       : "Market"}
                                   </td>
                                   <td className="numeric">
-                                    {money(
-                                      a.cashSalesMinor +
-                                        a.cardTotalMinor +
-                                        a.ibanMinor +
-                                        a.debtMinor
-                                    )}
+                                    {money(accountDeclaredTotalMinor(a))}
                                   </td>
                                   <td>
                                     <Badge status={a.status} />
@@ -1000,13 +1204,7 @@ export default function StationApp() {
                                 <td className="numeric">
                                   {money(
                                     sum(
-                                      aa.map(
-                                        a =>
-                                          a.cashSalesMinor +
-                                          a.cardTotalMinor +
-                                          a.ibanMinor +
-                                          a.debtMinor
-                                      )
+                                      aa.map(a => accountDeclaredTotalMinor(a))
                                     )
                                   )}
                                 </td>
@@ -1090,14 +1288,7 @@ export default function StationApp() {
                               </div>
                               <div className="account-card-bottom">
                                 <span>Ödeme dağılımı</span>
-                                <b>
-                                  {money(
-                                    a.cashSalesMinor +
-                                      a.cardTotalMinor +
-                                      a.ibanMinor +
-                                      a.debtMinor
-                                  )}
-                                </b>
+                                <b>{money(accountDeclaredTotalMinor(a))}</b>
                               </div>
                             </button>
                           ))}
@@ -1125,7 +1316,7 @@ export default function StationApp() {
                         <AccountDetails
                           account={account}
                           state={state}
-                          busy={busy || !!pending}
+                          busy={writeBlocked}
                           onModal={name => openModal(name, account)}
                           onAction={onAction}
                           canSource={!!ownerOrManager}
@@ -1170,6 +1361,35 @@ export default function StationApp() {
                               <td>{fmtDate(s.endsAt)}</td>
                               <td>
                                 <Badge status={s.status} />
+                                {ownerOrManager && s.status === "OPEN" && (
+                                  <button
+                                    className="btn"
+                                    disabled={
+                                      writeBlocked ||
+                                      !state.accounts.filter(
+                                        a => a.shiftId === s.id
+                                      ).length ||
+                                      state.accounts.some(
+                                        a =>
+                                          a.shiftId === s.id &&
+                                          (![
+                                            "ACCEPTED",
+                                            "ACCEPTED_WITH_PENDING",
+                                          ].includes(a.status) ||
+                                            a.signatureCount < 2)
+                                      )
+                                    }
+                                    onClick={() =>
+                                      void onAction("/shift/close", {
+                                        stationId: s.stationId,
+                                        shiftId: s.id,
+                                        endsAt: new Date().toISOString(),
+                                      })
+                                    }
+                                  >
+                                    İki onaylı vardiyayı kapat
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           ))}
@@ -1185,13 +1405,36 @@ export default function StationApp() {
                   </Panel>
                 </>
               )}
+              {path === "/mobil/pompaci" &&
+                state.member.role === "FUEL_STAFF" && (
+                  <PompaciMobilePage
+                    state={state}
+                    busy={writeBlocked}
+                    offlineContextSavedAt={null}
+                    offlineStorageWarning={offlineStorageWarning}
+                    onRefresh={refresh}
+                    onSyncVersion={() => setSyncVersion(value => value + 1)}
+                    onAction={onAction}
+                  />
+                )}
+              {path === "/mobil/pompaci" &&
+                state.member.role !== "FUEL_STAFF" && (
+                  <Notice warning>
+                    Bu ekran yalnız akaryakıt satış personeli içindir.
+                  </Notice>
+                )}
               {path === "/slipler" && (
                 <>
+                  <PosSlipPanel
+                    state={state}
+                    stationId={stationId}
+                    busy={busy}
+                    onAction={onAction}
+                  />
                   <Notice>
-                    Görüntü upload / gerçek OCR şu anda kapalıdır. KVKK ve
-                    sunucu maskeleme kabulü tamamlanana kadar slipin gerekli
-                    alanları <strong>manuel teyit</strong> ile kaydedilir. Tam
-                    kart numarası, isim veya CVV girmeyin.
+                    OCR slipi taslak olarak okur. Personel doğrulaması olmadan
+                    tahsilat kaydı oluşturulmaz; tam kart numarası, kart sahibi
+                    adı veya CVV saklanmaz.
                   </Notice>
                   <div className="metric-grid three">
                     <Metric
@@ -1350,12 +1593,7 @@ export default function StationApp() {
                                   {money(a.sourceSalesMinor)}
                                 </td>
                                 <td className="numeric">
-                                  {money(
-                                    a.cashSalesMinor +
-                                      a.cardTotalMinor +
-                                      a.ibanMinor +
-                                      a.debtMinor
-                                  )}
+                                  {money(accountDeclaredTotalMinor(a))}
                                 </td>
                                 <td
                                   className={`numeric ${a.differenceMinor ? "danger-text" : ""}`}
@@ -1396,30 +1634,6 @@ export default function StationApp() {
                   </Panel>
                 </>
               )}
-              {path === "/raporlar" && (
-                <Suspense fallback={<p>Raporlar yükleniyor…</p>}>
-                  <MarketReports state={state} stationId={stationId} />
-                </Suspense>
-              )}
-              {path === "/market-muhasebe" && (
-                <Suspense fallback={<p>Market muhasebesi yükleniyor…</p>}>
-                  <MarketAccounting state={state} stationId={stationId} />
-                </Suspense>
-              )}
-              {path === "/el-terminali" && (
-                <Suspense fallback={<p>El terminali yükleniyor…</p>}>
-                  <InventoryTerminal state={state} stationId={stationId} />
-                </Suspense>
-              )}
-              {path === "/kasa" && (
-                <Suspense fallback={<p>Kasa yükleniyor…</p>}>
-                  <MarketPos
-                    key={`${state.user.id}:${stationId}`}
-                    state={state}
-                    stationId={stationId}
-                  />
-                </Suspense>
-              )}
               {["/market", "/satinalma", "/cari", "/finans"].includes(path) && (
                 <BusinessModules
                   view={
@@ -1433,10 +1647,82 @@ export default function StationApp() {
                   }
                   state={state}
                   stationId={stationId}
-                  busy={busy || !!pending}
+                  busy={writeBlocked}
                   onAction={onAction}
                 />
               )}
+              {path === "/sayaclar" && (
+                <FuelPanel
+                  state={state}
+                  stationId={stationId}
+                  busy={writeBlocked}
+                  onAction={onAction}
+                />
+              )}
+              {path === "/icmal" && (
+                <IcmalPanel
+                  state={state}
+                  stationId={stationId}
+                  busy={writeBlocked}
+                  onAction={onAction}
+                />
+              )}
+              {path === "/tanklar" && (
+                <TankPanel
+                  state={state}
+                  stationId={stationId}
+                  busy={writeBlocked}
+                  onAction={onAction}
+                />
+              )}
+              {path === "/tank-dogrulama" && (
+                <TankValidationPanel
+                  state={state}
+                  stationId={stationId}
+                  busy={writeBlocked}
+                  onAction={onAction}
+                />
+              )}
+              {path === "/gunluk-rapor" && (
+                <Suspense
+                  fallback={
+                    <div role="status">Günlük rapor ekranı yükleniyor…</div>
+                  }
+                >
+                  <DailyReportPanel
+                    key={stationId}
+                    state={state}
+                    stationId={stationId}
+                    busy={writeBlocked}
+                    onAction={onAction}
+                  />
+                </Suspense>
+              )}
+              {path === "/tanker-belge" && (
+                <TankerDocumentPanel
+                  key={stationId}
+                  state={state}
+                  stationId={stationId}
+                  busy={writeBlocked}
+                  onAction={onAction}
+                />
+              )}
+              {path === "/personel" &&
+                (ownerOrManager ? (
+                  <PersonnelPanel
+                    state={state}
+                    busy={writeBlocked}
+                    inviteCode={inviteCode}
+                    inviteEmail={inviteEmail}
+                    onInvite={() => openModal("invite")}
+                    onAction={onAction}
+                  />
+                ) : (
+                  <Notice warning>
+                    Personel listesi ve davetler için firma sahibi veya yönetici
+                    yetkisi gerekir.
+                  </Notice>
+                ))}
               {path === "/kurulum" && (
                 <>
                   <Panel
@@ -1523,79 +1809,20 @@ export default function StationApp() {
                     </div>
                   </Panel>
                   <Panel
-                    title="Kullanıcılar ve yetki kapsamı"
-                    subtitle="Davet edilen personel kendi gerçek hesabıyla giriş yapar"
-                    action={
-                      ownerOrManager && (
-                        <button
-                          className="btn primary"
-                          onClick={() => openModal("invite")}
-                        >
-                          <Plus size={16} />
-                          Personel davet et
-                        </button>
-                      )
-                    }
+                    title="Personel ve davetler"
+                    subtitle="Kullanıcılar ve görünür istasyon yetkileri Personel ekranında listelenir."
                   >
-                    <div className="table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Kullanıcı</th>
-                            <th>Rol</th>
-                            <th>İstasyon kapsamı</th>
-                            <th>Durum</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {state.members.map(m => (
-                            <tr key={m.userId}>
-                              <td>
-                                <b>{m.name}</b>
-                                <small>{m.email || ""}</small>
-                              </td>
-                              <td>{roleLabels[m.role]}</td>
-                              <td>
-                                {m.stationIds?.length
-                                  ? m.stationIds
-                                      .map(
-                                        id =>
-                                          state.stations.find(s => s.id === id)
-                                            ?.name || id
-                                      )
-                                      .join(", ")
-                                  : "Firma kapsamı"}
-                              </td>
-                              <td>
-                                <Badge status="ACTIVE" />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {inviteCode && (
-                      <div className="invite-result">
-                        <b>Tek kullanımlık davet kodu</b>
-                        <code>{inviteCode}</code>
+                    <div className="setup-form">
+                      <p>{state.members.length} görünür firma üyesi</p>
+                      {ownerOrManager && (
                         <button
-                          className="btn small secondary"
-                          onClick={() => {
-                            void navigator.clipboard
-                              .writeText(inviteCode)
-                              .then(() =>
-                                toast.success("Davet kodu kopyalandı.")
-                              );
-                          }}
+                          className="btn secondary"
+                          onClick={() => navigate("/personel")}
                         >
-                          Kopyala
+                          Personel ekranını aç
                         </button>
-                        <small>
-                          Kodu yalnız davet ettiğiniz kişiyle güvenli biçimde
-                          paylaşın.
-                        </small>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </Panel>
                 </>
               )}
@@ -1667,6 +1894,11 @@ export default function StationApp() {
                     />
                   }
                 >
+                  {["OWNER", "MANAGER", "ACCOUNTANT"].includes(
+                    state.member.role
+                  ) && (
+                    <SmartAssistantPanel state={state} stationId={stationId} />
+                  )}
                   <AssistantPanel
                     key={`${state.user.id}:${state.member?.role}:${state.member?.stationIds.join(",")}`}
                     state={state}
@@ -1792,6 +2024,15 @@ export default function StationApp() {
             )}
             {modal === "invite" && (
               <>
+                <Field label="Davet edilecek e-posta / giriş hesabı">
+                  <input
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    maxLength={254}
+                  />
+                </Field>
                 <Field label="Kullanıcı rolü">
                   <select name="role">
                     {(
@@ -1802,16 +2043,30 @@ export default function StationApp() {
                         "MARKET_STAFF",
                         "PURCHASER",
                       ] as AppRole[]
-                    ).map(r => (
-                      <option value={r} key={r}>
-                        {roleLabels[r]}
-                      </option>
-                    ))}
+                    )
+                      .filter(
+                        r =>
+                          state.member?.role === "OWNER" ||
+                          !["MANAGER", "ACCOUNTANT"].includes(r)
+                      )
+                      .map(r => (
+                        <option value={r} key={r}>
+                          {roleLabels[r]}
+                        </option>
+                      ))}
                   </select>
                 </Field>
                 <Field label="İstasyon kapsamı">
-                  <select name="stationId">
-                    <option value="">Tüm yetkili istasyonlar</option>
+                  <select
+                    name="stationId"
+                    required
+                    defaultValue={
+                      state.stations.some(s => s.id === stationId)
+                        ? stationId
+                        : ""
+                    }
+                  >
+                    <option value="">İstasyon seçin</option>
                     {state.stations.map(s => (
                       <option value={s.id} key={s.id}>
                         {s.name}
@@ -1820,8 +2075,10 @@ export default function StationApp() {
                   </select>
                 </Field>
                 <Notice>
-                  Davet kodu tek kullanımlı ve sürelidir. Davet edilen kişi
-                  kendi hesabıyla giriş yaptıktan sonra kodu kullanır.
+                  Davet kodu yalnız yukarıdaki e-posta hesabıyla ve seçilen
+                  istasyonda kullanılır. Sistem e-posta göndermez; kodu davet
+                  ettiğiniz kişiyle güvenli paylaşın. Kişi kendi adını ve
+                  parolasını belirleyerek daveti kabul eder.
                 </Notice>
               </>
             )}
@@ -1884,6 +2141,10 @@ export default function StationApp() {
                     defaultValue={
                       state.member.role === "MARKET_STAFF" ? "MARKET" : "FUEL"
                     }
+                    disabled={
+                      state.member.role === "FUEL_STAFF" ||
+                      state.member.role === "MARKET_STAFF"
+                    }
                   >
                     <option value="FUEL">Akaryakıt</option>
                     <option value="MARKET">Market</option>
@@ -1906,10 +2167,13 @@ export default function StationApp() {
                     <option value="IBAN">
                       IBAN satış beyanı · banka bekliyor
                     </option>
+                    {state.member &&
+                      ["OWNER", "ACCOUNTANT"].includes(state.member.role) && (
+                        <option value="AR_COLLECTION">
+                          Eski cari nakit tahsilatı · ciro dışı
+                        </option>
+                      )}
                     <option value="DEBT">Borçlu satış</option>
-                    <option value="AR_COLLECTION">
-                      Eski cari nakit tahsilatı · ciro dışı
-                    </option>
                   </select>
                 </Field>
                 <Field label="Tutar">
@@ -2074,7 +2338,7 @@ export default function StationApp() {
               >
                 Vazgeç
               </button>
-              <SubmitButton busy={busy || !!pending}>
+              <SubmitButton busy={writeBlocked}>
                 {modal === "approve"
                   ? "İmzayı kaydet"
                   : modal === "submit"
@@ -2085,6 +2349,136 @@ export default function StationApp() {
           </form>
         </Modal>
       )}
+    </div>
+  );
+}
+
+function MarketFirstDeclaration({ accountId }: { accountId: string }) {
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    void fetch(
+      `/api/stationos/account/declaration-snapshot?accountId=${encodeURIComponent(accountId)}`,
+      {
+        credentials: "same-origin",
+        cache: "no-store",
+        signal: controller.signal,
+      }
+    )
+      .then(async response => {
+        const payload = await response.json();
+        if (!response.ok || !payload?.ok)
+          throw new Error("SNAPSHOT_READ_FAILED");
+        return payload.result;
+      })
+      .then(value => {
+        if (!controller.signal.aborted) setResult(value);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setError("İlk beyan kaynağı okunamadı; inceleme gerekli.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [accountId]);
+
+  const snapshot = result?.snapshot;
+  const rows = Array.isArray(snapshot?.paymentRows)
+    ? snapshot.paymentRows.filter(
+        (row: any) =>
+          row &&
+          typeof row === "object" &&
+          Number.isSafeInteger(row.amountMinor) &&
+          row.amountMinor >= 0
+      )
+    : [];
+  const sumKind = (kind: string) =>
+    rows
+      .filter((row: any) => row.category === kind)
+      .reduce((total: number, row: any) => total + row.amountMinor, 0);
+  const slips = Array.isArray(snapshot?.slipRows)
+    ? snapshot.slipRows.filter(
+        (row: any) =>
+          row &&
+          row.recordStatus === "VERIFIED" &&
+          Number.isSafeInteger(row.amountMinor) &&
+          row.amountMinor >= 0
+      )
+    : [];
+  const slipTotal = slips.reduce(
+    (total: number, row: any) => total + row.amountMinor,
+    0
+  );
+
+  return (
+    <div className="summary-list" aria-live="polite">
+      <div className="summary-row separated">
+        <span>İlk market beyanı</span>
+        <b>
+          {loading
+            ? "Yükleniyor"
+            : error
+              ? "İnceleme gerekli"
+              : result?.state === "FIRST_DECLARATION_UNKNOWN"
+                ? "FIRST_DECLARATION_UNKNOWN"
+                : snapshot?.businessUnit === "MARKET" &&
+                    snapshot?.accountId === accountId
+                  ? "Değiştirilemez kaynak"
+                  : "İnceleme gerekli"}
+        </b>
+      </div>
+      {error && <p role="alert">{error}</p>}
+      {!loading && !error && result?.state === "FIRST_DECLARATION_UNKNOWN" && (
+        <p>
+          Eski hesap için ilk beyan yok; güncel değerlerden geriye dönük
+          oluşturulmadı.
+        </p>
+      )}
+      {!loading &&
+        !error &&
+        snapshot?.businessUnit === "MARKET" &&
+        snapshot?.accountId === accountId && (
+          <>
+            <div className="summary-row">
+              <span>İlk kaynak satış toplamı</span>
+              <b>{money(snapshot.declaredTotals?.sourceSalesMinor ?? null)}</b>
+            </div>
+            <div className="summary-row">
+              <span>İlk sayılan nakit</span>
+              <b>{money(snapshot.declaredTotals?.countedCashMinor ?? null)}</b>
+            </div>
+            <div className="summary-row">
+              <span>Nakit beyanı</span>
+              <b>{money(sumKind("CASH"))}</b>
+            </div>
+            <div className="summary-row">
+              <span>POS slip beyanı · banka teyidi bekliyor</span>
+              <b>
+                {Array.isArray(snapshot?.slipRows)
+                  ? money(slipTotal)
+                  : "Kaynak yok"}
+              </b>
+            </div>
+            <div className="summary-row">
+              <span>Havale / IBAN · teyit bekliyor</span>
+              <b>{money(sumKind("IBAN"))}</b>
+            </div>
+            <div className="summary-row">
+              <span>Cari / borç</span>
+              <b>{money(sumKind("DEBT_SALE"))}</b>
+            </div>
+            <p>
+              Bu snapshot ilk personel beyanıdır; banka teyidi veya nihai
+              muhasebe onayı değildir.
+            </p>
+          </>
+        )}
     </div>
   );
 }
@@ -2113,7 +2507,11 @@ function AccountDetails({
     state.member!.role
   );
   const editable = own && a.status === "OPEN";
-  const total = a.cashSalesMinor + a.cardTotalMinor + a.ibanMinor + a.debtMinor;
+  const total = accountDeclaredTotalMinor(a);
+  const marketSourceDifferenceMinor =
+    a.businessUnit === "MARKET" && a.sourceSalesMinor !== null
+      ? a.sourceSalesMinor - total
+      : null;
   const closed = ["ACCEPTED", "ACCEPTED_WITH_PENDING"].includes(a.status);
   const { deviceId, kind: deviceKind } = getDeviceIdentity();
   return (
@@ -2140,10 +2538,16 @@ function AccountDetails({
         <div className="summary-row">
           <span>
             <CreditCard size={15} />
-            Teyitli kart slipleri
+            Kayda alınan POS slipleri · banka teyidi ayrı
           </span>
           <b>{money(a.cardTotalMinor)}</b>
         </div>
+        {!!a.fastMinor && (
+          <div className="summary-row">
+            <span>FAST beyanı · banka teyidi bekliyor</span>
+            <b>{money(a.fastMinor)}</b>
+          </div>
+        )}
         <div className="summary-row">
           <span>
             <ArrowDownLeft size={15} />
@@ -2161,6 +2565,18 @@ function AccountDetails({
           </span>
           <b>{money(a.debtMinor)}</b>
         </div>
+        {!!a.specialCoveredMinor && (
+          <div className="summary-row">
+            <span>Özel işlem karşılığı · operasyonel</span>
+            <b>{money(a.specialCoveredMinor)}</b>
+          </div>
+        )}
+        {!!a.prepaymentCashMinor && (
+          <div className="summary-row">
+            <span>Gift nakit yüklemesi · satış dışı</span>
+            <b>{money(a.prepaymentCashMinor)}</b>
+          </div>
+        )}
         <div className="summary-row separated">
           <span>Eski cari nakit tahsilatı · ciro dışı</span>
           <b>{money(a.arCollectionMinor)}</b>
@@ -2173,6 +2589,14 @@ function AccountDetails({
           <span>Kaynak satış raporu · manuel</span>
           <b>{money(a.sourceSalesMinor)}</b>
         </div>
+        {a.businessUnit === "MARKET" && (
+          <div
+            className={`summary-row ${marketSourceDifferenceMinor ? "danger-text" : ""}`}
+          >
+            <span>Market kaynak / beyan fark? ? ?n inceleme</span>
+            <b>{money(marketSourceDifferenceMinor)}</b>
+          </div>
+        )}
         <div
           className={`summary-row ${a.differenceMinor ? "danger-text" : ""}`}
         >
@@ -2184,6 +2608,9 @@ function AccountDetails({
           <b>{money(a.expectedCashMinor)}</b>
         </div>
       </div>
+      {a.businessUnit === "MARKET" && a.status !== "OPEN" && (
+        <MarketFirstDeclaration accountId={a.id} />
+      )}
       {a.sourceRef && (
         <div className="source-ref">
           <FileCheck2 size={14} />
@@ -2324,7 +2751,7 @@ function AccountDetails({
                   ? String(e.payload.note)
                   : `Kaynak: ${String(e.payload.sourceRef || "—")} · Tutar: ${money(typeof e.payload.sourceSalesMinor === "number" ? e.payload.sourceSalesMinor : null)}`}
                 <br />
-                <small>{new Date(e.createdAt).toLocaleString("tr-TR")}</small>
+                <small>{formatTurkeyInstant(e.createdAt)}</small>
               </div>
             ))
         )}

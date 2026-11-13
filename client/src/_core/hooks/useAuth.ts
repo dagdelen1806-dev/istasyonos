@@ -1,6 +1,7 @@
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
+import { clearOfflineContext } from "@/lib/mobile-outbox";
 import { useCallback, useEffect, useMemo } from "react";
 
 type UseAuthOptions = {
@@ -45,6 +46,7 @@ export function useAuth(options?: UseAuthOptions) {
       try {
         sessionStorage.removeItem("manus-cookie");
       } catch {}
+      await clearOfflineContext().catch(() => undefined);
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
     }

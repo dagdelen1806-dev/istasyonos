@@ -1,0 +1,16 @@
+{
+  "id": "/mobil/pompaci",
+  "name": "İstasyonOS ÖSSE Mobil",
+  "short_name": "ÖSSE Mobil",
+  "lang": "tr",
+  "description": "Personel vardiya beyanları ve slip taslakları.",
+  "start_url": "/mobil/pompaci",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7f8",
+  "theme_color": "#072e28",
+  "icons": [
+    { "src": "/station-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/station-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

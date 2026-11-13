@@ -1,5 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { containsLikelyPan, recommendationQuantity, rejectCardData, safeAdd } from "./safety";
+import {
+  containsLikelyPan,
+  recommendationQuantity,
+  rejectCardData,
+  safeAdd,
+  stockMutationRoles,
+} from "./safety";
+
+describe("stock mutation role boundaries", () => {
+  it("allows only market staff to record inventory sales", () => {
+    expect(stockMutationRoles("SALE")).toEqual([
+      "OWNER",
+      "MANAGER",
+      "MARKET_STAFF",
+    ]);
+    expect(stockMutationRoles("SALE")).not.toContain("FUEL_STAFF");
+    expect(stockMutationRoles("RECEIPT")).not.toContain("MARKET_STAFF");
+    expect(stockMutationRoles("ADJUSTMENT")).not.toContain("MARKET_STAFF");
+  });
+});
 
 describe("Finans ve gizlilik korumaları", () => {
   it("tam kart numarasını bitişik veya boşluklu metinde reddeder", () => {

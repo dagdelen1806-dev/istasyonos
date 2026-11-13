@@ -1,15 +1,117 @@
-import { registerMarketAccountingRoutes } from "./market-accounting";
-import { stationErrorLog } from "./error-log";
-import { lockMarketBook } from "./market-accounting-ledger";
-import { registerMarketPosRoutes } from "./market-pos";
 import {
   anonymousSummary,
   classifyQuestion,
   explainSummary,
 } from "./assistant";
-import type { AppState } from "../../shared/station";
-import { safeAdd, rejectCardData, recommendationQuantity } from "./safety";
-import { randomUUID } from "node:crypto";
+import { closeShift } from "./shift-close";
+import {
+  canAssignStaffToShift,
+  isPosSlipDraftSchemaReady,
+  normalizeStationAccessStatus,
+} from "./staffing";
+import {
+  buildFirstDeclarationSnapshot,
+  canOpenBusinessUnit,
+  canReadFirstDeclarationSnapshot,
+} from "./account-declaration";
+import { operationalDashboard } from "./dashboard";
+import { assistantStationScope, smartAssistantReport } from "./smart-assistant";
+import { limitedAssistantExplanation } from "./assistant-gemini";
+import { geminiOcrAvailable } from "./gemini-ocr";
+import type { AppRole, AppState } from "../../shared/station";
+import { paymentKinds, roleCanViewMarketCatalog } from "../../shared/station";
+import {
+  numericContext,
+  saveNumericDraft,
+  scopeNumericContextToStaff,
+} from "./daily-numeric";
+import {
+  tankerOverview,
+  readTankerDocument,
+  saveTankerDocument,
+} from "./tanker-document";
+import { getDailyOcr, readDailyOcr } from "./daily-ocr";
+import { ocrCapability } from "./windows-ocr";
+import type { NumericAccount, NumericNozzle } from "../../shared/daily-numeric";
+import { calculateFuel } from "../../shared/fuel";
+import {
+  importDailyReport,
+  parseDailyReportDocument,
+  reviewDailyReport,
+  dailyReportOverview,
+  dailyReportImage,
+} from "./daily-report";
+import {
+  recordDualVolumes,
+  requestVarianceReset,
+  reviewVarianceReset,
+  tankVolumesReport,
+} from "./tank-volumes";
+import { resolve as resolvePhotoPath } from "node:path";
+import { photoOverview, photoImageHash, reviewPhoto } from "./tank-validation";
+import {
+  saveTankCard,
+  requestTankMove,
+  reviewTankMove,
+  linkTankDelivery,
+  measureTank,
+  tankReport,
+  postTankAccount,
+} from "./tank";
+import {
+  SPECIAL_COVERAGE_SQL,
+  SPECIAL_PENDING_SQL,
+  PREPAYMENT_CASH_SQL,
+  addSpecial,
+  reviewSpecial,
+  settleSpecial,
+  voidSpecial,
+  setTankCheck,
+} from "./icmal";
+import {
+  addFuelEquipment,
+  fuelEquipment,
+  openFuel,
+  updateFuel,
+  fuelSnapshot,
+  assertFuelReady,
+  correctFuel,
+} from "./fuel";
+import {
+  safeAdd,
+  rejectCardData,
+  recommendationQuantity,
+  stockMutationRoles,
+} from "./safety";
+import {
+  importPosSlipDraft,
+  readPosSlipDraft,
+  confirmPosSlipDraft,
+  posSlipDrafts,
+  posSlipDraftImage,
+} from "./pos-slip";
+import { randomUUID, createHash } from "node:crypto";
+import { parseDbUtc } from "../../shared/datetime";
+import {
+  isRecoverableOperation,
+  OPERATION_VERSION,
+  operationStatus,
+} from "../../shared/operation-recovery";
+import {
+  createRequestContext,
+  requestScopeHash,
+  reserveRequest,
+  lockRequest,
+  completeRequest,
+  recordRequestFailure,
+  readRequestStatus,
+  type RequestContext,
+} from "./request-recovery";
+import {
+  isEncryptedInvitation,
+  openInvitation,
+  sealInvitation,
+} from "./invitation-response";
 import type { Express, NextFunction, Request, Response } from "express";
 import type { PoolConnection, RowDataPacket } from "mysql2/promise";
 import { sdk, type AuthenticatedUser } from "../_core/sdk";
@@ -17,15 +119,19 @@ import { ENV } from "../_core/env";
 import { execute, first, query, rows, withTransaction } from "./db";
 import {
   accountTotals,
+  hasUnconfirmedBankDeclaration,
   csrfToken,
+  dbErrorCode,
+  emailBoundInvitationCode,
   invitationHash,
+  invitationEmailBindingMatches,
   isRecord,
   isValidCsrf,
   mapDbError,
   mysqlDate,
+  normalizeInviteEmail,
   originIsSame,
   payloadHash,
-  randomInvitationCode,
   requireBoolean,
   requireEnum,
   requireId,
@@ -35,6 +141,7 @@ import {
   requireRequestId,
   requireString,
   safeDate,
+  safeCalendarDate,
 } from "./domain";
 import {
   fail,
@@ -49,7 +156,7 @@ import {
   type TerminalKind,
 } from "./types";
 
-const PAYMENT_KINDS = ["CASH", "IBAN", "DEBT", "AR_COLLECTION"] as const;
+const PAYMENT_KINDS = paymentKinds;
 const BUSINESS_UNITS = ["FUEL", "MARKET"] as const;
 const STOCK_KINDS = ["RECEIPT", "SALE", "ADJUSTMENT"] as const;
 const TERMINAL_KINDS = ["DESKTOP", "MOBILE"] as const;
@@ -87,6 +194,7 @@ type AccountRow = DbRow & {
   cash_sales_minor: number | string;
   card_total_minor: number | string;
   iban_minor: number | string;
+  fast_minor: number | string;
   debt_minor: number | string;
   ar_collection_minor: number | string;
   signature_count: number | string;
@@ -97,6 +205,7 @@ type AccountTotalsInput = Pick<
   | "cash_sales_minor"
   | "card_total_minor"
   | "iban_minor"
+  | "fast_minor"
   | "debt_minor"
   | "ar_collection_minor"
   | "source_sales_minor"
@@ -113,6 +222,13 @@ function n(value: unknown): number {
   return result;
 }
 
+function privateOcrIdentifier(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const text = String(value);
+  const match = /^OCR:[a-f0-9]{64}:([a-z0-9]{0,4})$/iu.exec(text);
+  return match ? `••••${match[1]}` : text;
+}
+
 function stationActor(req: StationRequest): StationActor {
   if (!req.stationActor)
     throw new StationError(
@@ -126,7 +242,7 @@ function stationActor(req: StationRequest): StationActor {
 function responseError(res: Response, error: unknown): void {
   const mapped = error instanceof StationError ? error : mapDbError(error);
   if (!(error instanceof StationError))
-    console.error(stationErrorLog(error, res.req));
+    console.error(`[StationOS] ${dbErrorCode(error) ?? "internal_error"}`);
   res
     .status(mapped.status)
     .json({ ok: false, error: { code: mapped.code, message: mapped.message } });
@@ -169,6 +285,7 @@ async function scopeFor(
   if (!member) return null;
   const tenantId = String(member.tenant_id);
   const role = String(member.role) as StationRole;
+  const capabilities = await staffingSchemaCapabilities(connection);
   let stationRows: DbRow[];
   if (role === "OWNER") {
     stationRows = await rows<DbRow[]>(
@@ -179,7 +296,7 @@ async function scopeFor(
   } else {
     stationRows = await rows<DbRow[]>(
       connection,
-      `SELECT station_id AS id FROM st_member_stations WHERE tenant_id = ? AND user_id = ? ORDER BY station_id`,
+      `SELECT station_id AS id FROM st_member_stations WHERE tenant_id = ? AND user_id = ? ${capabilities.membershipStatus ? "AND status='ACTIVE'" : ""} ORDER BY station_id`,
       [tenantId, actorId]
     );
   }
@@ -192,6 +309,39 @@ async function scopeFor(
       stationIds: stationRows.map(row => String(row.id)),
     },
     stationIds: stationRows.map(row => String(row.id)),
+  };
+}
+
+async function staffingSchemaCapabilities(connection: PoolConnection): Promise<{
+  membershipStatus: boolean;
+  shiftAssignments: boolean;
+  staffingEvents: boolean;
+  fastPayment: boolean;
+  posSlipDrafts: boolean;
+}> {
+  const row = await first<DbRow>(
+    connection,
+    `SELECT
+      EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='st_member_stations' AND COLUMN_NAME='status') AS membership_status,
+      EXISTS(SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='st_shift_assignments') AS shift_assignments,
+      EXISTS(SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='st_staffing_events') AS staffing_events,
+      EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='st_payments' AND COLUMN_NAME='kind' AND COLUMN_TYPE LIKE '%FAST%') AS fast_payment,
+      EXISTS(SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='st_pos_slip_drafts') AS pos_slip_table,
+      (SELECT COUNT(DISTINCT COLUMN_NAME) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='st_pos_slip_drafts' AND COLUMN_NAME IN ('id','tenant_id','station_id','shift_id','account_id','staff_user_id','source_sha256','transaction_key','mime_type','byte_size','image_bytes','ocr_provider','ocr_json','values_json','review_status','revision','confirmed_slip_id','confirmed_by','confirmed_at','created_by','created_at')) AS pos_slip_columns,
+      (SELECT COUNT(DISTINCT INDEX_NAME) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='st_pos_slip_drafts' AND INDEX_NAME IN ('uq_pos_slip_source','uq_pos_slip_transaction','uq_pos_slip_payment') AND NON_UNIQUE=0) AS pos_slip_indexes`
+  );
+  const enabled = (value: unknown) =>
+    value === true || value === 1 || value === "1";
+  return {
+    membershipStatus: enabled(row?.membership_status),
+    shiftAssignments: enabled(row?.shift_assignments),
+    staffingEvents: enabled(row?.staffing_events),
+    fastPayment: enabled(row?.fast_payment),
+    posSlipDrafts: isPosSlipDraftSchemaReady({
+      tableExists: enabled(row?.pos_slip_table),
+      requiredColumnCount: Number(row?.pos_slip_columns ?? 0),
+      requiredUniqueIndexCount: Number(row?.pos_slip_indexes ?? 0),
+    }),
   };
 }
 
@@ -244,54 +394,174 @@ async function audit(
 async function mutation<T>(
   actor: StationActor,
   body: Record<string, unknown>,
-  fn: (connection: PoolConnection) => Promise<T>
+  fn: (connection: PoolConnection) => Promise<T>,
+  invitation = false
 ): Promise<{ ok: true; result: T }> {
   const requestId = requireRequestId(body);
-  const hash = payloadHash(body);
-  return withTransaction(async connection => {
-    await execute(
-      connection,
-      `INSERT IGNORE INTO st_requests (actor_user_id, request_id, payload_hash) VALUES (?, ?, ?)`,
-      [actor.id, requestId, hash]
+  const operation = (body as any).__requestOperation as string;
+  let context: RequestContext | undefined;
+  let hash = payloadHash(body);
+  if (isRecoverableOperation(operation)) {
+    const scope = await withTransaction(connection =>
+      requireScope(connection, actor)
     );
-    const saved = await first<DbRow>(
-      connection,
-      `SELECT payload_hash, response_json FROM st_requests WHERE actor_user_id = ? AND request_id = ? FOR UPDATE`,
-      [actor.id, requestId]
+    context = createRequestContext(
+      {
+        actorId: actor.id,
+        tenantId: scope.tenantId,
+        requestId,
+        operation,
+        scopeHash: requestScopeHash(scope.member.role, scope.stationIds),
+      },
+      body
     );
-    if (!saved) fail("IDEMPOTENCY_ERROR", "İstek durumu okunamadı.", 500);
-    if (String(saved.payload_hash) !== hash)
-      fail(
-        "IDEMPOTENCY_CONFLICT",
-        "requestId farklı bir içerikle tekrar kullanıldı.",
-        409
-      );
-    if (saved.response_json !== null) {
-      try {
-        return JSON.parse(String(saved.response_json)) as {
-          ok: true;
-          result: T;
-        };
-      } catch {
-        fail("IDEMPOTENCY_ERROR", "Önceki isteğin sonucu okunamadı.", 500);
-      }
+    hash = context.bindingHash;
+    try {
+      await reserveRequest(context);
+    } catch (error) {
+      if (
+        !(
+          invitation &&
+          error instanceof StationError &&
+          error.code === "LEGACY_REQUEST_REVIEW_REQUIRED"
+        )
+      )
+        throw error;
+      // Y-01 legacy invitation replay is independently verified by its hash,
+      // creator, tenant and current station permissions; never backfilled.
+      context = undefined;
+      hash = payloadHash(body);
     }
-    const result = await fn(connection);
-    const response = { ok: true as const, result };
-    await execute(
-      connection,
-      `UPDATE st_requests SET response_json = ? WHERE actor_user_id = ? AND request_id = ?`,
-      [JSON.stringify(response), actor.id, requestId]
+  } else if (operation !== "/setup" && operation !== "/join") {
+    fail("OPERATION_REQUIRED", "Sunucu işlem türünü doğrulayamadı.", 500);
+  }
+  let attempted = false;
+  try {
+    return await withTransaction(async connection => {
+      const tracking = context ? await lockRequest(connection, context) : null;
+      await execute(
+        connection,
+        `INSERT IGNORE INTO st_requests (actor_user_id, request_id, payload_hash) VALUES (?, ?, ?)`,
+        [actor.id, requestId, hash]
+      );
+      const saved = await first<DbRow>(
+        connection,
+        `SELECT payload_hash, response_json FROM st_requests WHERE actor_user_id = ? AND request_id = ? FOR UPDATE`,
+        [actor.id, requestId]
+      );
+      if (!saved) fail("IDEMPOTENCY_ERROR", "İstek durumu okunamadı.", 500);
+      if (String(saved.payload_hash) !== hash)
+        fail(
+          "IDEMPOTENCY_CONFLICT",
+          "requestId farklı bir içerikle tekrar kullanıldı.",
+          409
+        );
+      if (saved.response_json !== null) {
+        if (tracking && tracking.state !== "COMPLETED")
+          fail(
+            "REQUEST_REVIEW_REQUIRED",
+            "İşlem sonucu ve takip kaydı tutarsız; inceleme gerekli.",
+            409
+          );
+        if (invitation) {
+          const response = openInvitation(String(saved.response_json), {
+            actorId: actor.id,
+            requestId,
+            payloadHash: hash,
+          });
+          await authorizeInvitationReplay(
+            connection,
+            actor,
+            response.result.code
+          );
+          return response as { ok: true; result: T };
+        }
+        try {
+          const response = JSON.parse(String(saved.response_json));
+          if (isEncryptedInvitation(response))
+            fail(
+              "IDEMPOTENCY_CONFLICT",
+              "İşlem kimliği başka bir işlem türüne ait.",
+              409
+            );
+          return response as {
+            ok: true;
+            result: T;
+          };
+        } catch (error) {
+          if (error instanceof StationError) throw error;
+          fail("IDEMPOTENCY_ERROR", "Önceki isteğin sonucu okunamadı.", 500);
+        }
+      }
+      if (tracking && tracking.state !== "PROCESSING")
+        fail("REQUEST_REVIEW_REQUIRED", "İşlem sonucu doğrulanamadı.", 409);
+      attempted = true;
+      const result = await fn(connection);
+      const response = { ok: true as const, result };
+      const storedResponse = invitation
+        ? sealInvitation(
+            response as unknown as ReturnType<typeof openInvitation>,
+            {
+              actorId: actor.id,
+              requestId,
+              payloadHash: hash,
+            }
+          )
+        : JSON.stringify(response);
+      await execute(
+        connection,
+        `UPDATE st_requests SET response_json = ? WHERE actor_user_id = ? AND request_id = ?`,
+        [storedResponse, actor.id, requestId]
+      );
+      if (context) await completeRequest(connection, context);
+      return response;
+    });
+  } catch (error) {
+    if (context && attempted) await recordRequestFailure(context, error);
+    throw error;
+  }
+}
+
+async function authorizeInvitationReplay(
+  connection: PoolConnection,
+  actor: StationActor,
+  code: string
+): Promise<void> {
+  const scope = await requireScope(connection, actor, ["OWNER", "MANAGER"]);
+  const invitation = await first<DbRow>(
+    connection,
+    `SELECT id, role FROM st_invitations WHERE code_hash=? AND tenant_id=? AND invited_by_user_id=?`,
+    [invitationHash(code), scope.tenantId, actor.id]
+  );
+  if (!invitation)
+    fail("INVITATION_FORBIDDEN", "Önceki davete erişiminiz yok.", 403);
+  if (
+    scope.member.role === "MANAGER" &&
+    ["MANAGER", "ACCOUNTANT"].includes(String(invitation.role))
+  )
+    fail("ROLE_GRANT_FORBIDDEN", "Önceki davetin rolüne erişiminiz yok.", 403);
+  const stations = await rows<DbRow[]>(
+    connection,
+    `SELECT station_id FROM st_invitation_stations WHERE invitation_id=?`,
+    [invitation.id]
+  );
+  if (
+    !stations.length ||
+    stations.some(row => !scope.stationIds.includes(String(row.station_id)))
+  )
+    fail(
+      "STATION_FORBIDDEN",
+      "Önceki davetin istasyon kapsamına erişiminiz yok.",
+      403
     );
-    return response;
-  });
 }
 
 function accountInput(account: AccountRow): AccountTotals {
-  return accountTotals({
+  const totals = accountTotals({
     cashSalesMinor: n(account.cash_sales_minor),
     cardTotalMinor: n(account.card_total_minor),
     ibanMinor: n(account.iban_minor),
+    fastMinor: n(account.fast_minor),
     debtMinor: n(account.debt_minor),
     arCollectionMinor: n(account.ar_collection_minor),
     sourceSalesMinor:
@@ -299,11 +569,24 @@ function accountInput(account: AccountRow): AccountTotals {
         ? null
         : n(account.source_sales_minor),
   });
+  totals.sourceTotalMinor = safeAdd(
+    totals.sourceTotalMinor,
+    n(account.special_covered_minor)
+  );
+  totals.expectedCashMinor = safeAdd(
+    totals.expectedCashMinor,
+    n(account.prepayment_cash_minor)
+  );
+  return totals;
 }
 
 export const ACCOUNT_TOTAL_COLUMNS = `
+  ${SPECIAL_COVERAGE_SQL} AS special_covered_minor,
+  ${SPECIAL_PENDING_SQL} AS special_pending_count,
+  ${PREPAYMENT_CASH_SQL} AS prepayment_cash_minor,
   COALESCE((SELECT SUM(p.amount_minor) FROM st_payments p WHERE p.account_id = a.id AND p.kind = 'CASH' AND p.status = 'POSTED'),0) AS cash_sales_minor,
   COALESCE((SELECT SUM(p.amount_minor) FROM st_payments p WHERE p.account_id = a.id AND p.kind = 'IBAN' AND p.status = 'POSTED'),0) AS iban_minor,
+  COALESCE((SELECT SUM(p.amount_minor) FROM st_payments p WHERE p.account_id = a.id AND p.kind = 'FAST' AND p.status = 'POSTED'),0) AS fast_minor,
   COALESCE((SELECT SUM(p.amount_minor) FROM st_payments p WHERE p.account_id = a.id AND p.kind = 'DEBT' AND p.status = 'POSTED'),0) AS debt_minor,
   COALESCE((SELECT SUM(p.amount_minor) FROM st_payments p WHERE p.account_id = a.id AND p.kind = 'AR_COLLECTION' AND p.status = 'POSTED'),0) AS ar_collection_minor,
   COALESCE((SELECT SUM(s.amount_minor) FROM st_slips s WHERE s.account_id = a.id AND s.status = 'VERIFIED'),0) AS card_total_minor,
@@ -450,8 +733,11 @@ async function stateFor(
       csrfToken: csrfToken(actor),
       companies: [],
       stations: [],
+      invitations: [],
       members: [],
       shifts: [],
+      staffingFeaturesAvailable: false,
+      fastPaymentAvailable: false,
       accounts: [],
       payments: [],
       slips: [],
@@ -480,6 +766,7 @@ async function stateFor(
       };
     }
     const placeholders = stationIds.map(() => "?").join(",");
+    const staffing = await staffingSchemaCapabilities(connection);
     const tenant = await rows<DbRow[]>(
       connection,
       `SELECT id, name, is_demo FROM st_tenants WHERE id = ? LIMIT 1`,
@@ -501,9 +788,50 @@ async function stateFor(
       `SELECT id, company_id, name, code, address FROM st_stations WHERE tenant_id = ? AND id IN (${placeholders}) ORDER BY name`,
       [scope.tenantId, ...stationIds]
     );
+    const invitationRows = ["OWNER", "MANAGER"].includes(scope.member.role)
+      ? await rows<DbRow[]>(
+          connection,
+          `SELECT i.id, i.role, i.created_at, i.expires_at, i.used_at, s.station_id FROM st_invitations i JOIN st_invitation_stations s ON s.invitation_id=i.id WHERE i.tenant_id=? AND s.station_id IN (${placeholders}) ORDER BY i.created_at DESC LIMIT 500`,
+          [scope.tenantId, ...stationIds]
+        )
+      : [];
+    const invitationsById = new Map<
+      string,
+      {
+        id: string;
+        role: AppRole;
+        stationIds: string[];
+        createdAt: string;
+        expiresAt: string;
+        usedAt: string | null;
+        status: "PENDING" | "ACCEPTED" | "EXPIRED";
+      }
+    >();
+    for (const row of invitationRows) {
+      const id = String(row.id);
+      const usedAt = row.used_at ? parseDbUtc(String(row.used_at)) : null;
+      const expiresAt = parseDbUtc(String(row.expires_at));
+      const invitation = invitationsById.get(id) ?? {
+        id,
+        role: String(row.role) as AppRole,
+        stationIds: [],
+        createdAt: parseDbUtc(String(row.created_at)).toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        usedAt: usedAt?.toISOString() ?? null,
+        status: (usedAt
+          ? "ACCEPTED"
+          : expiresAt.getTime() <= Date.now()
+            ? "EXPIRED"
+            : "PENDING") as "PENDING" | "ACCEPTED" | "EXPIRED",
+      };
+      const invitationStationId = String(row.station_id);
+      if (!invitation.stationIds.includes(invitationStationId))
+        invitation.stationIds.push(invitationStationId);
+      invitationsById.set(id, invitation);
+    }
     const memberRows = await rows<DbRow[]>(
       connection,
-      `SELECT DISTINCT m.user_id, u.name, u.email, m.role, ms.station_id FROM st_members m JOIN users u ON u.id = m.user_id LEFT JOIN st_member_stations ms ON ms.tenant_id = m.tenant_id AND ms.user_id = m.user_id WHERE m.tenant_id = ? AND (m.role = 'OWNER' OR ms.station_id IN (${placeholders})) ORDER BY u.name`,
+      `SELECT DISTINCT m.user_id, u.name, u.email, m.role, ms.station_id, ${staffing.membershipStatus ? "ms.status" : "'ACTIVE'"} AS station_status FROM st_members m JOIN users u ON u.id = m.user_id LEFT JOIN st_member_stations ms ON ms.tenant_id = m.tenant_id AND ms.user_id = m.user_id WHERE m.tenant_id = ? AND (m.role = 'OWNER' OR ms.station_id IN (${placeholders})) ORDER BY u.name`,
       [scope.tenantId, ...stationIds]
     );
     const membersById = new Map<
@@ -514,6 +842,10 @@ async function stateFor(
         email: string | null;
         role: string;
         stationIds: string[];
+        stationAccess: Record<
+          string,
+          "ACTIVE" | "INACTIVE" | "REVIEW_REQUIRED"
+        >;
       }
     >();
     for (const row of memberRows) {
@@ -524,12 +856,18 @@ async function stateFor(
         email: row.email === null ? null : String(row.email),
         role: String(row.role),
         stationIds: [],
+        stationAccess: {},
       };
-      if (
-        row.station_id &&
-        !current.stationIds.includes(String(row.station_id))
-      )
-        current.stationIds.push(String(row.station_id));
+      if (row.station_id) {
+        const stationId = String(row.station_id);
+        const status = normalizeStationAccessStatus(
+          row.station_status,
+          staffing.membershipStatus
+        );
+        current.stationAccess[stationId] = status;
+        if (status === "ACTIVE" && !current.stationIds.includes(stationId))
+          current.stationIds.push(stationId);
+      }
       if (current.role === "OWNER") current.stationIds = [...stationIds];
       membersById.set(id, current);
     }
@@ -538,6 +876,20 @@ async function stateFor(
       `SELECT id, station_id, label, starts_at, ends_at, status FROM st_shifts WHERE tenant_id = ? AND station_id IN (${placeholders}) ORDER BY starts_at DESC`,
       [scope.tenantId, ...stationIds]
     );
+    const assignmentRows = staffing.shiftAssignments
+      ? await rows<DbRow[]>(
+          connection,
+          `SELECT shift_id, user_id FROM st_shift_assignments WHERE tenant_id=? AND station_id IN (${placeholders}) AND status='ASSIGNED' ORDER BY shift_id,user_id`,
+          [scope.tenantId, ...stationIds]
+        )
+      : [];
+    const assignedUsersByShift = new Map<string, number[]>();
+    for (const assignment of assignmentRows) {
+      const shiftId = String(assignment.shift_id);
+      const assigned = assignedUsersByShift.get(shiftId) ?? [];
+      assigned.push(n(assignment.user_id));
+      assignedUsersByShift.set(shiftId, assigned);
+    }
     const isStaff = ["FUEL_STAFF", "MARKET_STAFF", "PURCHASER"].includes(
       scope.member.role
     );
@@ -573,19 +925,21 @@ async function stateFor(
         ? []
         : await rows<DbRow[]>(
             connection,
-            `SELECT id, name, type, balance_minor FROM st_debtors WHERE tenant_id = ? AND station_id IN (${placeholders}) ORDER BY name`,
+            `SELECT id, station_id, name, type, balance_minor FROM st_debtors WHERE tenant_id = ? AND station_id IN (${placeholders}) ORDER BY name`,
             [scope.tenantId, ...stationIds]
           );
-    const productRows = await rows<DbRow[]>(
-      connection,
-      `SELECT id, station_id, name, barcode, stock_qty, minimum_qty, purchase_price_minor, sale_price_minor, supplier_id FROM st_products WHERE tenant_id = ? AND station_id IN (${placeholders}) ORDER BY name`,
-      [scope.tenantId, ...stationIds]
-    );
+    const productRows = roleCanViewMarketCatalog(scope.member.role)
+      ? await rows<DbRow[]>(
+          connection,
+          `SELECT id, station_id, name, barcode, stock_qty, minimum_qty, purchase_price_minor, sale_price_minor, supplier_id FROM st_products WHERE tenant_id = ? AND station_id IN (${placeholders}) ORDER BY name`,
+          [scope.tenantId, ...stationIds]
+        )
+      : [];
     const supplierRows =
       sensitive || scope.member.role === "PURCHASER"
         ? await rows<DbRow[]>(
             connection,
-            `SELECT s.id, s.name, s.credit_limit_minor, COALESCE(SUM(CASE WHEN p.status = 'OPEN' THEN p.amount_minor ELSE 0 END),0) AS balance_minor, COALESCE(SUM(CASE WHEN p.status = 'OPEN' AND p.due_date <= CURRENT_DATE THEN p.amount_minor ELSE 0 END),0) AS due_minor FROM st_suppliers s LEFT JOIN st_payables p ON p.supplier_id = s.id WHERE s.tenant_id = ? AND s.station_id IN (${placeholders}) GROUP BY s.id ORDER BY s.name`,
+            `SELECT s.id, s.name, s.credit_limit_minor, COALESCE(SUM(CASE WHEN p.status = 'OPEN' THEN p.amount_minor ELSE 0 END),0) AS balance_minor, COALESCE(SUM(CASE WHEN p.status = 'OPEN' AND p.due_date <= DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 3 HOUR)) THEN p.amount_minor ELSE 0 END),0) AS due_minor FROM st_suppliers s LEFT JOIN st_payables p ON p.supplier_id = s.id WHERE s.tenant_id = ? AND s.station_id IN (${placeholders}) GROUP BY s.id ORDER BY s.name`,
             [scope.tenantId, ...stationIds]
           )
         : [];
@@ -603,8 +957,8 @@ async function stateFor(
     const saleTotals = mayRecommend
       ? await rows<DbRow[]>(
           connection,
-          `SELECT product_id, SUM(CASE WHEN kind='SALE' THEN quantity ELSE -quantity END) AS quantity28 FROM st_stock_movements
-       WHERE tenant_id = ? AND station_id IN (${placeholders}) AND kind IN ('SALE','SALE_RETURN')
+          `SELECT product_id, SUM(quantity) AS quantity28 FROM st_stock_movements
+       WHERE tenant_id = ? AND station_id IN (${placeholders}) AND kind='SALE'
        AND created_at >= DATE_SUB(CURRENT_TIMESTAMP(3), INTERVAL 28 DAY)
        GROUP BY product_id`,
           [scope.tenantId, ...stationIds]
@@ -626,7 +980,7 @@ async function stateFor(
       ? productRows
           .map(product => {
             const averageDaily =
-              Math.max(0, salesByProduct.get(String(product.id)) || 0) / 28;
+              (salesByProduct.get(String(product.id)) || 0) / 28;
             const stockQty = n(product.stock_qty);
             const recommendedQty = recommendationQuantity(
               stockQty,
@@ -714,6 +1068,12 @@ async function stateFor(
           }
         : null,
       member: { role: scope.member.role, stationIds },
+      staffingFeaturesAvailable:
+        staffing.membershipStatus &&
+        staffing.shiftAssignments &&
+        staffing.staffingEvents,
+      fastPaymentAvailable: staffing.fastPayment,
+      posSlipAvailable: staffing.posSlipDrafts,
       csrfToken: csrfToken(actor),
       companies: companyRows.map(row => ({
         id: String(row.id),
@@ -728,19 +1088,35 @@ async function stateFor(
         code: String(row.code),
         address: row.address === null ? null : String(row.address),
       })),
+      invitations: [...invitationsById.values()],
       members: isStaff
         ? [...membersById.values()].filter(m => m.userId === actor.id)
         : [...membersById.values()],
-      shifts: shiftRows.map(row => ({
-        id: String(row.id),
-        stationId: String(row.station_id),
-        label: String(row.label),
-        startsAt: new Date(String(row.starts_at)).toISOString(),
-        endsAt: row.ends_at
-          ? new Date(String(row.ends_at)).toISOString()
-          : null,
-        status: String(row.status),
-      })),
+      shifts: shiftRows
+        .filter(
+          row =>
+            !isStaff ||
+            (String(row.status) === "OPEN" &&
+              (assignedUsersByShift.get(String(row.id)) ?? []).includes(
+                actor.id
+              )) ||
+            accountRows.some(
+              account => String(account.shift_id) === String(row.id)
+            )
+        )
+        .map(row => ({
+          id: String(row.id),
+          stationId: String(row.station_id),
+          label: String(row.label),
+          startsAt: parseDbUtc(String(row.starts_at)).toISOString(),
+          endsAt: row.ends_at
+            ? parseDbUtc(String(row.ends_at)).toISOString()
+            : null,
+          status: String(row.status),
+          assignedUserIds: (
+            assignedUsersByShift.get(String(row.id)) ?? []
+          ).filter(userId => !isStaff || userId === actor.id),
+        })),
       accounts: accountRows.map(row => {
         const totals = accountInput(row);
         const own = n(row.user_id) === actor.id;
@@ -760,6 +1136,7 @@ async function stateFor(
           cardTotalMinor: totals.cardTotalMinor,
           cashSalesMinor: totals.cashSalesMinor,
           ibanMinor: totals.ibanMinor,
+          fastMinor: totals.fastMinor,
           debtMinor: own || sensitive ? totals.debtMinor : null,
           arCollectionMinor: totals.arCollectionMinor,
           expectedCashMinor: totals.expectedCashMinor,
@@ -772,6 +1149,8 @@ async function stateFor(
               ? null
               : n(row.cash_receiver_user_id),
           signatureCount: n(row.signature_count),
+          specialCoveredMinor: n(row.special_covered_minor),
+          prepaymentCashMinor: n(row.prepayment_cash_minor),
         };
       }),
       payments: paymentRows.map(row => ({
@@ -780,22 +1159,23 @@ async function stateFor(
         kind: String(row.kind),
         amountMinor: n(row.amount_minor),
         debtorId: row.debtor_id === null ? null : String(row.debtor_id),
-        reference: row.reference === null ? null : String(row.reference),
+        reference: privateOcrIdentifier(row.reference),
         status: String(row.status),
       })),
       slips: slipRows.map(row => ({
         id: String(row.id),
         accountId: String(row.account_id),
         amountMinor: n(row.amount_minor),
-        reference: String(row.reference),
-        terminalId: String(row.terminal_id),
-        transactionAt: new Date(String(row.transaction_at)).toISOString(),
+        reference: privateOcrIdentifier(row.reference) ?? "••••",
+        terminalId: privateOcrIdentifier(row.terminal_id) ?? "••••",
+        transactionAt: parseDbUtc(String(row.transaction_at)).toISOString(),
         status: String(row.status),
         method: String(row.method),
         note: row.note === null ? null : String(row.note),
       })),
       debtors: debtorRows.map(row => ({
         id: String(row.id),
+        stationId: String(row.station_id),
         name: String(row.name),
         type: String(row.type),
         balanceMinor: sensitive ? n(row.balance_minor) : null,
@@ -812,7 +1192,12 @@ async function stateFor(
             ? n(row.purchase_price_minor)
             : null,
         salePriceMinor: n(row.sale_price_minor),
-        supplierId: row.supplier_id === null ? null : String(row.supplier_id),
+        supplierId:
+          sensitive || scope.member.role === "PURCHASER"
+            ? row.supplier_id === null
+              ? null
+              : String(row.supplier_id)
+            : null,
       })),
       suppliers: supplierRows.map(row => ({
         id: String(row.id),
@@ -838,7 +1223,7 @@ async function stateFor(
         actorName: String(row.actor_name ?? ""),
         action: String(row.action),
         entityId: row.entity_id === null ? null : String(row.entity_id),
-        createdAt: new Date(String(row.created_at)).toISOString(),
+        createdAt: parseDbUtc(String(row.created_at)).toISOString(),
       })),
       accountEvents: eventRows.map(row => ({
         id: String(row.id),
@@ -846,7 +1231,7 @@ async function stateFor(
         actorName: String(row.actor_name ?? ""),
         eventType: String(row.event_type),
         revision: n(row.revision),
-        createdAt: new Date(String(row.created_at)).toISOString(),
+        createdAt: parseDbUtc(String(row.created_at)).toISOString(),
         payload: JSON.parse(String(row.payload_json)),
       })),
       integrationStatus: {
@@ -907,12 +1292,35 @@ function handler(fn: (req: StationRequest, res: Response) => Promise<void>) {
 }
 
 function mutationHandler(
-  fn: (actor: StationActor, body: Record<string, unknown>) => Promise<unknown>
+  fn: (actor: StationActor, body: Record<string, unknown>) => Promise<unknown>,
+  dates: {
+    instants?: readonly string[];
+    optionalInstants?: readonly string[];
+    calendarDates?: readonly string[];
+  } = {}
 ) {
   return handler(async (req, res) => {
     const actor = stationActor(req);
     assertMutationRequest(req, actor);
     const body = bodyOf(req);
+    // Validate before idempotency replay: old cached success must not admit
+    // timezone-less input under the new API contract. No DB is needed here.
+    for (const field of dates.instants ?? []) safeDate(body[field], field);
+    for (const field of dates.optionalInstants ?? []) {
+      if (
+        body[field] !== null &&
+        body[field] !== undefined &&
+        body[field] !== ""
+      )
+        safeDate(body[field], field);
+    }
+    for (const field of dates.calendarDates ?? [])
+      safeCalendarDate(body[field], field);
+    const route = String(req.route?.path ?? req.path ?? "");
+    Object.defineProperty(body, "__requestOperation", {
+      value: route.replace(/^\/api\/stationos/, ""),
+      enumerable: false,
+    });
     Object.defineProperty(body, "__stationDevice", {
       value: {
         id: req.get("X-Stationos-Device-Id"),
@@ -1029,11 +1437,6 @@ async function setup(
       );
       await execute(
         connection,
-        "INSERT INTO st_product_barcodes(station_id,barcode,product_id,pack_qty,label) VALUES (?,?,?,1,'Ana barkod')",
-        [stationId, `DEMO-${stationCode}`, productId]
-      );
-      await execute(
-        connection,
         `INSERT INTO st_shifts (id, tenant_id, station_id, label, starts_at, status) VALUES (?, ?, ?, 'DEMO - Örnek Vardiya', CURRENT_TIMESTAMP(3), 'OPEN')`,
         [shiftId, tenantId, stationId]
       );
@@ -1050,24 +1453,1110 @@ async function setup(
   });
 }
 
+async function numericShiftAccounts(
+  c: PoolConnection,
+  scope: { tenantId: string; stationId: string },
+  shiftId: string
+): Promise<NumericAccount[]> {
+  const ids = await rows<DbRow[]>(
+    c,
+    "SELECT id FROM st_accounts WHERE tenant_id=? AND station_id=? AND shift_id=? AND business_unit='FUEL' ORDER BY id LIMIT 101",
+    [scope.tenantId, scope.stationId, shiftId]
+  );
+  if (ids.length > 100)
+    fail(
+      "DAILY_ACCOUNT_LIMIT",
+      "Vardiyada 100 hesap sınırı aşıldı; karşılaştırma kapsamını daraltın."
+    );
+  const result: NumericAccount[] = [];
+  for (const row of ids) {
+    // Compare a consistent read view; do not acquire financial account locks
+    // after the daily package/station locks (approval locks in reverse order).
+    const a = await first<AccountRow>(
+      c,
+      `SELECT a.*,u.name AS user_name,${ACCOUNT_TOTAL_COLUMNS} FROM st_accounts a JOIN users u ON u.id=a.user_id WHERE a.id=? AND a.tenant_id=? AND a.station_id=?`,
+      [String(row.id), scope.tenantId, scope.stationId]
+    );
+    if (!a)
+      fail("DAILY_ACCOUNT_NOT_FOUND", "Karşılaştırma hesabı bulunamadı.", 404);
+    const t = accountInput(a),
+      fuel = await fuelSnapshot(c, a.id, t.sourceTotalMinor);
+    const groups = new Map<string, NonNullable<typeof fuel>["readings"]>();
+    for (const r of fuel?.readings ?? []) {
+      const group = groups.get(String(r.nozzleId)) ?? [];
+      group.push(r);
+      groups.set(String(r.nozzleId), group);
+    }
+    const nozzles: NumericNozzle[] = [];
+    for (const [id, points] of groups) {
+      const closed =
+        !!fuel?.closed &&
+        points[0]?.kind === "OPEN" &&
+        points.at(-1)?.kind === "CLOSE";
+      const fallback = closed ? calculateFuel(points as any) : null;
+      const native = fuel?.icmal?.nozzleTotals.find(n => n.nozzleId === id);
+      nozzles.push({
+        id,
+        openingMl:
+          points[0]?.kind === "OPEN" ? Number(points[0].meterMl) : null,
+        closingMl: closed ? Number(points.at(-1)!.meterMl) : null,
+        meterMl: closed ? (native?.meterMl ?? fallback!.soldMl) : null,
+        meterMinor: closed
+          ? (native?.meterMinor ?? fallback!.expectedMinor)
+          : null,
+        commercialMl: closed
+          ? (native?.commercialMl ?? fallback!.soldMl)
+          : null,
+        commercialMinor: closed
+          ? (native?.commercialMinor ?? fallback!.expectedMinor)
+          : null,
+      });
+    }
+    const specials = fuel?.icmal;
+    result.push({
+      id: String(a.id),
+      userId: Number(a.user_id),
+      revision: Number(a.revision),
+      status: a.status,
+      closed: !!fuel?.closed,
+      nozzles,
+      specialPending:
+        Number(a.special_pending_count) > 0 ||
+        (!!specials && (specials.draftCount > 0 || specials.pendingCount > 0)),
+      tenders: {
+        CASH: t.cashSalesMinor,
+        CARD: t.cardTotalMinor,
+        IBAN: t.ibanMinor,
+        FAST: t.fastMinor,
+        DEBT: t.debtMinor,
+        TTS: specials?.ttsMinor ?? 0,
+        GIFT_LOAD: specials?.giftLoadMinor ?? 0,
+        GIFT_USE: specials?.giftUseMinor ?? 0,
+        PARTNER: specials?.partnerMinor ?? 0,
+        TTS_GIFT_COMBINED: specials?.excelTtsGiftMinor ?? 0,
+      },
+    });
+  }
+  return result;
+}
+
 export function registerStationRoutes(app: Express): void {
   app.use("/api/stationos", authenticated);
-  registerMarketPosRoutes(app, {
-    actor: stationActor,
-    assertMutation: assertMutationRequest,
-    error: responseError,
-    requireStation,
-    mutation,
-    audit,
-  });
-  registerMarketAccountingRoutes(app, {
-    actor: stationActor,
-    assertMutation: assertMutationRequest,
-    error: responseError,
-    requireStation,
-    mutation,
-    audit,
-  });
+  async function assistantRead(
+    actor: StationActor,
+    filters: Record<string, unknown>
+  ) {
+    return withTransaction(async c => {
+      const scope = await requireScope(c, actor, [
+        "OWNER",
+        "MANAGER",
+        "ACCOUNTANT",
+      ]);
+      const stations = await rows<DbRow[]>(
+        c,
+        `SELECT id,company_id FROM st_stations WHERE tenant_id=? AND id IN (${scope.stationIds.map(() => "?").join(",") || "NULL"})`,
+        [scope.tenantId, ...scope.stationIds]
+      );
+      const companyId = filters.companyId
+        ? requireId(filters.companyId, "companyId")
+        : null;
+      const ids = assistantStationScope(
+        stations as { id: string; company_id: string }[],
+        filters.stationId ? requireId(filters.stationId, "stationId") : null,
+        companyId
+      );
+      return {
+        fingerprint: JSON.stringify([
+          scope.tenantId,
+          scope.member.role,
+          [...scope.stationIds].sort(),
+        ]),
+        report: await smartAssistantReport(
+          c,
+          scope.tenantId,
+          ids,
+          companyId,
+          filters.from,
+          filters.to,
+          geminiOcrAvailable()
+        ),
+      };
+    });
+  }
+  app.get(
+    "/api/stationos/assistant/report",
+    handler(async (req, res) => {
+      const result = await assistantRead(stationActor(req), req.query);
+      res
+        .set("Cache-Control", "no-store")
+        .json({ ok: true, report: result.report });
+    })
+  );
+  app.post(
+    "/api/stationos/assistant/explain",
+    mutationHandler(async (actor, body) => {
+      if (body.externalConfirmed !== true)
+        fail(
+          "EXTERNAL_CONFIRMATION_REQUIRED",
+          "Anonim özetin Gemini'ye gönderimini onaylayın."
+        );
+      const before = await assistantRead(actor, body);
+      const explanation = await limitedAssistantExplanation(
+        actor.id,
+        before.report
+      );
+      // Revalidate authorization after the external request, with no open DB transaction.
+      const after = await withTransaction(async c => {
+        const s = await requireScope(c, actor, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+        ]);
+        return JSON.stringify([
+          s.tenantId,
+          s.member.role,
+          [...s.stationIds].sort(),
+        ]);
+      });
+      if (before.fingerprint !== after)
+        fail("SCOPE_CHANGED", "Yetki kapsamı değişti; raporu yenileyin.", 403);
+      return { ok: true, report: before.report, explanation };
+    })
+  );
+  app.get(
+    "/api/stationos/dashboard",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        result = await withTransaction(async c => {
+          const scope = await requireScope(c, actor, [
+            "OWNER",
+            "MANAGER",
+            "ACCOUNTANT",
+          ]);
+          const selected = req.query.stationId
+            ? requireId(req.query.stationId, "stationId")
+            : null;
+          if (selected && !scope.stationIds.includes(selected))
+            fail("STATION_FORBIDDEN", "İstasyon yetki kapsamı dışında.", 403);
+          return operationalDashboard(
+            c,
+            scope.tenantId,
+            selected ? [selected] : scope.stationIds,
+            req.query.from,
+            req.query.to
+          );
+        });
+      res.json({ ok: true, ...result });
+    })
+  );
+  app.get(
+    "/api/stationos/tanker-documents",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId");
+      const result = await withTransaction(async c => {
+        const { scope } = await requireStation(c, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+        ]);
+        return tankerOverview(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          req.query.packageId
+            ? requireId(req.query.packageId, "packageId")
+            : undefined
+        );
+      });
+      res.json({ ok: true, ...result });
+    })
+  );
+  app.get(
+    "/api/stationos/tanker-document/image",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId");
+      const image = await withTransaction(async c => {
+        const { scope } = await requireStation(c, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+        ]);
+        return dailyReportImage(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          req.query.packageId,
+          req.query.pageId,
+          "TANKER"
+        );
+      });
+      res
+        .set({
+          "X-Content-Type-Options": "nosniff",
+          "Content-Security-Policy": "default-src 'none'; sandbox",
+        })
+        .type(image.mime)
+        .send(image.bytes);
+    })
+  );
+  for (const action of ["import", "read", "review"] as const) {
+    app.post(
+      "/api/stationos/tanker-document/" + action,
+      mutationHandler(async (actor, body) =>
+        mutation(actor, body, async c => {
+          const stationId = requireId(body.stationId, "stationId"),
+            { scope } = await requireStation(c, actor, stationId, [
+              "OWNER",
+              "MANAGER",
+              "ACCOUNTANT",
+            ]),
+            target = { tenantId: scope.tenantId, stationId };
+          const result =
+            action === "import"
+              ? await importDailyReport(c, target, actor.id, body, "TANKER")
+              : action === "read"
+                ? await readTankerDocument(c, target, actor.id, body)
+                : await saveTankerDocument(c, target, actor.id, body);
+          await audit(
+            c,
+            scope.tenantId,
+            stationId,
+            actor.id,
+            "TANKER_DOCUMENT_" + action.toUpperCase(),
+            result.id
+          );
+          return result;
+        })
+      )
+    );
+  }
+  app.get(
+    "/api/stationos/daily-report/ocr",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId");
+      const result = await withTransaction(async c => {
+        const { scope } = await requireStation(c, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+        ]);
+        return getDailyOcr(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          req.query.packageId,
+          req.query.pageId,
+          "SHIFT",
+          req.query.pdfPageNumber
+        );
+      });
+      res.json({ ok: true, ...result, capability: await ocrCapability() });
+    })
+  );
+  app.post(
+    "/api/stationos/daily-report/ocr",
+    mutationHandler(async (actor, body) =>
+      mutation(actor, body, async c => {
+        const stationId = requireId(body.stationId, "stationId"),
+          { scope } = await requireStation(c, actor, stationId, [
+            "OWNER",
+            "MANAGER",
+            "ACCOUNTANT",
+          ]);
+        const result = await readDailyOcr(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          actor.id,
+          body
+        );
+        await audit(
+          c,
+          scope.tenantId,
+          stationId,
+          actor.id,
+          "DAILY_PHOTO_OCR",
+          result.id
+        );
+        return result;
+      })
+    )
+  );
+  app.get(
+    "/api/stationos/daily-report/numeric",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId"),
+        staffUserId =
+          req.query.staffUserId === undefined
+            ? null
+            : requireInteger(Number(req.query.staffUserId), "staffUserId");
+      const result = await withTransaction(async c => {
+        const { scope } = await requireStation(c, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+        ]);
+        const context = await numericContext(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          req.query.packageId,
+          req.query.shiftId === undefined
+            ? undefined
+            : req.query.shiftId === ""
+              ? null
+              : requireId(req.query.shiftId, "shiftId"),
+          numericShiftAccounts
+        );
+        return staffUserId === null
+          ? context
+          : scopeNumericContextToStaff(context, staffUserId);
+      });
+      res.json({ ok: true, ...result });
+    })
+  );
+  app.post(
+    "/api/stationos/daily-report/numeric",
+    mutationHandler(async (actor, body) =>
+      mutation(actor, body, async c => {
+        const stationId = requireId(body.stationId, "stationId"),
+          { scope } = await requireStation(c, actor, stationId, [
+            "OWNER",
+            "MANAGER",
+            "ACCOUNTANT",
+          ]);
+        const result = await saveNumericDraft(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          actor.id,
+          body,
+          numericShiftAccounts
+        );
+        await audit(
+          c,
+          scope.tenantId,
+          stationId,
+          actor.id,
+          "DAILY_NUMERIC_DRAFT_REVIEW",
+          result.id
+        );
+        return result;
+      })
+    )
+  );
+  app.get(
+    "/api/stationos/daily-reports",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId");
+      const result = await withTransaction(async c => {
+        const { scope } = await requireStation(c, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+          "FUEL_STAFF",
+        ]);
+        return dailyReportOverview(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          req.query.packageId
+            ? requireId(req.query.packageId, "packageId")
+            : undefined
+        );
+      });
+      res.json({ ok: true, ...result });
+    })
+  );
+  app.get(
+    "/api/stationos/daily-report/parse",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId");
+      const result = await withTransaction(async c => {
+        const { scope } = await requireStation(c, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+        ]);
+        return parseDailyReportDocument(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          req.query.packageId
+        );
+      });
+      res.json({ ok: true, ...result });
+    })
+  );
+  app.get(
+    "/api/stationos/daily-report/image",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId");
+      const image = await withTransaction(async c => {
+        const { scope } = await requireStation(c, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+          "FUEL_STAFF",
+        ]);
+        const source = await dailyReportImage(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          req.query.packageId,
+          req.query.pageId
+        );
+        if (
+          scope.member.role === "FUEL_STAFF" &&
+          !source.mime.startsWith("image/")
+        )
+          fail(
+            "DAILY_DOCUMENT_FORBIDDEN",
+            "PDF/XLSX otomasyon kaynağını yalnız yönetim veya muhasebe görüntüleyebilir.",
+            403
+          );
+        return source;
+      });
+      res
+        .set({
+          "X-Content-Type-Options": "nosniff",
+          "Content-Security-Policy": "default-src 'none'; sandbox",
+        })
+        .type(image.mime)
+        .send(image.bytes);
+    })
+  );
+  for (const action of ["import", "review"] as const) {
+    app.post(
+      "/api/stationos/daily-report/" + action,
+      mutationHandler(async (actor, body) =>
+        mutation(actor, body, async c => {
+          const stationId = requireId(body.stationId, "stationId");
+          const { scope } = await requireStation(
+            c,
+            actor,
+            stationId,
+            action === "review"
+              ? ["OWNER", "MANAGER", "ACCOUNTANT"]
+              : ["OWNER", "MANAGER", "ACCOUNTANT", "FUEL_STAFF"]
+          );
+          if (
+            action === "import" &&
+            scope.member.role === "FUEL_STAFF" &&
+            typeof body.sourceName === "string" &&
+            /\.(pdf|xlsx)$/i.test(body.sourceName)
+          )
+            fail(
+              "DAILY_DOCUMENT_FORBIDDEN",
+              "PDF/XLSX otomasyon raporlarını yalnız yönetim veya muhasebe yükleyebilir.",
+              403
+            );
+          const target = { tenantId: scope.tenantId, stationId };
+          const result =
+            action === "import"
+              ? await importDailyReport(c, target, actor.id, body)
+              : await reviewDailyReport(c, target, actor.id, body);
+          await audit(
+            c,
+            scope.tenantId,
+            stationId,
+            actor.id,
+            action === "import"
+              ? "DAILY_REPORT_IMPORT"
+              : "DAILY_REPORT_DRAFT_REVIEW",
+            result.id
+          );
+          return result;
+        })
+      )
+    );
+  }
+  app.get(
+    "/api/stationos/tank/photo-validation",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId");
+      const result = await withTransaction(async c => {
+        const { scope } = await requireStation(c, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+        ]);
+        return photoOverview(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          req.query.documentId
+            ? requireId(req.query.documentId, "documentId")
+            : undefined
+        );
+      });
+      res.json({ ok: true, ...result });
+    })
+  );
+  app.get(
+    "/api/stationos/tank/photo-image",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId"),
+        id = requireId(req.query.documentId, "documentId");
+      const hash = await withTransaction(async c => {
+        const { scope } = await requireStation(c, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+        ]);
+        return photoImageHash(c, { tenantId: scope.tenantId, stationId }, id);
+      });
+      const { readFile } = await import("node:fs/promises");
+      const bytes = await readFile(
+        resolvePhotoPath(
+          process.cwd(),
+          ".local/phase4d/sources",
+          hash + ".jpeg"
+        )
+      ).catch(() =>
+        fail("PHOTO_UNAVAILABLE", "Kaynak fotoğraf dosyası bulunamadı.", 404)
+      );
+      if (createHash("sha256").update(bytes).digest("hex") !== hash)
+        fail(
+          "PHOTO_SOURCE_CHANGED",
+          "Fotoğraf kaynak hash değeriyle eşleşmiyor; doğrulama durduruldu.",
+          409
+        );
+      res.type("jpeg").send(bytes);
+    })
+  );
+  app.post(
+    "/api/stationos/tank/photo-review",
+    mutationHandler(async (actor, body) =>
+      mutation(actor, body, async c => {
+        const stationId = requireId(body.stationId, "stationId"),
+          { scope } = await requireStation(c, actor, stationId, [
+            "OWNER",
+            "MANAGER",
+          ]);
+        const result = await reviewPhoto(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          actor.id,
+          body
+        );
+        await audit(
+          c,
+          scope.tenantId,
+          stationId,
+          actor.id,
+          "TANK_PHOTO_REVIEW",
+          result.documentId
+        );
+        return result;
+      })
+    )
+  );
+  app.get(
+    "/api/stationos/tanks",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId");
+      const day = req.query.day
+        ? safeCalendarDate(req.query.day, "day")
+        : undefined;
+      const month =
+        typeof req.query.month === "string" && req.query.month !== ""
+          ? req.query.month
+          : undefined;
+      if (month) {
+        if (!/^\d{4}-\d{2}$/.test(month))
+          fail("INVALID_MONTH", "Ay YYYY-AA olmalı.");
+        safeCalendarDate(month + "-01", "month");
+      }
+      if (day && month)
+        fail("DATE_FILTER_CONFLICT", "Gün veya ay filtresinden birini seçin.");
+      const shiftId = req.query.shiftId
+        ? requireId(req.query.shiftId, "shiftId")
+        : undefined;
+      const result = await withTransaction(async connection => {
+        const { scope } = await requireStation(connection, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+          "FUEL_STAFF",
+        ]);
+        return {
+          ...(await tankReport(
+            connection,
+            { tenantId: scope.tenantId, stationId },
+            { day, month, shiftId }
+          )),
+          equipment: await fuelEquipment(connection, stationId),
+          volumes: await tankVolumesReport(connection, {
+            tenantId: scope.tenantId,
+            stationId,
+          }),
+          deliveryOperations: (
+            await rows<DbRow[]>(
+              connection,
+              `SELECT o.id,o.reference,o.provider,o.volume_ml,o.tank_id FROM st_shift_special_operations o JOIN st_accounts a ON a.id=o.account_id WHERE o.station_id=? AND o.tenant_id=? AND o.kind='TANKER_IN' AND o.status='RECORDED' AND a.status='OPEN' AND NOT EXISTS(SELECT 1 FROM st_tank_delivery_links x WHERE x.operation_id=o.id) ORDER BY o.created_at DESC`,
+              [stationId, scope.tenantId]
+            )
+          ).map(o => ({
+            id: o.id,
+            reference: o.reference,
+            provider: o.provider,
+            volumeMl: n(o.volume_ml),
+            tankId: o.tank_id,
+          })),
+        };
+      });
+      res.json({ ok: true, ...result });
+    })
+  );
+  for (const action of [
+    "card",
+    "request",
+    "review",
+    "measure",
+    "link",
+    "dual-measure",
+    "variance-request",
+    "variance-review",
+  ] as const) {
+    app.post(
+      "/api/stationos/tank/" + action,
+      mutationHandler(async (actor, body) =>
+        mutation(actor, body, async connection => {
+          const stationId = requireId(body.stationId, "stationId");
+          const roles =
+            action === "request" && body.tankerDocument
+              ? (["OWNER", "MANAGER", "ACCOUNTANT"] as const)
+              : action === "card"
+                ? (["OWNER", "MANAGER"] as const)
+                : action === "review" ||
+                    action === "link" ||
+                    action === "variance-review"
+                  ? (["OWNER", "ACCOUNTANT"] as const)
+                  : (["OWNER", "MANAGER", "ACCOUNTANT", "FUEL_STAFF"] as const);
+          const { scope } = await requireStation(
+              connection,
+              actor,
+              stationId,
+              roles
+            ),
+            target = { tenantId: scope.tenantId, stationId };
+          const result =
+            action === "card"
+              ? await saveTankCard(connection, target, body)
+              : action === "request"
+                ? await requestTankMove(connection, target, actor.id, body)
+                : action === "review"
+                  ? await reviewTankMove(connection, target, actor.id, body)
+                  : action === "dual-measure"
+                    ? await recordDualVolumes(
+                        connection,
+                        target,
+                        actor.id,
+                        body
+                      )
+                    : action === "variance-request"
+                      ? await requestVarianceReset(
+                          connection,
+                          target,
+                          actor.id,
+                          body
+                        )
+                      : action === "variance-review"
+                        ? await reviewVarianceReset(
+                            connection,
+                            target,
+                            actor.id,
+                            body
+                          )
+                        : action === "measure"
+                          ? await measureTank(
+                              connection,
+                              target,
+                              actor.id,
+                              body
+                            )
+                          : await linkTankDelivery(
+                              connection,
+                              target,
+                              actor.id,
+                              body
+                            );
+          await audit(
+            connection,
+            scope.tenantId,
+            stationId,
+            actor.id,
+            "TANK_" + action.toUpperCase(),
+            String(result.tankId)
+          );
+          return result;
+        })
+      )
+    );
+  }
+  for (const action of [
+    "special",
+    "review",
+    "settle",
+    "void",
+    "tank",
+  ] as const) {
+    app.post(
+      "/api/stationos/icmal/" + action,
+      mutationHandler(async (actor, body) =>
+        mutation(actor, body, async connection => {
+          const account = await lockedAccount(
+            connection,
+            requireId(body.accountId, "accountId")
+          );
+          const scope = await stationFromAccount(connection, actor, account, [
+            "OWNER",
+            "MANAGER",
+            "ACCOUNTANT",
+            "FUEL_STAFF",
+          ]);
+          checkRevision(account, body.expectedRevision);
+          if (
+            ["review", "settle"].includes(action) ||
+            (action === "void" && Number(account.user_id) !== actor.id)
+          ) {
+            if (!["OWNER", "ACCOUNTANT"].includes(scope.member.role))
+              fail(
+                "ROLE_FORBIDDEN",
+                "Özel işlem incelemesi/teyidi bağımsız mali rol gerektirir.",
+                403
+              );
+          } else {
+            checkAccountOwner(account, actor);
+            await ensureDeviceLease(connection, actor, account, body);
+          }
+          const result =
+            action === "special"
+              ? await addSpecial(connection, account, actor.id, body)
+              : action === "review"
+                ? await reviewSpecial(connection, account, actor.id, body)
+                : action === "settle"
+                  ? await settleSpecial(connection, account, actor.id, body)
+                  : action === "void"
+                    ? await voidSpecial(connection, account, actor.id, body)
+                    : await setTankCheck(connection, account, body);
+          const snapshot = await fuelSnapshot(connection, account.id, 0);
+          if (snapshot?.closed)
+            await execute(
+              connection,
+              `UPDATE st_accounts SET source_sales_minor=? WHERE id=?`,
+              [snapshot.expectedMinor, account.id]
+            );
+          const revision = n(account.revision) + 1;
+          await execute(
+            connection,
+            `UPDATE st_accounts SET revision=revision+1 WHERE id=?`,
+            [account.id]
+          );
+          await accountEvent(
+            connection,
+            account,
+            actor,
+            "ICMAL_" + action.toUpperCase(),
+            revision,
+            result as any
+          );
+          await audit(
+            connection,
+            scope.tenantId,
+            String(account.station_id),
+            actor.id,
+            "ICMAL_" + action.toUpperCase(),
+            account.id
+          );
+          return {
+            id: account.id,
+            revision,
+            ...("id" in result ? { operationId: result.id } : {}),
+          };
+        })
+      )
+    );
+  }
+  app.get(
+    "/api/stationos/icmal",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId");
+      const day =
+        typeof req.query.day === "string" && req.query.day !== ""
+          ? safeCalendarDate(req.query.day, "day")
+          : null;
+      const userId = req.query.userId
+        ? requireInteger(Number(req.query.userId), "userId")
+        : null;
+      const result = await withTransaction(async connection => {
+        const { scope } = await requireStation(connection, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+          "FUEL_STAFF",
+        ]);
+        const own = scope.member.role === "FUEL_STAFF";
+        if (own && userId !== null && userId !== actor.id)
+          fail(
+            "ACCOUNT_FORBIDDEN",
+            "Yalnız kendi icmalinizi görebilirsiniz.",
+            403
+          );
+        const ids = await rows<DbRow[]>(
+          connection,
+          `SELECT a.id,s.label AS shift_label,s.starts_at,u.name AS user_name FROM st_accounts a JOIN st_shifts s ON s.id=a.shift_id JOIN users u ON u.id=a.user_id WHERE a.tenant_id=? AND a.station_id=? AND a.business_unit='FUEL' ${day ? "AND DATE(DATE_ADD(s.starts_at,INTERVAL 3 HOUR))=?" : ""} ${own || userId !== null ? "AND a.user_id=?" : ""} ORDER BY s.starts_at DESC,a.id LIMIT 501`,
+          [
+            scope.tenantId,
+            stationId,
+            ...(day ? [day] : []),
+            ...(own || userId !== null ? [own ? actor.id : userId] : []),
+          ]
+        );
+        if (ids.length > 500)
+          fail(
+            "REPORT_RANGE_REQUIRED",
+            "500'den fazla hesap var; gün veya personel filtresi seçin.",
+            400
+          );
+        const accounts = [];
+        for (const id of ids) {
+          const a = await lockedAccount(connection, String(id.id)),
+            t = accountInput(a),
+            fuel = await fuelSnapshot(connection, a.id, t.sourceTotalMinor);
+          const ledger = await first<DbRow>(
+            connection,
+            `SELECT COALESCE(SUM(d.amount_minor),0) AS debt FROM st_debtor_ledger d JOIN st_payments p ON p.id=d.payment_id WHERE p.account_id=? AND d.direction='DEBT'`,
+            [a.id]
+          );
+          const cashCountedMinor =
+            a.counted_cash_minor === null ? null : n(a.counted_cash_minor);
+          const recorded =
+            fuel?.icmal?.operations.filter(o => o.status === "RECORDED") ?? [];
+          accounts.push({
+            cashCountedMinor,
+            cashDifferenceMinor:
+              cashCountedMinor === null
+                ? null
+                : cashCountedMinor -
+                  t.expectedCashMinor -
+                  n(a.opening_float_minor),
+            receivableLedgerMinor: n(ledger?.debt),
+            receivableDifferenceMinor: n(ledger?.debt) - t.debtMinor,
+            providerReceivableMinor: safeAdd(
+              ...recorded
+                .filter(o => o.model === "RECEIVABLE")
+                .map(o => o.amountMinor)
+            ),
+            giftAppliedMinor: safeAdd(
+              ...recorded
+                .filter(o => o.kind === "GIFT_USE" && o.model === "PREPAID")
+                .map(o => o.amountMinor)
+            ),
+            id: a.id,
+            shiftId: a.shift_id,
+            shiftLabel: id.shift_label,
+            startsAt: parseDbUtc(String(id.starts_at)).toISOString(),
+            userId: n(a.user_id),
+            userName: id.user_name,
+            status: a.status,
+            revision: n(a.revision),
+            cashMinor: t.cashSalesMinor,
+            cardMinor: t.cardTotalMinor,
+            ibanMinor: t.ibanMinor,
+            fastMinor: t.fastMinor,
+            debtMinor: t.debtMinor,
+            arCollectionMinor: t.arCollectionMinor,
+            specialCoveredMinor: n(a.special_covered_minor),
+            prepaymentCashMinor: n(a.prepayment_cash_minor),
+            expectedCashMinor: t.expectedCashMinor,
+            signatureCount: n(a.signature_count),
+            fuel,
+          });
+        }
+        return {
+          stationId,
+          day,
+          userId,
+          accounts,
+          equipment: await fuelEquipment(connection, stationId),
+          operationalOnly: true,
+        };
+      });
+      res.json({ ok: true, ...result });
+    })
+  );
+  app.get(
+    "/api/stationos/fuel",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId");
+      const result = await withTransaction(async connection => {
+        const { scope } = await requireStation(connection, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+          "FUEL_STAFF",
+        ]);
+        const list = await rows<DbRow[]>(
+          connection,
+          `SELECT id FROM st_accounts WHERE station_id=? AND tenant_id=? AND business_unit='FUEL' ${scope.member.role === "FUEL_STAFF" ? "AND user_id=?" : ""} ORDER BY created_at DESC LIMIT 100`,
+          scope.member.role === "FUEL_STAFF"
+            ? [stationId, scope.tenantId, actor.id]
+            : [stationId, scope.tenantId]
+        );
+        const batches = [];
+        for (const a of list) {
+          const account = await lockedAccount(connection, String(a.id));
+          const batch = await fuelSnapshot(
+            connection,
+            account.id,
+            accountInput(account).sourceTotalMinor
+          );
+          if (batch) batches.push(batch);
+        }
+        return {
+          equipment: await fuelEquipment(connection, stationId),
+          batches,
+        };
+      });
+      res.json({ ok: true, ...result });
+    })
+  );
+  app.post(
+    "/api/stationos/fuel/equipment",
+    mutationHandler(async (actor, body) =>
+      mutation(actor, body, async connection => {
+        const stationId = requireId(body.stationId, "stationId");
+        const { scope } = await requireStation(connection, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+        ]);
+        const result = await addFuelEquipment(
+          connection,
+          scope.tenantId,
+          stationId,
+          body
+        );
+        await audit(
+          connection,
+          scope.tenantId,
+          stationId,
+          actor.id,
+          "FUEL_EQUIPMENT",
+          result.id
+        );
+        return result;
+      })
+    )
+  );
+  for (const [path, kind] of [
+    ["/fuel/price", "PRICE"],
+    ["/fuel/close", "CLOSE"],
+    ["/fuel/correct", "CORRECT"],
+  ] as const) {
+    app.post(
+      "/api/stationos" + path,
+      mutationHandler(
+        async (actor, body) =>
+          mutation(actor, body, async connection => {
+            const account = await lockedAccount(
+              connection,
+              requireId(body.accountId, "accountId")
+            );
+            const scope = await stationFromAccount(connection, actor, account, [
+              "OWNER",
+              "MANAGER",
+              "FUEL_STAFF",
+            ]);
+            checkAccountOwner(account, actor);
+            checkRevision(account, body.expectedRevision);
+            await ensureDeviceLease(connection, actor, account, body);
+            const change =
+              kind === "CORRECT"
+                ? await correctFuel(connection, account, actor.id, body)
+                : await updateFuel(connection, account, actor.id, body, kind);
+            const revision = n(account.revision) + 1;
+            await accountEvent(
+              connection,
+              account,
+              actor,
+              "FUEL_" + kind,
+              revision,
+              change
+            );
+            await execute(
+              connection,
+              `UPDATE st_accounts SET revision=revision+1 WHERE id=?`,
+              [account.id]
+            );
+            await audit(
+              connection,
+              scope.tenantId,
+              String(account.station_id),
+              actor.id,
+              "FUEL_" + kind,
+              account.id
+            );
+            return { id: account.id, revision };
+          }),
+        { instants: ["readingAt"] }
+      )
+    );
+  }
+  app.get(
+    "/api/stationos/requests/status",
+    handler(async (req, res) => {
+      const actor = stationActor(req);
+      const requestId = requireId(req.query.requestId, "requestId");
+      const operation =
+        typeof req.query.operation === "string" ? req.query.operation : "";
+      const tenantId =
+        typeof req.query.tenantId === "string" ? req.query.tenantId : "";
+      if (
+        !isRecoverableOperation(operation) ||
+        String(req.query.version) !== String(OPERATION_VERSION)
+      ) {
+        res.json(operationStatus("NOT_FOUND"));
+        return;
+      }
+      const status = await withTransaction(async connection => {
+        const scope = await scopeFor(connection, actor.id);
+        if (!scope || scope.tenantId !== tenantId)
+          return operationStatus("NOT_FOUND");
+        return readRequestStatus(
+          connection,
+          {
+            actorId: actor.id,
+            tenantId,
+            requestId,
+            operation,
+            scopeHash: requestScopeHash(scope.member.role, scope.stationIds),
+          },
+          async (stored, bindingHash) => {
+            if (operation === "/invite") {
+              const response = openInvitation(stored, {
+                actorId: actor.id,
+                requestId,
+                payloadHash: bindingHash,
+              });
+              await authorizeInvitationReplay(
+                connection,
+                actor,
+                response.result.code
+              );
+              return response;
+            }
+            const response = JSON.parse(stored);
+            if (isEncryptedInvitation(response))
+              throw new Error("operation mismatch");
+            return response;
+          }
+        );
+      });
+      res.json(status);
+    })
+  );
   app.get(
     "/api/stationos/state",
     handler(async (req, res) => {
@@ -1199,6 +2688,34 @@ export function registerStationRoutes(app: Express): void {
     })
   );
   app.post("/api/stationos/setup", mutationHandler(setup));
+  app.post(
+    "/api/stationos/shift/close",
+    mutationHandler(
+      async (actor, body) =>
+        mutation(actor, body, async c => {
+          const stationId = requireId(body.stationId, "stationId"),
+            { scope } = await requireStation(c, actor, stationId, [
+              "OWNER",
+              "MANAGER",
+            ]);
+          const result = await closeShift(
+            c,
+            { tenantId: scope.tenantId, stationId },
+            body
+          );
+          await audit(
+            c,
+            scope.tenantId,
+            stationId,
+            actor.id,
+            "SHIFT_CLOSE",
+            result.id
+          );
+          return result;
+        }),
+      { instants: ["endsAt"] }
+    )
+  );
 
   app.post(
     "/api/stationos/company",
@@ -1273,72 +2790,84 @@ export function registerStationRoutes(app: Express): void {
   app.post(
     "/api/stationos/invite",
     mutationHandler(async (actor, body) =>
-      mutation(actor, body, async connection => {
-        const scope = await requireScope(connection, actor, [
-          "OWNER",
-          "MANAGER",
-        ]);
-        const role = requireEnum(body.role, "role", INVITE_ROLES);
-        if (
-          scope.member.role === "MANAGER" &&
-          ["MANAGER", "ACCOUNTANT"].includes(role)
-        )
-          fail(
-            "ROLE_GRANT_FORBIDDEN",
-            "Yönetici ve mali onay rollerini yalnız firma sahibi atayabilir.",
-            403
-          );
-        if (!Array.isArray(body.stationIds) || body.stationIds.length < 1)
-          fail("INVALID_INPUT", "En az bir istasyon seçilmelidir.");
-        const stationIds = [
-          ...new Set(
-            body.stationIds.map(value => requireId(value, "stationIds"))
-          ),
-        ];
-        if (stationIds.some(id => !scope.stationIds.includes(id)))
-          fail("STATION_FORBIDDEN", "Davet istasyon kapsamınızı aşıyor.", 403);
-        const code = randomInvitationCode();
-        const id = randomUUID();
-        const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        await execute(
-          connection,
-          `INSERT INTO st_invitations (id, tenant_id, code_hash, role, expires_at, invited_by_user_id) VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            id,
-            scope.tenantId,
-            invitationHash(code),
-            role,
-            mysqlDate(expires),
-            actor.id,
-          ]
-        );
-        for (const stationId of stationIds)
+      mutation(
+        actor,
+        body,
+        async connection => {
+          const scope = await requireScope(connection, actor, [
+            "OWNER",
+            "MANAGER",
+          ]);
+          const role = requireEnum(body.role, "role", INVITE_ROLES);
+          if (
+            scope.member.role === "MANAGER" &&
+            ["MANAGER", "ACCOUNTANT"].includes(role)
+          )
+            fail(
+              "ROLE_GRANT_FORBIDDEN",
+              "Yönetici ve mali onay rollerini yalnız firma sahibi atayabilir.",
+              403
+            );
+          if (!Array.isArray(body.stationIds) || body.stationIds.length < 1)
+            fail("INVALID_INPUT", "En az bir istasyon seçilmelidir.");
+          const stationIds = [
+            ...new Set(
+              body.stationIds.map(value => requireId(value, "stationIds"))
+            ),
+          ];
+          if (stationIds.some(id => !scope.stationIds.includes(id)))
+            fail(
+              "STATION_FORBIDDEN",
+              "Davet istasyon kapsamınızı aşıyor.",
+              403
+            );
+          const invitedEmail = normalizeInviteEmail(body.email);
+          const code = emailBoundInvitationCode(invitedEmail);
+          const id = randomUUID();
+          const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
           await execute(
             connection,
-            `INSERT INTO st_invitation_stations (invitation_id, station_id) VALUES (?, ?)`,
-            [id, stationId]
+            `INSERT INTO st_invitations (id, tenant_id, code_hash, role, expires_at, invited_by_user_id) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              id,
+              scope.tenantId,
+              invitationHash(code),
+              role,
+              mysqlDate(expires),
+              actor.id,
+            ]
           );
-        await audit(
-          connection,
-          scope.tenantId,
-          stationIds[0] ?? null,
-          actor.id,
-          "INVITE_CREATE",
-          id
-        );
-        return { code, expiresAt: expires.toISOString() };
-      })
+          for (const stationId of stationIds)
+            await execute(
+              connection,
+              `INSERT INTO st_invitation_stations (invitation_id, station_id) VALUES (?, ?)`,
+              [id, stationId]
+            );
+          await audit(
+            connection,
+            scope.tenantId,
+            stationIds[0] ?? null,
+            actor.id,
+            "INVITE_CREATE",
+            id
+          );
+          return { code, expiresAt: expires.toISOString(), invitedEmail };
+        },
+        true
+      )
     )
   );
   app.post(
     "/api/stationos/join",
     mutationHandler(async (actor, body) =>
       mutation(actor, body, async connection => {
-        await first<DbRow>(
+        const acceptingUser = await first<DbRow>(
           connection,
-          `SELECT id FROM users WHERE id = ? FOR UPDATE`,
+          `SELECT id, email FROM users WHERE id = ? FOR UPDATE`,
           [actor.id]
         );
+        if (!acceptingUser)
+          fail("UNAUTHENTICATED", "Kullanıcı hesabı bulunamadı.", 401);
         const existing = await first<DbRow>(
           connection,
           `SELECT tenant_id FROM st_members WHERE user_id = ? LIMIT 1 FOR UPDATE`,
@@ -1355,12 +2884,20 @@ export function registerStationRoutes(app: Express): void {
         if (
           !invitation ||
           invitation.used_at ||
-          new Date(String(invitation.expires_at)).getTime() <= Date.now()
+          parseDbUtc(String(invitation.expires_at)).getTime() <= Date.now()
         )
           fail(
             "INVITATION_INVALID",
             "Davet kodu geçersiz, kullanılmış veya süresi dolmuş.",
             400
+          );
+        if (
+          invitationEmailBindingMatches(code, acceptingUser.email) === false
+        )
+          fail(
+            "INVITATION_EMAIL_MISMATCH",
+            "Bu davet, giriş yaptığınız e-posta adresi için düzenlenmemiş.",
+            403
           );
         const stationRows = await rows<DbRow[]>(
           connection,
@@ -1403,34 +2940,173 @@ export function registerStationRoutes(app: Express): void {
   );
   app.post(
     "/api/stationos/shift",
+    mutationHandler(
+      async (actor, body) =>
+        mutation(actor, body, async connection => {
+          const stationId = requireId(body.stationId, "stationId");
+          const { scope } = await requireStation(connection, actor, stationId, [
+            "OWNER",
+            "MANAGER",
+          ]);
+          const label = requireString(body.label, "label", { max: 190 });
+          const startsAt = safeDate(body.startsAt, "startsAt");
+          const endsAt =
+            body.endsAt === null ||
+            body.endsAt === undefined ||
+            body.endsAt === ""
+              ? null
+              : safeDate(body.endsAt, "endsAt");
+          if (endsAt && endsAt <= startsAt)
+            fail(
+              "INVALID_INPUT",
+              "Vardiya bitişi başlangıçtan sonra olmalıdır."
+            );
+          const id = randomUUID();
+          await execute(
+            connection,
+            `INSERT INTO st_shifts (id, tenant_id, station_id, label, starts_at, ends_at) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              id,
+              scope.tenantId,
+              stationId,
+              label,
+              mysqlDate(startsAt),
+              endsAt ? mysqlDate(endsAt) : null,
+            ]
+          );
+          await audit(
+            connection,
+            scope.tenantId,
+            stationId,
+            actor.id,
+            "SHIFT_CREATE",
+            id
+          );
+          return { id };
+        }),
+      { instants: ["startsAt"], optionalInstants: ["endsAt"] }
+    )
+  );
+  app.post(
+    "/api/stationos/personnel/station-access",
     mutationHandler(async (actor, body) =>
       mutation(actor, body, async connection => {
         const stationId = requireId(body.stationId, "stationId");
+        const targetUserId = requireInteger(body.userId, "userId");
+        const active = requireBoolean(body.active, "active");
         const { scope } = await requireStation(connection, actor, stationId, [
           "OWNER",
           "MANAGER",
         ]);
-        const label = requireString(body.label, "label", { max: 190 });
-        const startsAt = safeDate(body.startsAt, "startsAt");
-        const endsAt =
-          body.endsAt === null ||
-          body.endsAt === undefined ||
-          body.endsAt === ""
-            ? null
-            : safeDate(body.endsAt, "endsAt");
-        if (endsAt && endsAt <= startsAt)
-          fail("INVALID_INPUT", "Vardiya bitişi başlangıçtan sonra olmalıdır.");
-        const id = randomUUID();
+        const capabilities = await staffingSchemaCapabilities(connection);
+        if (
+          !capabilities.membershipStatus ||
+          !capabilities.shiftAssignments ||
+          !capabilities.staffingEvents
+        )
+          fail(
+            "STAFFING_MIGRATION_REQUIRED",
+            "Personel/atama şeması henüz hazır değil; değişiklik yapılmadı.",
+            503
+          );
+        const target = await first<DbRow>(
+          connection,
+          `SELECT m.role, ms.status FROM st_members m LEFT JOIN st_member_stations ms ON ms.tenant_id=m.tenant_id AND ms.user_id=m.user_id AND ms.station_id=? WHERE m.tenant_id=? AND m.user_id=? FOR UPDATE`,
+          [stationId, scope.tenantId, targetUserId]
+        );
+        if (
+          !target ||
+          !["FUEL_STAFF", "MARKET_STAFF"].includes(String(target.role))
+        )
+          fail(
+            "STAFF_NOT_FOUND",
+            "Bu şirkette ÖSSE personeli bulunamadı.",
+            404
+          );
+        if (!active && !target.status)
+          fail(
+            "STAFF_STATION_ACCESS_NOT_FOUND",
+            "Personelin bu istasyonda aktif veya pasif üyeliği yok.",
+            404
+          );
+        if (!active) {
+          const unresolved = await first<DbRow>(
+            connection,
+            `SELECT id FROM st_accounts WHERE tenant_id=? AND station_id=? AND user_id=? AND business_unit IN ('FUEL','MARKET') AND status NOT IN ('ACCEPTED','ACCEPTED_WITH_PENDING') LIMIT 1 FOR UPDATE`,
+            [scope.tenantId, stationId, targetUserId]
+          );
+          if (unresolved)
+            fail(
+              "STAFF_ACCOUNT_REQUIRES_REVIEW",
+              "Açık veya incelemedeki eski vardiya hesabı sonuçlanmadan istasyon erişimi kapatılamaz.",
+              409
+            );
+          const assignments = await rows<DbRow[]>(
+            connection,
+            `SELECT id,shift_id FROM st_shift_assignments WHERE tenant_id=? AND station_id=? AND user_id=? AND status='ASSIGNED' FOR UPDATE`,
+            [scope.tenantId, stationId, targetUserId]
+          );
+          for (const assignment of assignments) {
+            const historicalAccount = await first<DbRow>(
+              connection,
+              `SELECT id FROM st_accounts WHERE tenant_id=? AND station_id=? AND shift_id=? AND user_id=? AND business_unit=? LIMIT 1 FOR UPDATE`,
+              [
+                scope.tenantId,
+                stationId,
+                String(assignment.shift_id),
+                targetUserId,
+                target.role === "MARKET_STAFF" ? "MARKET" : "FUEL",
+              ]
+            );
+            // Keep assignment history intact where an account already exists.
+            if (historicalAccount) continue;
+            await execute(
+              connection,
+              `UPDATE st_shift_assignments SET status='REMOVED',updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP(3) WHERE id=?`,
+              [actor.id, String(assignment.id)]
+            );
+            await execute(
+              connection,
+              `INSERT INTO st_staffing_events (id,tenant_id,station_id,shift_id,target_user_id,actor_user_id,event_type,payload_json) VALUES (?,?,?,?,?,?,?,?)`,
+              [
+                randomUUID(),
+                scope.tenantId,
+                stationId,
+                String(assignment.shift_id),
+                targetUserId,
+                actor.id,
+                "SHIFT_ASSIGNMENT_REMOVED",
+                JSON.stringify({ reason: "STATION_ACCESS_DEACTIVATED" }),
+              ]
+            );
+          }
+          await execute(
+            connection,
+            `UPDATE st_member_stations SET status='INACTIVE' WHERE tenant_id=? AND user_id=? AND station_id=?`,
+            [scope.tenantId, targetUserId, stationId]
+          );
+        } else {
+          await execute(
+            connection,
+            `INSERT INTO st_member_stations (tenant_id,user_id,station_id,status) VALUES (?,?,?,'ACTIVE') ON DUPLICATE KEY UPDATE status='ACTIVE'`,
+            [scope.tenantId, targetUserId, stationId]
+          );
+        }
         await execute(
           connection,
-          `INSERT INTO st_shifts (id, tenant_id, station_id, label, starts_at, ends_at) VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO st_staffing_events (id,tenant_id,station_id,shift_id,target_user_id,actor_user_id,event_type,payload_json) VALUES (?,?,?,?,?,?,?,?)`,
           [
-            id,
+            randomUUID(),
             scope.tenantId,
             stationId,
-            label,
-            mysqlDate(startsAt),
-            endsAt ? mysqlDate(endsAt) : null,
+            null,
+            targetUserId,
+            actor.id,
+            active ? "STATION_ACCESS_ACTIVATED" : "STATION_ACCESS_DEACTIVATED",
+            JSON.stringify({
+              previousStatus: target.status ?? null,
+              status: active ? "ACTIVE" : "INACTIVE",
+            }),
           ]
         );
         await audit(
@@ -1438,10 +3114,179 @@ export function registerStationRoutes(app: Express): void {
           scope.tenantId,
           stationId,
           actor.id,
-          "SHIFT_CREATE",
-          id
+          active ? "STATION_STAFF_ACTIVATE" : "STATION_STAFF_DEACTIVATE",
+          String(targetUserId)
         );
-        return { id };
+        return {
+          userId: targetUserId,
+          stationId,
+          status: active ? "ACTIVE" : "INACTIVE",
+        };
+      })
+    )
+  );
+  app.post(
+    "/api/stationos/staff/shift-assignment",
+    mutationHandler(async (actor, body) =>
+      mutation(actor, body, async connection => {
+        const stationId = requireId(body.stationId, "stationId");
+        const shiftId = requireId(body.shiftId, "shiftId");
+        const targetUserId = requireInteger(body.userId, "userId");
+        const assigned = requireBoolean(body.assigned, "assigned");
+        const { scope } = await requireStation(connection, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+        ]);
+        const capabilities = await staffingSchemaCapabilities(connection);
+        if (
+          !capabilities.membershipStatus ||
+          !capabilities.shiftAssignments ||
+          !capabilities.staffingEvents
+        )
+          fail(
+            "STAFFING_MIGRATION_REQUIRED",
+            "Personel/atama şeması henüz hazır değil; değişiklik yapılmadı.",
+            503
+          );
+        const shift = await first<DbRow>(
+          connection,
+          `SELECT id,status,starts_at,ends_at FROM st_shifts WHERE id=? AND tenant_id=? AND station_id=? FOR UPDATE`,
+          [shiftId, scope.tenantId, stationId]
+        );
+        if (!shift)
+          fail(
+            "SHIFT_NOT_FOUND",
+            "Vardiya bu istasyon kapsamında bulunamadı.",
+            404
+          );
+        const target = await first<DbRow>(
+          connection,
+          `SELECT m.role,ms.status AS station_status FROM st_members m JOIN st_member_stations ms ON ms.tenant_id=m.tenant_id AND ms.user_id=m.user_id WHERE m.tenant_id=? AND m.user_id=? AND ms.station_id=? FOR UPDATE`,
+          [scope.tenantId, targetUserId, stationId]
+        );
+        if (
+          !target ||
+          !["FUEL_STAFF", "MARKET_STAFF"].includes(String(target.role))
+        )
+          fail(
+            "STAFF_NOT_FOUND",
+            "Bu istasyonda ÖSSE üyeliği bulunamadı.",
+            404
+          );
+        if (String(shift.status) !== "OPEN")
+          fail(
+            "SHIFT_NOT_OPEN",
+            "Kapalı vardiyanın personel ataması değiştirilemez.",
+            409
+          );
+        const account = await first<DbRow>(
+          connection,
+          `SELECT id,status FROM st_accounts WHERE tenant_id=? AND station_id=? AND shift_id=? AND user_id=? AND business_unit=? LIMIT 1 FOR UPDATE`,
+          [
+            scope.tenantId,
+            stationId,
+            shiftId,
+            targetUserId,
+            target.role === "MARKET_STAFF" ? "MARKET" : "FUEL",
+          ]
+        );
+        const accountExists = !!account;
+        const overlaps =
+          assigned &&
+          (
+            await rows<DbRow[]>(
+              connection,
+              `SELECT s.id FROM st_shift_assignments a JOIN st_shifts s ON s.id=a.shift_id WHERE a.tenant_id=? AND a.user_id=? AND a.status='ASSIGNED' AND s.status='OPEN' AND s.id<>? AND s.starts_at < COALESCE(?, '9999-12-31 23:59:59.999') AND COALESCE(s.ends_at, '9999-12-31 23:59:59.999') > ? LIMIT 1 FOR UPDATE`,
+              [
+                scope.tenantId,
+                targetUserId,
+                shiftId,
+                shift.ends_at,
+                shift.starts_at,
+              ]
+            )
+          ).length > 0;
+        if (assigned) {
+          const eligibility = canAssignStaffToShift({
+            managerRole: scope.member.role,
+            managerHasStation: scope.stationIds.includes(stationId),
+            targetRole: String(target?.role ?? ""),
+            targetStationAccess:
+              target?.station_status === "ACTIVE"
+                ? "ACTIVE"
+                : target?.station_status === "INACTIVE"
+                  ? "INACTIVE"
+                  : null,
+            shiftStatus: String(shift.status),
+            overlapsOtherShift: overlaps,
+            hasAccountHistory: accountExists,
+          });
+          if (!eligibility.ok)
+            fail(
+              eligibility.reason,
+              "Personel, istasyon veya vardiya atama koşulları uygun değil.",
+              409
+            );
+          await execute(
+            connection,
+            `INSERT INTO st_shift_assignments (id,tenant_id,station_id,shift_id,user_id,status,assigned_by_user_id,updated_by_user_id) VALUES (?,?,?,?,?,'ASSIGNED',?,?) ON DUPLICATE KEY UPDATE status='ASSIGNED',updated_by_user_id=VALUES(updated_by_user_id),updated_at=CURRENT_TIMESTAMP(3)`,
+            [
+              randomUUID(),
+              scope.tenantId,
+              stationId,
+              shiftId,
+              targetUserId,
+              actor.id,
+              actor.id,
+            ]
+          );
+        } else {
+          if (accountExists)
+            fail(
+              "ACCOUNT_REQUIRES_REVIEW",
+              "Bu vardiyada hesap kaydı bulunduğu için atama geçmişi değiştirilemez.",
+              409
+            );
+          await execute(
+            connection,
+            `UPDATE st_shift_assignments SET status='REMOVED',updated_by_user_id=?,updated_at=CURRENT_TIMESTAMP(3) WHERE tenant_id=? AND station_id=? AND shift_id=? AND user_id=? AND status='ASSIGNED'`,
+            [actor.id, scope.tenantId, stationId, shiftId, targetUserId]
+          );
+        }
+        const eventType = assigned
+          ? "SHIFT_STAFF_ASSIGNED"
+          : "SHIFT_STAFF_UNASSIGNED";
+        await execute(
+          connection,
+          `INSERT INTO st_staffing_events (id,tenant_id,station_id,shift_id,target_user_id,actor_user_id,event_type,payload_json) VALUES (?,?,?,?,?,?,?,?)`,
+          [
+            randomUUID(),
+            scope.tenantId,
+            stationId,
+            shiftId,
+            targetUserId,
+            actor.id,
+            eventType,
+            JSON.stringify({
+              status: assigned ? "ASSIGNED" : "REMOVED",
+              accountId: account?.id ?? null,
+            }),
+          ]
+        );
+        await audit(
+          connection,
+          scope.tenantId,
+          stationId,
+          actor.id,
+          eventType,
+          shiftId
+        );
+        return {
+          userId: targetUserId,
+          stationId,
+          shiftId,
+          status: assigned ? "ASSIGNED" : "REMOVED",
+        };
       })
     )
   );
@@ -1459,7 +3304,7 @@ export function registerStationRoutes(app: Express): void {
         const shiftId = requireId(body.shiftId, "shiftId");
         const shift = await first<DbRow>(
           connection,
-          `SELECT id FROM st_shifts WHERE id = ? AND tenant_id = ? AND station_id = ? AND status = 'OPEN'`,
+          `SELECT id FROM st_shifts WHERE id = ? AND tenant_id = ? AND station_id = ? AND status = 'OPEN' FOR UPDATE`,
           [shiftId, scope.tenantId, stationId]
         );
         if (!shift) fail("NOT_FOUND", "Vardiya bulunamadı.", 404);
@@ -1468,24 +3313,36 @@ export function registerStationRoutes(app: Express): void {
           "businessUnit",
           BUSINESS_UNITS
         );
-        if (
-          (scope.member.role === "FUEL_STAFF" && businessUnit !== "FUEL") ||
-          (scope.member.role === "MARKET_STAFF" && businessUnit !== "MARKET")
-        )
+        if (!canOpenBusinessUnit(scope.member.role, businessUnit))
           fail(
             "UNIT_FORBIDDEN",
             "Satış rolünüz bu iş alanına izin vermiyor.",
             403
           );
-        if (
-          businessUnit === "MARKET" &&
-          (await lockMarketBook(connection, scope.tenantId, stationId, true))
-        )
-          fail(
-            "MARKET_ACCOUNTING_ACTIVE",
-            "Market işlemleri için Satış kasası ve Market muhasebesi modüllerini kullanın.",
-            409
+        if (["FUEL_STAFF", "MARKET_STAFF"].includes(scope.member.role)) {
+          const staffing = await staffingSchemaCapabilities(connection);
+          if (
+            !staffing.membershipStatus ||
+            !staffing.shiftAssignments ||
+            !staffing.staffingEvents
+          )
+            fail(
+              "STAFFING_MIGRATION_REQUIRED",
+              "Vardiya atama şeması kurulmadı; yeni ÖSSE hesabı açılamaz.",
+              503
+            );
+          const assigned = await first<DbRow>(
+            connection,
+            `SELECT id FROM st_shift_assignments WHERE tenant_id=? AND station_id=? AND shift_id=? AND user_id=? AND status='ASSIGNED' FOR UPDATE`,
+            [scope.tenantId, stationId, shiftId, actor.id]
           );
+          if (!assigned)
+            fail(
+              "SHIFT_ASSIGNMENT_REQUIRED",
+              "Yalnız yöneticinin size atadığı açık vardiyada hesap açabilirsiniz.",
+              403
+            );
+        }
         const openingFloatMinor = requireMoney(
           body.openingFloatMinor,
           "openingFloatMinor",
@@ -1524,6 +3381,19 @@ export function registerStationRoutes(app: Express): void {
           "ACCOUNT_OPEN",
           id
         );
+        await openFuel(
+          connection,
+          {
+            id,
+            tenant_id: scope.tenantId,
+            station_id: stationId,
+            shift_id: shiftId,
+            business_unit: businessUnit,
+            status: "OPEN",
+          },
+          actor.id,
+          body
+        );
         return { id, revision: 1 };
       })
     )
@@ -1540,6 +3410,15 @@ export function registerStationRoutes(app: Express): void {
         if (account.status !== "OPEN")
           fail("ACCOUNT_LOCKED", "Hesap artık düzenlenemez.", 409);
         const kind = requireEnum(body.kind, "kind", PAYMENT_KINDS);
+        if (
+          kind === "FAST" &&
+          !(await staffingSchemaCapabilities(connection)).fastPayment
+        )
+          fail(
+            "FAST_MIGRATION_REQUIRED",
+            "FAST ödeme türü şemada etkin değil; kayıt reddedildi ve bekleyen kuyruk korunmalı.",
+            503
+          );
         if (
           kind === "AR_COLLECTION" &&
           !["OWNER", "ACCOUNTANT"].includes(
@@ -1658,61 +3537,195 @@ export function registerStationRoutes(app: Express): void {
       })
     )
   );
-  app.post(
-    "/api/stationos/slip",
-    mutationHandler(async (actor, body) =>
-      mutation(actor, body, async connection => {
-        const accountId = requireId(body.accountId, "accountId");
-        const account = await lockedAccount(connection, accountId);
-        checkRevision(account, body.expectedRevision);
-        checkAccountOwner(account, actor);
-        await ensureDeviceLease(connection, actor, account, body);
-        if (account.status !== "OPEN")
-          fail("ACCOUNT_LOCKED", "Hesap artık düzenlenemez.", 409);
-        const amountMinor = requireMoney(body.amountMinor, "amountMinor");
-        const reference = requireString(body.reference, "reference", {
-          max: 190,
-        });
-        const terminalId = requireString(body.terminalId, "terminalId", {
-          max: 190,
-        });
-        const transactionAt = safeDate(body.transactionAt, "transactionAt");
-        const note = optionalString(body.note, "note", 500);
-        rejectCardData(reference, terminalId, note);
-        safeAdd(accountInput(account).sourceTotalMinor, amountMinor);
-        const scope = await stationFromAccount(connection, actor, account);
-        const id = randomUUID();
-        await execute(
-          connection,
-          `INSERT INTO st_slips (id, tenant_id, station_id, account_id, amount_minor, reference, terminal_id, transaction_at, note, created_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            id,
-            scope.tenantId,
-            account.station_id,
-            accountId,
-            amountMinor,
-            reference,
-            terminalId,
-            mysqlDate(transactionAt),
-            note,
-            actor.id,
-          ]
+  app.get(
+    "/api/stationos/pos-slip-drafts",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId");
+      const result = await withTransaction(async c => {
+        if (!(await staffingSchemaCapabilities(c)).posSlipDrafts)
+          fail(
+            "POS_SLIP_MIGRATION_REQUIRED",
+            "POS slip taslak şeması etkin değil; ilgili migration olmadan bu özellik kullanılamaz.",
+            409
+          );
+        const { scope } = await requireStation(c, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+          "FUEL_STAFF",
+        ]);
+        return posSlipDrafts(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          actor.id,
+          scope.member.role,
+          req.query.accountId
+            ? requireId(req.query.accountId, "accountId")
+            : undefined
         );
-        await execute(
-          connection,
-          `UPDATE st_accounts SET revision = revision + 1 WHERE id = ?`,
-          [accountId]
+      });
+      res.set("Cache-Control", "no-store").json({ ok: true, drafts: result });
+    })
+  );
+  app.get(
+    "/api/stationos/pos-slip-draft/image",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        stationId = requireId(req.query.stationId, "stationId");
+      const image = await withTransaction(async c => {
+        if (!(await staffingSchemaCapabilities(c)).posSlipDrafts)
+          fail(
+            "POS_SLIP_MIGRATION_REQUIRED",
+            "POS slip taslak şeması etkin değil; ilgili migration olmadan bu özellik kullanılamaz.",
+            409
+          );
+        const { scope } = await requireStation(c, actor, stationId, [
+          "OWNER",
+          "MANAGER",
+          "ACCOUNTANT",
+          "FUEL_STAFF",
+        ]);
+        const result = await posSlipDraftImage(
+          c,
+          { tenantId: scope.tenantId, stationId },
+          req.query.draftId,
+          actor.id,
+          scope.member.role
         );
         await audit(
-          connection,
+          c,
           scope.tenantId,
-          String(account.station_id),
+          stationId,
           actor.id,
-          "SLIP_VERIFY_MANUAL",
-          id
+          "POS_SLIP_IMAGE_READ",
+          String(req.query.draftId)
         );
-        return { id, revision: n(account.revision) + 1 };
-      })
+        return result;
+      });
+      res
+        .set({
+          "Cache-Control": "private, no-store",
+          "X-Content-Type-Options": "nosniff",
+          "Content-Security-Policy": "default-src 'none'; sandbox",
+        })
+        .type(image.mime)
+        .send(image.bytes);
+    })
+  );
+  for (const action of ["import", "read", "confirm"] as const) {
+    app.post(
+      "/api/stationos/pos-slip-draft/" + action,
+      mutationHandler(async (actor, body) =>
+        mutation(actor, body, async c => {
+          if (!(await staffingSchemaCapabilities(c)).posSlipDrafts)
+            fail(
+              "POS_SLIP_MIGRATION_REQUIRED",
+              "POS slip taslak şeması etkin değil; ilgili migration olmadan bu özellik kullanılamaz.",
+              409
+            );
+          const accountId = requireId(body.accountId, "accountId"),
+            account = await lockedAccount(c, accountId);
+          checkAccountOwner(account, actor);
+          checkRevision(account, body.expectedRevision);
+          await ensureDeviceLease(c, actor, account, body);
+          if (account.status !== "OPEN")
+            fail(
+              "ACCOUNT_LOCKED",
+              "Slip yalnız açık pompacı hesabında işlenebilir.",
+              409
+            );
+          const scope = await stationFromAccount(c, actor, account, [
+            "FUEL_STAFF",
+          ]);
+          const target = {
+            tenantId: scope.tenantId,
+            stationId: String(account.station_id),
+          };
+          const result =
+            action === "import"
+              ? await importPosSlipDraft(c, target, account, actor.id, body)
+              : action === "read"
+                ? await readPosSlipDraft(
+                    c,
+                    target,
+                    body.draftId,
+                    account.id,
+                    actor.id,
+                    body.provider,
+                    body.externalConfirmed
+                  )
+                : await confirmPosSlipDraft(c, target, actor.id, body, account);
+          await audit(
+            c,
+            scope.tenantId,
+            target.stationId,
+            actor.id,
+            `POS_SLIP_${action.toUpperCase()}`,
+            result.id
+          );
+          return result;
+        })
+      )
+    );
+  }
+  app.post(
+    "/api/stationos/slip",
+    mutationHandler(
+      async (actor, body) =>
+        mutation(actor, body, async connection => {
+          const accountId = requireId(body.accountId, "accountId");
+          const account = await lockedAccount(connection, accountId);
+          checkRevision(account, body.expectedRevision);
+          checkAccountOwner(account, actor);
+          await ensureDeviceLease(connection, actor, account, body);
+          if (account.status !== "OPEN")
+            fail("ACCOUNT_LOCKED", "Hesap artık düzenlenemez.", 409);
+          const amountMinor = requireMoney(body.amountMinor, "amountMinor");
+          const reference = requireString(body.reference, "reference", {
+            max: 190,
+          });
+          const terminalId = requireString(body.terminalId, "terminalId", {
+            max: 190,
+          });
+          const transactionAt = safeDate(body.transactionAt, "transactionAt");
+          const note = optionalString(body.note, "note", 500);
+          rejectCardData(reference, terminalId, note);
+          safeAdd(accountInput(account).sourceTotalMinor, amountMinor);
+          const scope = await stationFromAccount(connection, actor, account);
+          const id = randomUUID();
+          await execute(
+            connection,
+            `INSERT INTO st_slips (id, tenant_id, station_id, account_id, amount_minor, reference, terminal_id, transaction_at, note, created_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              id,
+              scope.tenantId,
+              account.station_id,
+              accountId,
+              amountMinor,
+              reference,
+              terminalId,
+              mysqlDate(transactionAt),
+              note,
+              actor.id,
+            ]
+          );
+          await execute(
+            connection,
+            `UPDATE st_accounts SET revision = revision + 1 WHERE id = ?`,
+            [accountId]
+          );
+          await audit(
+            connection,
+            scope.tenantId,
+            String(account.station_id),
+            actor.id,
+            "SLIP_VERIFY_MANUAL",
+            id
+          );
+          return { id, revision: n(account.revision) + 1 };
+        }),
+      { instants: ["transactionAt"] }
     )
   );
   app.post(
@@ -1734,6 +3747,12 @@ export function registerStationRoutes(app: Express): void {
           );
         if (account.status !== "OPEN")
           fail("ACCOUNT_LOCKED", "Hesap kaynak toplamı için açık değil.", 409);
+        if (await fuelSnapshot(connection, account.id, 0))
+          fail(
+            "FUEL_SOURCE_LOCKED",
+            "Sayaçlı hesabın kaynağı yalnız sayaç kapanışından hesaplanır.",
+            409
+          );
         const sourceSalesMinor = requireMoney(
           body.sourceSalesMinor,
           "sourceSalesMinor",
@@ -1778,6 +3797,84 @@ export function registerStationRoutes(app: Express): void {
       })
     )
   );
+  app.get(
+    "/api/stationos/account/declaration-snapshot",
+    handler(async (req, res) => {
+      const actor = stationActor(req),
+        accountId = requireId(req.query.accountId, "accountId");
+      const result = await withTransaction(async connection => {
+        const account = await first<DbRow>(
+          connection,
+          `SELECT id,tenant_id,station_id,shift_id,user_id,business_unit FROM st_accounts WHERE id=?`,
+          [accountId]
+        );
+        if (
+          !account ||
+          !["FUEL", "MARKET"].includes(String(account.business_unit))
+        )
+          fail("ACCOUNT_NOT_FOUND", "ÖSSE hesabı bulunamadı.", 404);
+        const scope = await stationFromAccount(
+          connection,
+          actor,
+          account as AccountRow
+        );
+        if (
+          !canReadFirstDeclarationSnapshot(
+            scope.member.role,
+            actor.id,
+            n(account.user_id)
+          )
+        )
+          fail(
+            "ROLE_FORBIDDEN",
+            "İlk beyanı yalnız yetkili muhasebe rolleri veya hesabın sahibi görebilir.",
+            403
+          );
+        const event = await first<DbRow>(
+          connection,
+          `SELECT payload_json FROM st_account_events WHERE account_id=? AND event_type='FIRST_DECLARATION_SNAPSHOT_V1' ORDER BY created_at,id LIMIT 1`,
+          [accountId]
+        );
+        if (!event)
+          return {
+            state: "FIRST_DECLARATION_UNKNOWN" as const,
+            accountId,
+            message:
+              "Bu eski hesap için ilk teslim anında değiştirilemez beyan snapshot'ı alınmamış. Güncel tutarlardan geriye dönük üretilmedi.",
+          };
+        let snapshot: Record<string, any>;
+        try {
+          snapshot = JSON.parse(String(event.payload_json));
+        } catch {
+          fail(
+            "DECLARATION_SNAPSHOT_INVALID",
+            "İlk beyan snapshot'ı okunamadı.",
+            500
+          );
+        }
+        if (
+          snapshot.kind !== "FIRST_DECLARATION_SNAPSHOT" ||
+          snapshot.accountId !== accountId ||
+          snapshot.scope?.tenantId !== scope.tenantId ||
+          snapshot.scope?.stationId !== String(account.station_id) ||
+          snapshot.scope?.shiftId !== String(account.shift_id) ||
+          snapshot.scope?.staffUserId !== n(account.user_id) ||
+          (snapshot.businessUnit !== String(account.business_unit) &&
+            !(
+              account.business_unit === "FUEL" &&
+              snapshot.businessUnit === undefined
+            ))
+        )
+          fail(
+            "DECLARATION_SNAPSHOT_SCOPE_INVALID",
+            "İlk beyan snapshot kapsamı hesapla eşleşmiyor.",
+            500
+          );
+        return { state: "FIRST_DECLARATION_AVAILABLE" as const, snapshot };
+      });
+      res.json({ ok: true, result });
+    })
+  );
   app.post(
     "/api/stationos/account/submit",
     mutationHandler(async (actor, body) =>
@@ -1795,6 +3892,11 @@ export function registerStationRoutes(app: Express): void {
           { allowZero: true }
         );
         const totals = accountInput(account);
+        const businessUnit = String(account.business_unit);
+        if (businessUnit === "FUEL")
+          await assertFuelReady(connection, account, totals.sourceTotalMinor);
+        else if (businessUnit !== "MARKET")
+          fail("ACCOUNT_UNIT_FORBIDDEN", "Unsupported business unit.", 409);
         if (account.source_sales_minor === null || !account.source_ref)
           fail(
             "SOURCE_REQUIRED",
@@ -1816,6 +3918,100 @@ export function registerStationRoutes(app: Express): void {
             409
           );
         const scope = await stationFromAccount(connection, actor, account);
+        const shift = await first<DbRow>(
+          connection,
+          `SELECT DATE(DATE_ADD(starts_at,INTERVAL 3 HOUR)) AS business_date, UTC_TIMESTAMP(3) AS submitted_at FROM st_shifts WHERE id=? AND tenant_id=? AND station_id=?`,
+          [account.shift_id, scope.tenantId, account.station_id]
+        );
+        if (!shift)
+          fail(
+            "ACCOUNT_SHIFT_NOT_FOUND",
+            "Hesabın bağlı vardiyası bulunamadı.",
+            409
+          );
+        const paymentRows = await rows<DbRow[]>(
+          connection,
+          `SELECT id,kind,amount_minor,debtor_id,status FROM st_payments WHERE account_id=? AND tenant_id=? AND station_id=? ORDER BY id`,
+          [account.id, scope.tenantId, account.station_id]
+        );
+        const slipRows = await rows<DbRow[]>(
+          connection,
+          `SELECT id,amount_minor,status,method,transaction_at FROM st_slips WHERE account_id=? AND tenant_id=? AND station_id=? ORDER BY id`,
+          [account.id, scope.tenantId, account.station_id]
+        );
+        const specialRows = await rows<DbRow[]>(
+          connection,
+          `SELECT id,kind,model,status,amount_minor,volume_ml,settlement,settlement_method,payment_id,slip_id FROM st_shift_special_operations WHERE account_id=? AND tenant_id=? AND station_id=? ORDER BY id`,
+          [account.id, scope.tenantId, account.station_id]
+        );
+        const priorDeclarations = await first<DbRow>(
+          connection,
+          `SELECT COUNT(*) AS count FROM st_account_events WHERE account_id=? AND event_type IN ('FIRST_DECLARATION_SNAPSHOT_V1','DECLARATION_RESUBMISSION_V1')`,
+          [account.id]
+        );
+        const declarationRevision = n(priorDeclarations?.count) + 1,
+          declarationEventType =
+            declarationRevision === 1
+              ? "FIRST_DECLARATION_SNAPSHOT_V1"
+              : "DECLARATION_RESUBMISSION_V1";
+        const requestId = requireRequestId(body),
+          declarationSnapshotId = randomUUID(),
+          firstDeclaration = buildFirstDeclarationSnapshot({
+            snapshotId: declarationSnapshotId,
+            requestId,
+            accountId: account.id,
+            businessUnit: businessUnit as "FUEL" | "MARKET",
+            cycleNo: n(account.cycle_no),
+            declarationRevision,
+            tenantId: scope.tenantId,
+            stationId: String(account.station_id),
+            shiftId: String(account.shift_id),
+            businessDate: String(shift.business_date).slice(0, 10),
+            staffUserId: n(account.user_id),
+            submittedAt: parseDbUtc(String(shift.submitted_at)).toISOString(),
+            sourceSalesMinor: n(account.source_sales_minor),
+            countedCashMinor,
+            payments: paymentRows.map(row => ({
+              id: String(row.id),
+              kind: String(row.kind) as
+                | "CASH"
+                | "IBAN"
+                | "FAST"
+                | "DEBT"
+                | "AR_COLLECTION",
+              amountMinor: n(row.amount_minor),
+              debtorId: row.debtor_id === null ? null : String(row.debtor_id),
+              status: String(row.status),
+            })),
+            slips: slipRows.map(row => ({
+              id: String(row.id),
+              amountMinor: n(row.amount_minor),
+              status: String(row.status),
+              method: String(row.method),
+              transactionAt: String(row.transaction_at),
+            })),
+            specialOperations: specialRows.map(row => ({
+              id: String(row.id),
+              kind: String(row.kind),
+              model: String(row.model),
+              status: String(row.status),
+              amountMinor: n(row.amount_minor),
+              volumeMl: n(row.volume_ml),
+              settlement: String(row.settlement),
+              settlementMethod: String(row.settlement_method),
+              paymentId:
+                row.payment_id === null ? null : String(row.payment_id),
+              slipId: row.slip_id === null ? null : String(row.slip_id),
+            })),
+          });
+        await accountEvent(
+          connection,
+          account,
+          actor,
+          declarationEventType,
+          n(account.revision) + 1,
+          firstDeclaration
+        );
         await execute(
           connection,
           `UPDATE st_accounts SET counted_cash_minor = ?, difference_minor = ?, status = 'SUBMITTED', submitted_at = CURRENT_TIMESTAMP(3), revision = revision + 1 WHERE id = ?`,
@@ -1837,6 +4033,7 @@ export function registerStationRoutes(app: Express): void {
           id: accountId,
           revision: n(account.revision) + 1,
           status: "SUBMITTED",
+          declarationSnapshotId,
         };
       })
     )
@@ -1939,6 +4136,11 @@ export function registerStationRoutes(app: Express): void {
             "Kaynak, ödeme ve fizikî teslim doğrulanmadan onaylanamaz.",
             409
           );
+        const fuel = await assertFuelReady(
+          connection,
+          account,
+          totals.sourceTotalMinor
+        );
         const existingApproval = await first<DbRow>(
           connection,
           `SELECT user_id FROM st_account_signatures WHERE account_id = ? AND cycle_no = ? AND kind = 'APPROVAL' AND user_id = ?`,
@@ -1960,9 +4162,14 @@ export function registerStationRoutes(app: Express): void {
         const status =
           n(approvals?.count) + 1 < 2
             ? "IN_REVIEW"
-            : totals.ibanMinor > 0
+            : hasUnconfirmedBankDeclaration(totals) ||
+                n(account.special_pending_count) > 0
               ? "ACCEPTED_WITH_PENDING"
               : "ACCEPTED";
+        const tankPosting =
+          fuel && ["ACCEPTED", "ACCEPTED_WITH_PENDING"].includes(status)
+            ? await postTankAccount(connection, account, fuel, actor.id)
+            : undefined;
         await execute(
           connection,
           `UPDATE st_accounts SET status = ?, revision = ? WHERE id = ?`,
@@ -1977,7 +4184,13 @@ export function registerStationRoutes(app: Express): void {
             n(account.cycle_no),
             newRevision,
             actor.id,
-            JSON.stringify({ status, note, totals }),
+            JSON.stringify({
+              status,
+              note,
+              totals,
+              ...(fuel ? { fuel } : {}),
+              ...(tankPosting ? { tankPosting } : {}),
+            }),
           ]
         );
         await audit(
@@ -1987,7 +4200,9 @@ export function registerStationRoutes(app: Express): void {
           actor.id,
           status === "ACCEPTED"
             ? "ACCOUNT_APPROVE"
-            : "ACCOUNT_APPROVE_PENDING_IBAN",
+            : totals.fastMinor > 0
+              ? "ACCOUNT_APPROVE_PENDING_FAST"
+              : "ACCOUNT_APPROVE_PENDING_IBAN",
           accountId
         );
         return { id: accountId, revision: newRevision, status };
@@ -2006,15 +4221,12 @@ export function registerStationRoutes(app: Express): void {
           "ACCOUNTANT",
         ]);
         checkNotAccountOwner(account, actor);
-        if (
-          ![
-            "SUBMITTED",
-            "IN_REVIEW",
-            "ACCEPTED",
-            "ACCEPTED_WITH_PENDING",
-          ].includes(account.status)
-        )
-          fail("ACCOUNT_LOCKED", "Hesap iade akışı için uygun değil.", 409);
+        if (!["SUBMITTED", "IN_REVIEW"].includes(account.status))
+          fail(
+            "ACCOUNT_LOCKED",
+            "Yalnızca teslim edilmiş veya incelemedeki hesap düzeltmeye gönderilebilir.",
+            409
+          );
         const note = requireString(body.note, "note", { max: 500 });
         const newRevision = n(account.revision) + 1;
         rejectCardData(note);
@@ -2211,11 +4423,6 @@ export function registerStationRoutes(app: Express): void {
             actor.id,
           ]
         );
-        await execute(
-          connection,
-          "INSERT INTO st_product_barcodes(station_id,barcode,product_id,pack_qty,label) VALUES (?,?,?,1,'Ana barkod')",
-          [stationId, barcode, id]
-        );
         await audit(
           connection,
           scope.tenantId,
@@ -2234,22 +4441,12 @@ export function registerStationRoutes(app: Express): void {
       mutation(actor, body, async connection => {
         const stationId = requireId(body.stationId, "stationId");
         const kind = requireEnum(body.kind, "kind", STOCK_KINDS);
-        const roles: StationRole[] =
-          kind === "SALE"
-            ? ["OWNER", "MANAGER", "MARKET_STAFF"]
-            : ["OWNER", "MANAGER", "PURCHASER"];
         const { scope } = await requireStation(
           connection,
           actor,
           stationId,
-          roles
+          stockMutationRoles(kind)
         );
-        if (await lockMarketBook(connection, scope.tenantId, stationId, true))
-          fail(
-            "MARKET_ACCOUNTING_ACTIVE",
-            "Stok hareketini Market muhasebesi / Alış veya Stok sayımı ekranından kaydedin.",
-            409
-          );
         const productId = requireId(body.productId, "productId");
         const product = await first<DbRow>(
           connection,
@@ -2290,7 +4487,7 @@ export function registerStationRoutes(app: Express): void {
         );
         await execute(
           connection,
-          `UPDATE st_products SET stock_qty = ?,stock_version=stock_version+1 WHERE id = ?`,
+          `UPDATE st_products SET stock_qty = ? WHERE id = ?`,
           [nextStock, productId]
         );
         await audit(
@@ -2340,57 +4537,51 @@ export function registerStationRoutes(app: Express): void {
   );
   app.post(
     "/api/stationos/payable",
-    mutationHandler(async (actor, body) =>
-      mutation(actor, body, async connection => {
-        const stationId = requireId(body.stationId, "stationId");
-        const { scope } = await requireStation(connection, actor, stationId, [
-          "OWNER",
-          "ACCOUNTANT",
-          "PURCHASER",
-        ]);
-        if (await lockMarketBook(connection, scope.tenantId, stationId, true))
-          fail(
-            "MARKET_ACCOUNTING_ACTIVE",
-            "Market borçlarını Market muhasebesi / Cariler ve Alış ekranından kaydedin.",
-            409
+    mutationHandler(
+      async (actor, body) =>
+        mutation(actor, body, async connection => {
+          const stationId = requireId(body.stationId, "stationId");
+          const { scope } = await requireStation(connection, actor, stationId, [
+            "OWNER",
+            "ACCOUNTANT",
+            "PURCHASER",
+          ]);
+          const supplierId = requireId(body.supplierId, "supplierId");
+          const supplier = await first<DbRow>(
+            connection,
+            `SELECT id FROM st_suppliers WHERE id = ? AND tenant_id = ? AND station_id = ?`,
+            [supplierId, scope.tenantId, stationId]
           );
-        const supplierId = requireId(body.supplierId, "supplierId");
-        const supplier = await first<DbRow>(
-          connection,
-          `SELECT id FROM st_suppliers WHERE id = ? AND tenant_id = ? AND station_id = ?`,
-          [supplierId, scope.tenantId, stationId]
-        );
-        if (!supplier) fail("NOT_FOUND", "Tedarikçi bulunamadı.", 404);
-        const amountMinor = requireMoney(body.amountMinor, "amountMinor");
-        const dueDate = requireString(body.dueDate, "dueDate", { max: 10 });
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate))
-          fail("INVALID_INPUT", "dueDate YYYY-AA-GG olmalıdır.");
-        const reference = optionalString(body.reference, "reference", 190);
-        const id = randomUUID();
-        await execute(
-          connection,
-          `INSERT INTO st_payables (id, tenant_id, station_id, supplier_id, amount_minor, due_date, reference, created_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            id,
+          if (!supplier) fail("NOT_FOUND", "Tedarikçi bulunamadı.", 404);
+          const amountMinor = requireMoney(body.amountMinor, "amountMinor");
+          const dueDate = safeCalendarDate(body.dueDate, "dueDate");
+          const reference = optionalString(body.reference, "reference", 190);
+          const id = randomUUID();
+          await execute(
+            connection,
+            `INSERT INTO st_payables (id, tenant_id, station_id, supplier_id, amount_minor, due_date, reference, created_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              id,
+              scope.tenantId,
+              stationId,
+              supplierId,
+              amountMinor,
+              dueDate,
+              reference,
+              actor.id,
+            ]
+          );
+          await audit(
+            connection,
             scope.tenantId,
             stationId,
-            supplierId,
-            amountMinor,
-            dueDate,
-            reference,
             actor.id,
-          ]
-        );
-        await audit(
-          connection,
-          scope.tenantId,
-          stationId,
-          actor.id,
-          "PAYABLE_CREATE",
-          id
-        );
-        return { id };
-      })
+            "PAYABLE_CREATE",
+            id
+          );
+          return { id };
+        }),
+      { calendarDates: ["dueDate"] }
     )
   );
   app.post(

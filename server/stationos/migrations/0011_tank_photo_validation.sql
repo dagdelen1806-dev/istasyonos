@@ -1,0 +1,37 @@
+CREATE TABLE st_tank_photo_drafts (
+  id CHAR(36) NOT NULL PRIMARY KEY,
+  tenant_id CHAR(36) NOT NULL,
+  station_id CHAR(36) NOT NULL,
+  source_name VARCHAR(190) NOT NULL,
+  source_sha256 CHAR(64) NOT NULL,
+  photo_sha256 CHAR(64) NULL,
+  displayed_at DATETIME(3) NOT NULL,
+  rows_json LONGTEXT NOT NULL,
+  created_by INT NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  UNIQUE KEY uq_photo_source (station_id,source_sha256),
+  FOREIGN KEY (tenant_id) REFERENCES st_tenants(id),
+  FOREIGN KEY (station_id) REFERENCES st_stations(id),
+  FOREIGN KEY (created_by) REFERENCES users(id)
+) ENGINE=InnoDB;
+CREATE TABLE st_tank_photo_reviews (
+  id CHAR(36) NOT NULL PRIMARY KEY,
+  document_id CHAR(36) NOT NULL,
+  row_key VARCHAR(32) NOT NULL,
+  revision INT UNSIGNED NOT NULL,
+  decision ENUM('PENDING','APPROVED_DRAFT','REJECTED') NOT NULL,
+  tank_id CHAR(36) NULL,
+  basis ENUM('PRODUCT','NET','UNDECIDED') NOT NULL,
+  capacity_ml BIGINT NULL,
+  volume_ml BIGINT NULL,
+  note VARCHAR(1000) NOT NULL,
+  evidence VARCHAR(500) NOT NULL,
+  source_confirmed BOOLEAN NOT NULL,
+  warnings_acknowledged BOOLEAN NOT NULL,
+  reviewer_id INT NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  UNIQUE KEY uq_photo_review (document_id,row_key,revision),
+  FOREIGN KEY (document_id) REFERENCES st_tank_photo_drafts(id),
+  FOREIGN KEY (tank_id) REFERENCES st_tank_cards(tank_id),
+  FOREIGN KEY (reviewer_id) REFERENCES users(id)
+) ENGINE=InnoDB;

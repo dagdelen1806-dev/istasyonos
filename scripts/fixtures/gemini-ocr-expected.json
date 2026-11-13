@@ -1,0 +1,49 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "numberRules": {
+    "decimal": "Belgede virgül ondalık, nokta binlik ayırıcıdır; litre ve TL değerini decimal olarak ayrıştır.",
+    "volumeUnit": "L",
+    "moneyUnit": "TRY",
+    "moneyRounding": "En yakın kuruşa, yarım yukarı (HALF_UP).",
+    "volumeTolerance": "Görselde basılı hassasiyet; tolerans 0,01 L.",
+    "textMatch": "Unicode NFC, Türkçe büyük/küçük harf duyarsız; boşlukları sadeleştir."
+  },
+  "documents": [
+    {
+      "file": "scripts/fixtures/demo-tanker.png",
+      "kind": "TANKER",
+      "expected": {
+        "documentNo": "DEMO-TANKER-BROWSER",
+        "date": "2026-11-05",
+        "product": "DEMO YAKIT",
+        "netLitres": 9.9,
+        "dispatchLitres": 10.0
+      }
+    },
+    {
+      "file": "scripts/fixtures/demo-invoice.png",
+      "kind": "INVOICE",
+      "expected": {
+        "documentNo": "DEMO-FAT-2026-001",
+        "date": "2026-11-07",
+        "product": "DEMO Motorin",
+        "quantityLitres": 125.5,
+        "unitPriceTry": 45.2,
+        "subtotalTry": 5672.6,
+        "vatTry": 1134.52,
+        "totalTry": 6807.12
+      }
+    },
+    {
+      "file": "scripts/fixtures/demo-tank.png",
+      "kind": "TANK",
+      "expected": {
+        "tankNumber": "T-01",
+        "fuel": "Motorin",
+        "capacityLitres": 30000,
+        "productVolumeLitres": 23990,
+        "netVolumeLitres": 23879
+      }
+    }
+  ]
+}

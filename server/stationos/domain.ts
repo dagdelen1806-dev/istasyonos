@@ -1,6 +1,12 @@
-import { createHash, createHmac, randomBytes } from "node:crypto";
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 import type { Request } from "express";
 import { ENV } from "../_core/env";
+import { calendarDate, formatDbUtc, parseInstant } from "../../shared/datetime";
 import { StationError, type AccountTotals } from "./types";
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -136,6 +142,47 @@ export function randomInvitationCode(): string {
   return randomBytes(32).toString("base64url");
 }
 
+export function normalizeInviteEmail(value: unknown): string {
+  if (typeof value !== "string")
+    throw new StationError("INVALID_INPUT", "Davet e-postası gerekli.");
+  const email = value.trim().toLowerCase();
+  if (
+    email.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  )
+    throw new StationError("INVALID_INPUT", "Geçerli e-posta gerekli.");
+  return email;
+}
+
+export function emailBoundInvitationCode(email: string): string {
+  const secret = randomInvitationCode();
+  const binding = createHmac("sha256", secret)
+    .update(`stationos-invitation-email-v1\0${normalizeInviteEmail(email)}`)
+    .digest("hex");
+  return `v2.${secret}.${binding}`;
+}
+
+/** null means a legacy bearer code; new v2 invitations are recipient-bound. */
+export function invitationEmailBindingMatches(
+  code: string,
+  email: unknown
+): boolean | null {
+  if (!code.startsWith("v2.")) return null;
+  const match = /^v2\.([A-Za-z0-9_-]{43})\.([a-f0-9]{64})$/.exec(code);
+  if (!match) return false;
+  let normalizedEmail: string;
+  try {
+    normalizedEmail = normalizeInviteEmail(email);
+  } catch {
+    return false;
+  }
+  const expected = createHmac("sha256", match[1])
+    .update(`stationos-invitation-email-v1\0${normalizedEmail}`)
+    .digest();
+  const supplied = Buffer.from(match[2], "hex");
+  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+}
+
 export function invitationHash(code: string): string {
   return createHash("sha256").update(code).digest("hex");
 }
@@ -187,6 +234,7 @@ export function accountTotals(input: {
   cashSalesMinor: number;
   cardTotalMinor: number;
   ibanMinor: number;
+  fastMinor?: number;
   debtMinor: number;
   arCollectionMinor: number;
   sourceSalesMinor: number | null;
@@ -195,16 +243,25 @@ export function accountTotals(input: {
     input.cashSalesMinor +
     input.cardTotalMinor +
     input.ibanMinor +
+    (input.fastMinor ?? 0) +
     input.debtMinor;
   return {
     cashSalesMinor: input.cashSalesMinor,
     cardTotalMinor: input.cardTotalMinor,
     ibanMinor: input.ibanMinor,
+    fastMinor: input.fastMinor ?? 0,
     debtMinor: input.debtMinor,
     arCollectionMinor: input.arCollectionMinor,
     expectedCashMinor: input.cashSalesMinor + input.arCollectionMinor,
     sourceTotalMinor,
   };
+}
+
+export function hasUnconfirmedBankDeclaration(totals: {
+  ibanMinor: number;
+  fastMinor: number;
+}) {
+  return totals.ibanMinor > 0 || totals.fastMinor > 0;
 }
 
 export function recommendationStatus(
@@ -220,18 +277,31 @@ export function recommendationStatus(
 }
 
 export function safeDate(value: unknown, field: string): Date {
-  const text = requireString(value, field, { max: 64 });
-  const date = new Date(text);
-  if (Number.isNaN(date.getTime()))
+  try {
+    return parseInstant(requireString(value, field, { max: 64 }));
+  } catch {
     throw new StationError(
       "INVALID_INPUT",
-      `${field} geçerli bir tarih olmalıdır.`
+      `${field}, Z veya ±HH:MM saat farkı içeren geçerli bir ISO 8601 tarih-saat olmalıdır. Örnek: 2026-10-28T15:30:00+03:00.`,
+      400
     );
-  return date;
+  }
+}
+
+export function safeCalendarDate(value: unknown, field: string): string {
+  try {
+    return calendarDate(requireString(value, field, { max: 10 }));
+  } catch {
+    throw new StationError(
+      "INVALID_INPUT",
+      `${field}, YYYY-MM-DD biçiminde geçerli bir takvim tarihi olmalıdır.`,
+      400
+    );
+  }
 }
 
 export function mysqlDate(date: Date): string {
-  return date.toISOString().slice(0, 23).replace("T", " ");
+  return formatDbUtc(date);
 }
 
 export function dbErrorCode(error: unknown): string | undefined {

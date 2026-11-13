@@ -5,7 +5,14 @@ export type AppRole =
   | "FUEL_STAFF"
   | "MARKET_STAFF"
   | "PURCHASER";
-export type PaymentKind = "CASH" | "IBAN" | "DEBT" | "AR_COLLECTION";
+export const paymentKinds = [
+  "CASH",
+  "IBAN",
+  "FAST",
+  "DEBT",
+  "AR_COLLECTION",
+] as const;
+export type PaymentKind = (typeof paymentKinds)[number];
 export type Unit = "FUEL" | "MARKET";
 export interface Company {
   id: string;
@@ -19,6 +26,15 @@ export interface Station {
   code: string;
   address: string | null;
 }
+export interface StationInvitation {
+  id: string;
+  role: AppRole;
+  stationIds: string[];
+  createdAt: string;
+  expiresAt: string;
+  usedAt: string | null;
+  status: "PENDING" | "ACCEPTED" | "EXPIRED";
+}
 export interface Shift {
   id: string;
   stationId: string;
@@ -26,6 +42,8 @@ export interface Shift {
   startsAt: string;
   endsAt: string | null;
   status: string;
+  /** Only present when the assignment schema is installed. */
+  assignedUserIds?: number[];
 }
 export interface Account {
   id: string;
@@ -42,6 +60,7 @@ export interface Account {
   cardTotalMinor: number;
   cashSalesMinor: number;
   ibanMinor: number;
+  fastMinor: number;
   debtMinor: number;
   arCollectionMinor: number;
   expectedCashMinor: number;
@@ -49,6 +68,8 @@ export interface Account {
   differenceMinor: number | null;
   cashReceiverUserId: number | null;
   signatureCount: number;
+  specialCoveredMinor?: number;
+  prepaymentCashMinor?: number;
 }
 export interface Payment {
   id: string;
@@ -72,15 +93,12 @@ export interface Slip {
 }
 export interface Debtor {
   id: string;
+  stationId?: string;
   name: string;
   type: "PERSON" | "COMPANY";
   balanceMinor: number | null;
 }
 export interface Product {
-  lotTracking?: boolean;
-  nextLotCode?: string | null;
-  nextExpiryDate?: string | null;
-  physicalStockQty?: number;
   id: string;
   stationId: string;
   name: string;
@@ -124,15 +142,20 @@ export interface AppState {
   canSetup: boolean;
   tenant: null | { id: string; name: string; isDemo: boolean };
   member: null | { role: AppRole; stationIds: string[] };
+  staffingFeaturesAvailable?: boolean;
+  fastPaymentAvailable?: boolean;
+  posSlipAvailable?: boolean;
   csrfToken?: string;
   companies: Company[];
   stations: Station[];
+  invitations?: StationInvitation[];
   members: {
     userId: number;
     name: string;
     email: string | null;
     role: AppRole;
     stationIds: string[];
+    stationAccess?: Record<string, "ACTIVE" | "INACTIVE" | "REVIEW_REQUIRED">;
   }[];
   shifts: Shift[];
   accounts: Account[];
@@ -169,9 +192,48 @@ export const roleLabels: Record<AppRole, string> = {
   MARKET_STAFF: "Market satış personeli",
   PURCHASER: "Satın alma",
 };
+
+export function roleLandingPath(role: AppRole): string | null {
+  if (role === "FUEL_STAFF") return "/mobil/pompaci";
+  if (role === "MARKET_STAFF") return "/market";
+  return null;
+}
+
+/** Limits staff navigation and direct route access to the staff work areas. */
+export function roleCanAccessPath(role: AppRole, path: string): boolean {
+  if (role === "FUEL_STAFF") {
+    return [
+      "/",
+      "/vardiyalar",
+      "/mobil/pompaci",
+      "/slipler",
+      "/cari",
+      "/entegrasyon",
+      "/profil",
+    ].includes(path);
+  }
+  if (role === "MARKET_STAFF") {
+    return [
+      "/",
+      "/vardiyalar",
+      "/market",
+      "/cari",
+      "/entegrasyon",
+      "/profil",
+    ].includes(path);
+  }
+  return true;
+}
+
+/** Market inventory is irrelevant to fuel staff and is not sent in their state. */
+export function roleCanViewMarketCatalog(role: AppRole): boolean {
+  return role !== "FUEL_STAFF";
+}
+
 export const paymentLabels: Record<PaymentKind, string> = {
   CASH: "Nakit satış",
   IBAN: "IBAN satış beyanı",
+  FAST: "FAST transfer beyanı · banka teyidi bekliyor",
   DEBT: "Borçlu satış",
   AR_COLLECTION: "Eski cari nakit tahsilatı",
 };
@@ -198,4 +260,26 @@ export function parseMoney(input: string): number {
 }
 export function amountInput(minor: number | null | undefined) {
   return minor == null ? "" : (minor / 100).toFixed(2).replace(".", ",");
+}
+
+/** Sales declaration total in kuruş; excludes collections and opening float. */
+export function accountDeclaredTotalMinor(
+  account: Pick<
+    Account,
+    | "cashSalesMinor"
+    | "cardTotalMinor"
+    | "ibanMinor"
+    | "fastMinor"
+    | "debtMinor"
+    | "specialCoveredMinor"
+  >
+) {
+  return (
+    account.cashSalesMinor +
+    account.cardTotalMinor +
+    account.ibanMinor +
+    account.fastMinor +
+    account.debtMinor +
+    (account.specialCoveredMinor ?? 0)
+  );
 }

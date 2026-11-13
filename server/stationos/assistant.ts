@@ -45,6 +45,7 @@ export function anonymousSummary(state: AppState, topic: string) {
     cashSalesMinor: sum(accounts.map(a => a.cashSalesMinor)),
     cardEvidenceMinor: sum(accounts.map(a => a.cardTotalMinor)),
     pendingIbanMinor: sum(accounts.map(a => a.ibanMinor)),
+    pendingFastMinor: sum(accounts.map(a => a.fastMinor)),
     debtSalesMinor: sum(accounts.map(a => a.debtMinor)),
     receivableBalanceMinor: hasFinance
       ? sum(state.debtors.map(d => d.balanceMinor))
@@ -93,6 +94,7 @@ export async function explainSummary(
     const tl = (value: number | null) => value === null ? "bilinmiyor / yetki dışında" : new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(value / 100);
     const lines = ["Kural tabanlı yerel özet — yapay zekâ servisi kullanılmadı.", summary.scope];
     if (["OVERVIEW", "SHIFTS", "FINANCE"].includes(summary.topic)) {
+      lines.push(`FAST (banka teyidi bekliyor): ${tl(summary.pendingFastMinor)}.`);
       lines.push(`Vardiya hesabı: ${summary.shifts}; onay bekleyen: ${summary.reviewQueue}.`, `Nakit satış: ${tl(summary.cashSalesMinor)}; kart kanıtı: ${tl(summary.cardEvidenceMinor)}; bekleyen IBAN beyanı: ${tl(summary.pendingIbanMinor)}.`);
     }
     if (["OVERVIEW", "PURCHASE_STOCK"].includes(summary.topic)) lines.push(`Ürün: ${summary.products}; sıfır stok: ${summary.zeroStockProducts}; minimum stokta/altında: ${summary.minimumStockProducts}; kredi nedeniyle bekleyen öneri: ${summary.creditBlockedProducts}.`);
